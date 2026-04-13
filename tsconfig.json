@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"target": "es2022",
+		"module": "es2022",
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"types": ["vite/client", "cypress"],
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"sourceMap": true,
+		"inlineSources": true,
+		"jsx": "preserve",
+		"baseUrl": "./",
+		"paths": {
+			"@/*": ["src/*"]
+		}
+	},
+	"include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "vite.config.ts"],
+	"exclude": ["node_modules", "src/**/*.cy.ts"]
+}
