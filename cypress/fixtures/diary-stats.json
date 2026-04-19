@@ -1,0 +1,16 @@
+{
+	"question_count": 1,
+	"entry_count": 1,
+	"answer_count": 1,
+	"average_answer_count": 1,
+	"first_entry_at": 1713517200,
+	"latest_entry_at": 1713517200,
+	"entry_frequency": { "mean": 86400, "stddev": 0 },
+	"entry_frequency_last_month": { "mean": 86400, "stddev": 0 },
+	"gap_count_above_ten_target_intervals": 0,
+	"last_large_gap": null,
+	"longest_gap": null,
+	"average_entry_duration": 600,
+	"average_entry_duration_last_month": 600,
+	"latest_answer_at": 1713517800
+}

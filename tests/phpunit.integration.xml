@@ -1,0 +1,19 @@
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         bootstrap="bootstrap.php"
+         timeoutForSmallTests="900"
+         timeoutForMediumTests="900"
+         timeoutForLargeTests="900"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.4/phpunit.xsd"
+         cacheResult="false"
+         cacheDirectory=".phpunit.cache">
+    <testsuite name="Structured Diary Integration Tests">
+        <directory suffix="Test.php">Integration</directory>
+    </testsuite>
+    <source>
+        <include>
+            <directory suffix=".php">../appinfo</directory>
+            <directory suffix=".php">../lib</directory>
+            <directory suffix=".php">./Integration/TestUtil</directory>
+        </include>
+    </source>
+</phpunit>

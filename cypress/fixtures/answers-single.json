@@ -1,0 +1,13 @@
+[
+	{
+		"id": 11,
+		"diary_id": 5,
+		"entry_id": 7,
+		"question_id": 17,
+		"created_at": 1713517800,
+		"text_content": "Feeling stable today.",
+		"numeric_content": null,
+		"previous_version_id": null,
+		"next_version_id": null
+	}
+]

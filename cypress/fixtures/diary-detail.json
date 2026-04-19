@@ -1,0 +1,15 @@
+{
+	"id": 5,
+	"user_id": "alice",
+	"title": "Health journal",
+	"description": "Daily notes",
+	"reminder_active": true,
+	"reminder_time": 32400,
+	"reminder_count": 3,
+	"reminder_delay": 2700,
+	"reminder_signal_first": "bell",
+	"reminder_signal_repeat": "soft-bell",
+	"entry_schedule": 86400,
+	"access_level": 15,
+	"is_owner": true
+}

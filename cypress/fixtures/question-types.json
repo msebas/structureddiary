@@ -1,0 +1,10 @@
+[
+	{ "id": "TEXT", "value": "text" },
+	{ "id": "BOOLEAN", "value": "boolean" },
+	{ "id": "RATING", "value": "rating" },
+	{ "id": "NUMBER", "value": "number" },
+	{ "id": "INTEGER", "value": "integer" },
+	{ "id": "TIME", "value": "time" },
+	{ "id": "SELECT", "value": "select" },
+	{ "id": "EDITABLE_SELECT", "value": "editable_select" }
+]

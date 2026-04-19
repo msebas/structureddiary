@@ -1,0 +1,22 @@
+{
+  "_structureddiary-main.css": {
+    "file": "css/structureddiary-main.css",
+    "src": "_structureddiary-main.css"
+  },
+  "_vendor-BLTBO7LR.chunk.mjs": {
+    "file": "js/vendor-BLTBO7LR.chunk.mjs",
+    "name": "vendor"
+  },
+  "src/main.ts": {
+    "file": "js/structureddiary-main.mjs",
+    "name": "main",
+    "src": "src/main.ts",
+    "isEntry": true,
+    "imports": [
+      "_vendor-BLTBO7LR.chunk.mjs"
+    ],
+    "css": [
+      "css/main-DWey8YYM.chunk.css"
+    ]
+  }
+}

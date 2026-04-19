@@ -1,0 +1,32 @@
+[
+	{
+		"id": 17,
+		"diary_id": 5,
+		"created_at": 1713500000,
+		"label": "Mood",
+		"display_text": "How do you feel today?",
+		"type": "text",
+		"minimum": null,
+		"maximum": null,
+		"choices": null,
+		"active": true,
+		"template_text": "Write a short note",
+		"previous_version_id": null,
+		"next_version_id": 18
+	},
+	{
+		"id": 18,
+		"diary_id": 5,
+		"created_at": 1713600000,
+		"label": "Mood check-in",
+		"display_text": "How do you feel today, in detail?",
+		"type": "text",
+		"minimum": null,
+		"maximum": null,
+		"choices": null,
+		"active": true,
+		"template_text": "Write a longer note",
+		"previous_version_id": 17,
+		"next_version_id": null
+	}
+]

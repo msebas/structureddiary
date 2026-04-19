@@ -3,7 +3,6 @@
 		"target": "es2022",
 		"module": "es2022",
 		"moduleResolution": "bundler",
-		"allowImportingTsExtensions": true,
 		"types": ["vite/client", "cypress"],
 		"strict": true,
 		"esModuleInterop": true,
@@ -16,6 +15,6 @@
 			"@/*": ["src/*"]
 		}
 	},
-	"include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "vite.config.ts"],
-	"exclude": ["node_modules", "src/**/*.cy.ts"]
+	"include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "vite.config.ts", "cypress.config.ts", "cypress/**/*.ts"],
+	"exclude": ["node_modules"]
 }
