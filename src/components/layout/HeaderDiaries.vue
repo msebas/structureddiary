@@ -8,7 +8,7 @@ import {useRoute} from "vue-router";
 
 const router = useRoute();
 const store = useStructuredDiaryStore()
-const diary = computed(() => store.diaries[Number(router.params.entryId)])
+const diary = computed(() => store.diaries[Number(router.params.diaryId)])
 
 import { getCurrentUser } from '@nextcloud/auth'
 import {Permissions} from "@/types/types";
