@@ -4,7 +4,7 @@ describe('Structured diary entry flow', () => {
 		cy.mockStructuredDiaryBootstrap()
 		cy.visit('/')
 
-		cy.contains('New entry').click()
+		cy.get('[aria-label="Create new entry"]').first().click()
 		cy.get('input[placeholder="Entry title"]').type('Evening reflection')
 		cy.contains('How do you feel today?').parent().find('textarea').clear().type('Productive day')
 		cy.contains('Save').first().click()

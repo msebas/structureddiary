@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import NcButton from '@nextcloud/vue/components/NcButton'
+import NcTextField from '@nextcloud/vue/components/NcTextField'
 import type { Question } from '@/types/types'
 import { formatDateTime } from '@/utils/format'
 
@@ -25,16 +27,18 @@ function hasMultipleVersions(question: Question): boolean {
 
 <template>
 	<aside :class="$style.panel">
-		<button type="button" :class="$style.createButton" @click="emit('create')">
-			New question
-		</button>
+		<div :class="$style.actions">
+			<NcButton @click="emit('create')">
+				New question
+			</NcButton>
+		</div>
 
-		<input
-			:value="props.search"
+		<NcTextField
+			:model-value="props.search"
 			type="search"
+			label="Search questions"
 			placeholder="Search questions"
-			:class="$style.search"
-			@input="emit('update:search', ($event.target as HTMLInputElement).value)">
+			@update:model-value="emit('update:search', String($event))" />
 
 		<div :class="$style.list">
 			<div
@@ -43,20 +47,20 @@ function hasMultipleVersions(question: Question): boolean {
 				:class="$style.questionWrap">
 				<div :class="[$style.item, question.id === props.selectedQuestionId && $style.itemActive]">
 					<span>{{ question.label }}</span>
-					<button
+					<NcButton
 						v-if="hasMultipleVersions(question)"
-						type="button"
-						:class="$style.versionsButton"
+						variant="tertiary"
+						size="small"
 						@click.stop="emit('toggleVersions', question)">
 						Versions
-					</button>
+					</NcButton>
 				</div>
-				<button
-					type="button"
+				<NcButton
+					variant="secondary"
 					:class="$style.selectButton"
 					@click="emit('select', question)">
 					Open question
-				</button>
+				</NcButton>
 				<div
 					v-if="props.expandedQuestionId === question.id && props.versionMap[question.id]?.length"
 					:class="$style.versionList">
@@ -84,28 +88,12 @@ function hasMultipleVersions(question: Question): boolean {
 	gap: 12px;
 	min-height: 0;
 	padding: 18px;
-	background:
-		radial-gradient(circle at top right, rgba(246, 216, 155, 0.22), transparent 40%),
-		linear-gradient(180deg, #fbfbfc, #eef1f6);
-	border-left: 1px solid rgba(27, 41, 58, 0.12);
+	background: var(--color-main-background);
 }
 
-.search {
-	width: 100%;
-	border: 1px solid rgba(16, 37, 66, 0.15);
-	border-radius: 14px;
-	padding: 12px 14px;
-	background: rgba(255, 255, 255, 0.92);
-}
-
-.createButton {
-	border: 0;
-	border-radius: 16px;
-	padding: 12px 14px;
-	background: #102542;
-	color: white;
-	font-weight: 700;
-	cursor: pointer;
+.actions {
+	display: flex;
+	justify-content: flex-end;
 }
 
 .list {
@@ -124,37 +112,20 @@ function hasMultipleVersions(question: Question): boolean {
 	align-items: center;
 	justify-content: space-between;
 	gap: 10px;
-	border: 1px solid transparent;
-	border-radius: 16px;
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius-large);
 	padding: 12px 14px;
-	background: rgba(255, 255, 255, 0.75);
+	background: var(--color-main-background);
 	text-align: left;
 }
 
 .itemActive {
-	border-color: rgba(16, 37, 66, 0.18);
-	background: white;
+	border-color: var(--color-primary-element);
+	background: var(--color-background-hover);
 }
 
 .selectButton {
-	border: 0;
-	border-radius: 12px;
-	padding: 9px 12px;
-	background: rgba(217, 105, 65, 0.12);
-	color: #8d3c20;
-	text-align: left;
-	font-weight: 700;
-	cursor: pointer;
-}
-
-.versionsButton {
-	border: 0;
-	border-radius: 999px;
-	padding: 6px 10px;
-	background: rgba(16, 37, 66, 0.08);
-	font-size: 0.78rem;
-	font-weight: 700;
-	cursor: pointer;
+	justify-self: start;
 }
 
 .versionList {
@@ -167,13 +138,13 @@ function hasMultipleVersions(question: Question): boolean {
 	border: 0;
 	border-radius: 12px;
 	padding: 9px 12px;
-	background: rgba(16, 37, 66, 0.05);
+	background: var(--color-background-hover);
 	text-align: left;
 	cursor: pointer;
 }
 
 .versionLabel {
 	font-size: 0.8rem;
-	color: #5d6d81;
+	color: var(--color-text-maxcontrast);
 }
 </style>

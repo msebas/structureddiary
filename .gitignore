@@ -14,3 +14,4 @@
 /tests/bin/test_cypress_e2e.sh.log
 /cypress/screenshots/
 /tmp/Ticket.txt
+/tmp/

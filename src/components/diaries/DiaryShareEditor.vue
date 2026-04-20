@@ -80,7 +80,9 @@ const payload = computed(() => {
 .editor {
 	display: grid;
 	gap: 14px;
+	width: 100%;
 	padding: 18px;
+	box-sizing: border-box;
 	border-radius: 20px;
 	background: rgba(246, 248, 252, 0.9);
 }
@@ -88,9 +90,12 @@ const payload = computed(() => {
 .field {
 	display: grid;
 	gap: 8px;
+	min-width: 0;
 }
 
 .field input {
+	width: 100%;
+	box-sizing: border-box;
 	border: 1px solid rgba(16, 37, 66, 0.15);
 	border-radius: 14px;
 	padding: 12px 14px;
@@ -120,4 +125,3 @@ const payload = computed(() => {
 	background: rgba(16, 37, 66, 0.08);
 }
 </style>
-

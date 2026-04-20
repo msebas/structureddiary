@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import NcButton from '@nextcloud/vue/components/NcButton'
+import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
+import { mdiBookOpenVariant, mdiPlus } from '@mdi/js'
+import { computed } from 'vue'
 import type { Diary, Entry, Question } from '@/types/types'
 
 const props = defineProps<{
@@ -6,6 +10,7 @@ const props = defineProps<{
 	entry: Entry | null
 	question: Question | null
 	view: string
+	showNewEntryButton?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -16,54 +21,68 @@ const emit = defineEmits<{
 	(event: 'editDiary'): void
 	(event: 'editQuestion'): void
 }>()
+
+const showCreateButton = computed(() =>
+	props.view === 'diary' || props.view === 'diary-edit'
+		? true
+		: (props.view === 'entry' || props.view === 'entry-edit') && props.showNewEntryButton !== false)
+
+const createAriaLabel = computed(() => props.view.startsWith('diary') ? 'Create new diary' : 'Create new entry')
+
+function triggerCreate(): void {
+	if (props.view.startsWith('diary')) {
+		emit('newDiary')
+		return
+	}
+
+	emit('newEntry')
+}
 </script>
 
 <template>
 	<header :class="$style.header">
 		<div :class="$style.leading">
-			<button type="button" :class="$style.secondaryButton" @click="emit('openDiary')">
-				Diary
-			</button>
+			<NcButton
+				variant="tertiary"
+				aria-label="Open diary"
+				:class="$style.diaryButton"
+				@click="emit('openDiary')">
+				<template #icon>
+					<NcIconSvgWrapper :path="mdiBookOpenVariant" />
+				</template>
+			</NcButton>
 			<h1 :class="$style.title">
 				{{ props.diary?.title ?? 'Structured Diary' }}
 			</h1>
 		</div>
 
 		<div :class="$style.actions">
-			<button
-				type="button"
-				:class="$style.secondaryButton"
-				@click="emit('newDiary')">
-				New diary
-			</button>
-			<button
-				v-if="props.view !== 'entry-edit'"
-				type="button"
-				:class="$style.primaryButton"
-				@click="emit('newEntry')">
-				New entry
-			</button>
-			<button
+			<NcButton
+				v-if="showCreateButton"
+				:aria-label="createAriaLabel"
+				@click="triggerCreate()">
+				<template #icon>
+					<NcIconSvgWrapper :path="mdiPlus" />
+				</template>
+			</NcButton>
+			<NcButton
 				v-if="props.entry && props.view !== 'entry-edit'"
-				type="button"
-				:class="$style.secondaryButton"
+				variant="secondary"
 				@click="emit('editEntry')">
 				Edit entry
-			</button>
-			<button
+			</NcButton>
+			<NcButton
 				v-if="props.diary"
-				type="button"
-				:class="$style.secondaryButton"
+				variant="secondary"
 				@click="emit('editDiary')">
 				Edit diary
-			</button>
-			<button
+			</NcButton>
+			<NcButton
 				v-if="props.question"
-				type="button"
-				:class="$style.secondaryButton"
+				variant="secondary"
 				@click="emit('editQuestion')">
 				Edit question
-			</button>
+			</NcButton>
 		</div>
 	</header>
 </template>
@@ -78,10 +97,8 @@ const emit = defineEmits<{
 	justify-content: space-between;
 	gap: 20px;
 	padding: 18px 22px;
-	background:
-		linear-gradient(135deg, rgba(255, 248, 236, 0.96), rgba(243, 248, 255, 0.96));
-	border-bottom: 1px solid rgba(24, 36, 56, 0.12);
-	backdrop-filter: blur(8px);
+	background: var(--color-main-background);
+	border-bottom: 1px solid var(--color-border);
 }
 
 .leading {
@@ -89,6 +106,10 @@ const emit = defineEmits<{
 	align-items: center;
 	gap: 14px;
 	min-width: 0;
+}
+
+.diaryButton {
+	margin-inline-start: 18px;
 }
 
 .title {
@@ -103,24 +124,5 @@ const emit = defineEmits<{
 	flex-wrap: wrap;
 	justify-content: flex-end;
 	gap: 10px;
-}
-
-.primaryButton,
-.secondaryButton {
-	border: 0;
-	border-radius: 999px;
-	padding: 10px 14px;
-	font-weight: 700;
-	cursor: pointer;
-}
-
-.primaryButton {
-	background: #d96941;
-	color: white;
-}
-
-.secondaryButton {
-	background: rgba(16, 37, 66, 0.1);
-	color: #102542;
 }
 </style>

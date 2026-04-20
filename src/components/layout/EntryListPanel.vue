@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import NcButton from '@nextcloud/vue/components/NcButton'
+import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
+import { mdiCheck } from '@mdi/js'
 import { computed } from 'vue'
 import type { Entry } from '@/types/types'
 import { formatDate, formatDateTime } from '@/utils/format'
@@ -8,6 +11,7 @@ const props = defineProps<{
 	selectedEntryId: number | null
 	fromValue: string
 	untilValue: string
+	showCreateButton?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -30,25 +34,37 @@ const duplicateDays = computed(() => {
 
 <template>
 	<aside :class="$style.panel">
-		<div :class="$style.actions">
-			<button type="button" :class="$style.primaryButton" @click="emit('create')">
+		<div v-if="props.showCreateButton" :class="$style.actions">
+			<NcButton @click="emit('create')">
 				New entry
-			</button>
+			</NcButton>
 		</div>
 		<div :class="$style.filters">
-			<input
-				:value="props.fromValue"
-				type="date"
-				:class="$style.input"
-				@input="emit('update:fromValue', ($event.target as HTMLInputElement).value)">
-			<input
-				:value="props.untilValue"
-				type="date"
-				:class="$style.input"
-				@input="emit('update:untilValue', ($event.target as HTMLInputElement).value)">
-			<button type="button" :class="$style.filterButton" @click="emit('applyFilter')">
-				Apply
-			</button>
+			<label :class="$style.field">
+				<span :class="$style.fieldLabel">From</span>
+				<input
+					:value="props.fromValue"
+					type="date"
+					:class="['nc-input-field__input', $style.input]"
+					@input="emit('update:fromValue', ($event.target as HTMLInputElement).value)">
+			</label>
+			<label :class="$style.field">
+				<span :class="$style.fieldLabel">Until</span>
+				<input
+					:value="props.untilValue"
+					type="date"
+					:class="['nc-input-field__input', $style.input]"
+					@input="emit('update:untilValue', ($event.target as HTMLInputElement).value)">
+			</label>
+			<NcButton
+				variant="secondary"
+				aria-label="Apply filter"
+				:class="$style.applyButton"
+				@click="emit('applyFilter')">
+				<template #icon>
+					<NcIconSvgWrapper :path="mdiCheck" />
+				</template>
+			</NcButton>
 		</div>
 		<div :class="$style.list">
 			<button
@@ -71,10 +87,7 @@ const duplicateDays = computed(() => {
 	gap: 14px;
 	padding: 18px;
 	min-height: 0;
-	background:
-		radial-gradient(circle at top right, rgba(155, 204, 246, 0.24), transparent 42%),
-		linear-gradient(180deg, #f8fbff, #eef3f8);
-	border-left: 1px solid rgba(27, 41, 58, 0.12);
+	background: var(--color-main-background);
 }
 
 .actions {
@@ -82,36 +95,32 @@ const duplicateDays = computed(() => {
 	justify-content: flex-end;
 }
 
-.primaryButton,
-.filterButton {
-	border: 0;
-	border-radius: 14px;
-	padding: 10px 14px;
-	font-weight: 700;
-	cursor: pointer;
-}
-
-.primaryButton {
-	background: #d96941;
-	color: white;
-}
-
-.filterButton {
-	background: #102542;
-	color: white;
-}
-
 .filters {
 	display: grid;
 	grid-template-columns: 1fr 1fr auto;
 	gap: 8px;
+	align-items: end;
+}
+
+.field {
+	display: grid;
+	gap: 4px;
+}
+
+.fieldLabel {
+	font-size: 0.8rem;
+	color: var(--color-text-maxcontrast);
 }
 
 .input {
-	border: 1px solid rgba(16, 37, 66, 0.15);
-	border-radius: 12px;
-	padding: 10px 12px;
-	background: rgba(255, 255, 255, 0.92);
+	width: 100%;
+	min-height: 44px;
+}
+
+.applyButton {
+	inline-size: 44px;
+	block-size: 44px;
+	padding: 0;
 }
 
 .list {
@@ -124,26 +133,24 @@ const duplicateDays = computed(() => {
 	display: grid;
 	gap: 4px;
 	padding: 12px 14px;
-	border: 1px solid transparent;
-	border-radius: 16px;
-	background: rgba(255, 255, 255, 0.72);
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius-large);
+	background: var(--color-main-background);
 	text-align: left;
 	cursor: pointer;
 }
 
 .item strong {
-	color: #12253e;
+	color: var(--color-main-text);
 }
 
 .item span {
 	font-size: 0.82rem;
-	color: #66768a;
+	color: var(--color-text-maxcontrast);
 }
 
 .itemActive {
-	border-color: rgba(16, 37, 66, 0.18);
-	box-shadow: 0 10px 24px rgba(16, 37, 66, 0.08);
-	background: rgba(255, 255, 255, 0.95);
+	border-color: var(--color-primary-element);
+	background: var(--color-background-hover);
 }
 </style>
-

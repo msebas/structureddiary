@@ -4,17 +4,16 @@ describe('Structured diary management flow', () => {
 		cy.mockStructuredDiaryBootstrap()
 		cy.visit('/')
 
-		cy.contains('New diary').first().click()
+		cy.contains('Management').click()
+		cy.get('[aria-label="Create new diary"]').first().click()
 		cy.contains('Create diary').should('be.visible')
-		cy.contains('Title').parent().find('input').type('Copied journal')
-		cy.contains('Description').parent().find('textarea').type('Draft description')
-		cy.contains('Owner').parent().find('input').clear().type('alice')
+		cy.get('input[aria-label="Title"]').type('Copied journal')
+		cy.get('textarea[aria-label="Description"]').type('Draft description')
 		cy.contains('Save diary').click()
 
 		cy.wait('@createDiary').its('request.body').should('deep.include', {
 			title: 'Copied journal',
 			description: 'Draft description',
-			ownerUserId: 'alice',
 		})
 		cy.contains('Copied journal').should('be.visible')
 	})
@@ -24,6 +23,7 @@ describe('Structured diary management flow', () => {
 		cy.mockStructuredDiaryBootstrap()
 		cy.visit('/')
 
+		cy.contains('Management').click()
 		cy.contains('Health journal').click()
 		cy.contains('New question').click()
 		cy.contains('Create question').should('be.visible')

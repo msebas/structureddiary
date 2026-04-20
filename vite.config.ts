@@ -39,7 +39,7 @@ export default createAppConfig({
 			},
 			server: {
 				host: '0.0.0.0',          // listen in the container
-				port: 5173,
+				port: 5174,
 				strictPort: true,
 				// Docker/VM file watchers sometimes miss FS events:
 				watch: {usePolling: true, interval: 300},

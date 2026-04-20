@@ -14,6 +14,7 @@ import type {
 	QuestionCreatePayload,
 	QuestionTypeDefinition,
 	QuestionUpdatePayload,
+	SelectOption,
 } from '@/types/types'
 
 declare global {
@@ -35,6 +36,14 @@ function apiPath(path: string): string {
 	}
 
 	return `/apps/structureddiary${path}`
+}
+
+function ocsPath(path: string): string {
+	if (window.OC?.generateUrl) {
+		return window.OC.generateUrl(path)
+	}
+
+	return path
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -65,6 +74,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 	}
 
 	return payload as T
+}
+
+async function ocsRequest<T>(path: string, init?: RequestInit): Promise<T> {
+	const response = await fetch(ocsPath(path), {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			'OCS-APIRequest': 'true',
+			...(init?.headers ?? {}),
+		},
+		credentials: 'same-origin',
+		...init,
+	})
+
+	if (!response.ok) {
+		throw new Error(`HTTP ${response.status}`)
+	}
+
+	const payload = await response.json() as { ocs?: { data?: T } }
+	return payload.ocs?.data as T
 }
 
 function withQuery(path: string, params: Record<string, string | number | null | undefined>): string {
@@ -120,6 +149,51 @@ export const diaryService = {
 	},
 	stats(id: number): Promise<DiaryStats> {
 		return request(`/api/v1/diaries/${id}/stats`)
+	},
+}
+
+interface OcsAutocompleteEntry {
+	id?: string
+	label?: string
+	displayName?: string
+	subline?: string
+	shareWithDisplayNameUnique?: string
+}
+
+export const userService = {
+	async search(search: string): Promise<SelectOption<string>[]> {
+		const query = search.trim()
+		if (query === '') {
+			return []
+		}
+
+		const params = new URLSearchParams()
+		params.set('search', query)
+		params.set('itemType', ' ')
+		params.set('itemId', ' ')
+		params.set('limit', '20')
+		params.append('shareTypes[]', '0')
+
+		const raw = await ocsRequest<OcsAutocompleteEntry[]>(`/ocs/v2.php/core/autocomplete/get?${params.toString()}`)
+		const seen = new Set<string>()
+
+		return raw
+			.map((entry) => {
+				const value = entry.id ?? ''
+				const label = entry.displayName ?? entry.label ?? value
+				const suffix = entry.subline ?? entry.shareWithDisplayNameUnique
+				return {
+					value,
+					label: suffix && suffix !== label ? `${label} (${suffix})` : label,
+				}
+			})
+			.filter((entry) => {
+				if (entry.value === '' || seen.has(entry.value)) {
+					return false
+				}
+				seen.add(entry.value)
+				return true
+			})
 	},
 }
 

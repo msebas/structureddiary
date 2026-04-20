@@ -3,9 +3,19 @@
     "file": "css/structureddiary-main.css",
     "src": "_structureddiary-main.css"
   },
-  "_vendor-BLTBO7LR.chunk.mjs": {
-    "file": "js/vendor-BLTBO7LR.chunk.mjs",
+  "_vendor-DR6U724j.chunk.mjs": {
+    "file": "js/vendor-DR6U724j.chunk.mjs",
     "name": "vendor"
+  },
+  "node_modules/rehype-highlight/index.js": {
+    "file": "js/index-lOLtl3lT.chunk.mjs",
+    "name": "index",
+    "src": "node_modules/rehype-highlight/index.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.ts",
+      "_vendor-DR6U724j.chunk.mjs"
+    ]
   },
   "src/main.ts": {
     "file": "js/structureddiary-main.mjs",
@@ -13,10 +23,13 @@
     "src": "src/main.ts",
     "isEntry": true,
     "imports": [
-      "_vendor-BLTBO7LR.chunk.mjs"
+      "_vendor-DR6U724j.chunk.mjs"
+    ],
+    "dynamicImports": [
+      "node_modules/rehype-highlight/index.js"
     ],
     "css": [
-      "css/main-DWey8YYM.chunk.css"
+      "css/main-EeK-mSP8.chunk.css"
     ]
   }
 }

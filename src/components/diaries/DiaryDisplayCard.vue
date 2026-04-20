@@ -79,7 +79,9 @@ const props = defineProps<{
 .card {
 	display: grid;
 	gap: 18px;
+	width: 100%;
 	padding: 22px;
+	box-sizing: border-box;
 	border-radius: 26px;
 	background: rgba(255, 255, 255, 0.98);
 	box-shadow: 0 20px 48px rgba(12, 25, 46, 0.09);
@@ -107,6 +109,7 @@ const props = defineProps<{
 }
 
 .block {
+	min-width: 0;
 	padding: 16px;
 	border-radius: 18px;
 	background: rgba(246, 248, 252, 0.92);
@@ -149,4 +152,3 @@ const props = defineProps<{
 	}
 }
 </style>
-

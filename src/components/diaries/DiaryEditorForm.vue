@@ -124,7 +124,9 @@ function submit(): void {
 .form {
 	display: grid;
 	gap: 16px;
+	width: 100%;
 	padding: 22px;
+	box-sizing: border-box;
 	border-radius: 24px;
 	background: rgba(255, 255, 255, 0.98);
 	box-shadow: 0 20px 48px rgba(12, 25, 46, 0.09);
@@ -133,10 +135,13 @@ function submit(): void {
 .field {
 	display: grid;
 	gap: 8px;
+	min-width: 0;
 }
 
 .field input,
 .field textarea {
+	width: 100%;
+	box-sizing: border-box;
 	border: 1px solid rgba(16, 37, 66, 0.15);
 	border-radius: 14px;
 	padding: 12px 14px;
@@ -184,4 +189,3 @@ function submit(): void {
 	}
 }
 </style>
-
