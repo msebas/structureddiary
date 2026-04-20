@@ -19,6 +19,7 @@ import type {
 	QuestionTypeDefinition,
 	QuestionUpdatePayload,
 } from '@/types/types'
+import {router} from "@/router";
 
 export interface DiaryShareInput {
 	sharedWith: string
@@ -55,15 +56,16 @@ function cloneQuestionAsCreatePayload(question: Question): QuestionCreatePayload
 }
 
 export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
-	const diaries = ref<Diary[]>([])
-	const diaryShares = ref<Record<number, DiaryShare[]>>({})
+	const diaries = ref<Record<number,Diary>>({})
+	const diaryShares = ref<Record<number, Record<string, DiaryShare>>>({})
+	const diaryStatsById = ref<Record<number, DiaryStats>>({})
+
 	const entriesByDiary = ref<Record<number, Entry[]>>({})
 	const questionsByDiary = ref<Record<number, Question[]>>({})
 	const questionVersionsById = ref<Record<number, Question[]>>({})
 	const activeQuestionsByDiaryTimestamp = ref<Record<string, Question[]>>({})
 	const answersByEntry = ref<Record<number, Answer[]>>({})
 	const answerHistoryByEntryQuestion = ref<Record<string, Answer[]>>({})
-	const diaryStatsById = ref<Record<number, DiaryStats>>({})
 	const questionTypes = ref<QuestionTypeDefinition[]>([])
 	const loading = ref(false)
 	const error = ref<string | null>(null)
@@ -133,11 +135,23 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
 	async function loadDiaries(): Promise<void> {
 		await runTask(async () => {
-			diaries.value = await diaryService.list()
-			if (selectedDiaryId.value === null && diaries.value.length > 0) {
-				selectedDiaryId.value = diaries.value[0].id
-			}
+			diaries.value = Object.fromEntries((await diaryService.list()).map(i=>[i.id,i]))
 		})
+	}
+
+	async function loadDiary(id: number): Promise<void> {
+		await runTask(async () => {
+			diaries.value[id] = await diaryService.get(id)
+		})
+	}
+
+	async function loadDiaryShares(id: number): Promise<void> {
+		const shares = await runTask(() => diaryService.shares(id))
+		diaryShares.value[id] = Object.fromEntries(shares.map(i=>[i.shared_with, i]))
+	}
+
+	async function loadDiaryStats(id: number): Promise<void> {
+		diaryStatsById.value[id] = await runTask(() => diaryService.stats(id))
 	}
 
 	async function ensureQuestionTypes(): Promise<void> {
@@ -145,22 +159,6 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 			return
 		}
 		questionTypes.value = await runTask(() => questionService.types())
-	}
-
-	async function loadDiary(id: number): Promise<void> {
-		await runTask(async () => {
-			const diary = await diaryService.get(id)
-			diaries.value = replaceById(diaries.value, diary)
-			selectedDiaryId.value = id
-		})
-	}
-
-	async function loadDiaryShares(id: number): Promise<void> {
-		diaryShares.value[id] = await runTask(() => diaryService.shares(id))
-	}
-
-	async function loadDiaryStats(id: number): Promise<void> {
-		diaryStatsById.value[id] = await runTask(() => diaryService.stats(id))
 	}
 
 	async function loadEntries(diaryId: number, fromTimestamp?: number | null, untilTimestamp?: number | null): Promise<void> {
@@ -245,11 +243,16 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 		creatingQuestion.value = false
 	}
 
-	function startCreatingDiary(): void {
-		creatingDiary.value = true
-		duplicatedDiaryDraft.value = null
-		duplicatedQuestions.value = []
-		setSelectedDiary(null)
+	async function startCreatingDiary(): Promise<void> {
+		await router.push({name: 'diaryCreate'})
+	}
+
+	async function editDiary(entryId: number): Promise<void> {
+		await router.push({ name: 'diaryEdit', params: { entryId } })
+	}
+
+	async function editDiaryShares(entryId: number): Promise<void> {
+		await router.push({ name: 'diaryEditShare', params: { entryId } })
 	}
 
 	function cancelDiaryCreation(): void {
@@ -528,7 +531,9 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 		setSelectedDiary,
 		setSelectedEntry,
 		setSelectedQuestion,
-		startCreatingDiary,
+		startCreatingDiary: startCreatingDiary,
+		editDiary,
+		editDiaryShares,
 		cancelDiaryCreation,
 		prepareDiaryDuplicate,
 		startCreatingEntry,
