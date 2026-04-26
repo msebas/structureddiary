@@ -15,3 +15,4 @@
 /cypress/screenshots/
 /tmp/Ticket.txt
 /tmp/
+/tests/bin/test_unit.log

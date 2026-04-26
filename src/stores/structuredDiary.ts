@@ -26,11 +26,13 @@ export interface DiaryShareInput {
     permission: number
 }
 
+type DuplicatedQuestionPayload = Required<Omit<QuestionCreatePayload, 'diaryId'>>
+
 export interface DiaryEditSubmitPayload {
     diaryId: number | null
     diary: DiaryUpdatePayload | DiaryCreatePayload
     shares?: DiaryShareInput[] | null
-    questions?: Required<Omit<(QuestionCreatePayload | QuestionUpdatePayload), "diaryId">>[] | null
+    questions?: DuplicatedQuestionPayload[] | null
 }
 
 export interface EntryEditSubmitPayload {
@@ -41,7 +43,7 @@ export interface EntryEditSubmitPayload {
     answers: Answer[]
 }
 
-function cloneQuestionAsCreatePayload(question: Question): Omit<QuestionCreatePayload, "diaryId"> {
+function cloneQuestionAsCreatePayload(question: Question): DuplicatedQuestionPayload {
     return {
         label: question.label,
         displayText: question.display_text,
@@ -64,8 +66,6 @@ function toRouteNumber(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null
 }
 
-const route = useRoute()
-const router = useRouter()
 
 type DiaryError = {
     message: string
@@ -74,6 +74,9 @@ type DiaryError = {
 }
 
 export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
+    const route = useRoute()
+    const router = useRouter()
+
     const diaries = ref<Record<number, Diary>>({})
     const diaryShares = ref<Record<number, Record<string, DiaryShare>>>({}) // <diary.id, <user_id, DiaryShare>>
     const diaryStatsById = ref<Record<number, DiaryStats>>({})
@@ -94,31 +97,51 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const errors = ref<DiaryError[]>([])
 
     // reworked
-    const selectedDiaryId = computed({
-        get: () => toRouteNumber(route.params.diaryId) ?? 0,
-        set: async (diaryId: number) => {
+    const selectedDiaryId = computed<number | null>({
+        get: () => toRouteNumber(route.params.diaryId),
+        set: async (diaryId: number | null) => {
             if (diaryId !== selectedDiaryId.value) {
+                if (diaryId === null) {
+                    await router.push({name: 'diaries'})
+                    return
+                }
                 if (String(route.name).startsWith('entr')) {
                     await router.push({name: 'entries', params: {diaryId}})
+                } else if (String(route.name).startsWith('quest')) {
+                    await router.push({name: 'questions', params: {diaryId}})
                 } else {
-                    await router.push({name: 'diaries', params: {diaryId}})
+                    await router.push({name: 'diary', params: {diaryId}})
                 }
             }
             await refreshSelectedDiaryWorkspace()
         }
     })
-    const selectedEntryId = computed({
-        get: () => toRouteNumber(route.params.entryId) ?? 0,
-        set: async (entryId: number) => {
+    const selectedEntryId = computed<number | null>({
+        get: () => toRouteNumber(route.params.entryId),
+        set: async (entryId: number | null) => {
+            if (entryId === null) {
+                const diaryId = selectedDiaryId.value
+                if (diaryId != null) {
+                    await router.push({name: 'entries', params: {diaryId}})
+                }
+                return
+            }
             if (String(route.name).startsWith('entr')) {
                 await router.push({name: 'entry', params: {diaryId: selectedDiaryId.value, entryId}})
                 await loadEntry(entryId)
             }
         }
     })
-    const selectedQuestionId = computed({
-        get: () => toRouteNumber(route.params.questionId) ?? 0,
-        set: async (questionId: number) => {
+    const selectedQuestionId = computed<number | null>({
+        get: () => toRouteNumber(route.params.questionId),
+        set: async (questionId: number | null) => {
+            if (questionId === null) {
+                const diaryId = selectedDiaryId.value
+                if (diaryId != null) {
+                    await router.push({name: 'questions', params: {diaryId}})
+                }
+                return
+            }
             await router.push({name: 'question', params: {diaryId: selectedDiaryId.value, questionId}})
             await loadQuestion(questionId)
         }
@@ -139,7 +162,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const entryFromTimestamp = ref<number | null>(null)
     const entryUntilTimestamp = ref<number | null>(null)
 
-    const selectedDiary = computed(() => diaries.value[selectedDiaryId.value] ?? null)
+    const selectedDiary = computed(() => selectedDiaryId.value === null ? null : diaries.value[selectedDiaryId.value] ?? null)
     const selectedDiaryShares = computed(() => selectedDiaryId.value === null ? [] : diaryShares.value[selectedDiaryId.value] ?? [])
     const selectedDiaryStats = computed(() => selectedDiaryId.value === null ? null : diaryStatsById.value[selectedDiaryId.value] ?? null)
 
@@ -154,8 +177,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
                 i.timestamp <= (entryUntilTimestamp.value ?? Infinity)).sort(
             (a, b) => a.timestamp - b.timestamp)
     })
-    const currentAnswers = computed(() =>
-        selectedEntryId.value === null ? [] : answersByEntryByQuestion.value[selectedEntryId.value] ?? {})
+    const currentAnswers = computed<Record<number, Answer>>(() =>
+        selectedEntryId.value === null ? {} : answersByEntryByQuestion.value[selectedEntryId.value] ?? {})
 
     const selectedQuestion = computed(() => {
         if (selectedDiaryId.value == null || selectedQuestionId.value === null) return null
@@ -429,7 +452,9 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         if (!diary) {
             throw new Error(`Diary with ID ${diaryId} not found`)
         }
-        const questionsToDuplicate = (questionIdsByDiary.value[selectedDiaryId.value] ?? []).map(id => questionById.value[id])
+        const questionsToDuplicate = (questionIdsByDiary.value[diaryId] ?? [])
+            .map((id) => questionById.value[id])
+            .filter((question): question is Question => question !== undefined)
         await router.push({name: 'diaryCreate'})
         return {
             diaryId: null,
@@ -458,14 +483,14 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         if (questionTypes.value.length === 0)
             promises.push(ensureQuestionTypes())
 
-        if (selectedDiaryId.value !== 0) {
+        if (selectedDiaryId.value !== null) {
             promises.push(loadDiary(selectedDiaryId.value))
             promises.push(loadEntries(selectedDiaryId.value, entryFromTimestamp.value, entryUntilTimestamp.value))
             promises.push((loadQuestions(selectedDiaryId.value)))
-            if (selectedEntryId.value !== 0) {
+            if (selectedEntryId.value !== null) {
                 promises.push(loadEntry(selectedEntryId.value))
             }
-            if (selectedQuestionId.value !== 0) {
+            if (selectedQuestionId.value !== null) {
                 promises.push(loadQuestion(selectedQuestionId.value))
             }
         }
@@ -483,7 +508,9 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             return questionService.update(update.questionId, update)
         })
 
-        await loadQuestions(selectedDiaryId.value)
+        if (selectedDiaryId.value !== null) {
+            await loadQuestions(selectedDiaryId.value)
+        }
         selectedQuestionId.value = saved.id
         return saved
     }
@@ -529,9 +556,9 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             delete diaryStatsById.value[removedDiaryId]
 
             if (diaryId == selectedDiaryId.value) {
-                selectedDiaryId.value = 0
-                selectedEntryId.value = 0
-                selectedQuestionId.value = 0
+                selectedDiaryId.value = null
+                selectedEntryId.value = null
+                selectedQuestionId.value = null
             }
             await initialize()
         }
@@ -549,14 +576,14 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             if (payload.entryId != null) {
                 return entryService.update(payload.entryId, {title: payload.title, timestamp: payload.timestamp})
             }
-            return entryService.create(selectedDiaryId.value, {title: payload.title, timestamp: payload.timestamp})
+            return entryService.create(payload.diaryId, {title: payload.title, timestamp: payload.timestamp})
         })
 
-        if (entriesByDiary.value[selectedDiaryId.value] == null) {
-            entriesByDiary.value[selectedDiaryId.value] = {}
+        if (entriesByDiary.value[saved_entry.diary_id] == null) {
+            entriesByDiary.value[saved_entry.diary_id] = {}
         }
 
-        entriesByDiary.value[selectedDiaryId.value][saved_entry.id] = saved_entry
+        entriesByDiary.value[saved_entry.diary_id][saved_entry.id] = saved_entry
 
         // This does not load answers in all cases.
         if (payload.entryId != null && answersByEntryByQuestion.value[payload.entryId] == null) {
@@ -564,7 +591,10 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         }
 
         const promises: Promise<any>[] = []
-        const entryId = saved_entry.id || payload.entryId || 0
+        const entryId = saved_entry.id || payload.entryId
+        if (entryId == null) {
+            throw new Error('Unable to determine saved entry id.')
+        }
         // This assumes that answers for this entry are loaded now.
         for (const answer of payload.answers) {
             if (answer.text_content === null && answer.numeric_content === null) continue
@@ -722,10 +752,10 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         loadQuestionVersions,
         loadAnswerHistory,
         refreshSelectedDiaryWorkspace,
-        startCreatingDiary: startCreatingDiary,
+        startCreatingDiary,
         editDiary,
         editDiaryShares,
-        prepareDiaryDuplicate: copyDiary,
+        copyDiary,
         startCreatingEntry,
         startEditingEntry,
         startCreatingQuestion,
