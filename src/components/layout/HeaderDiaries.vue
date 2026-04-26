@@ -4,7 +4,6 @@ import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import { mdiPlus } from '@mdi/js'
 
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import { Permissions } from '@/types/types'
 

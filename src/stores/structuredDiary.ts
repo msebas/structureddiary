@@ -66,6 +66,24 @@ function toRouteNumber(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null
 }
 
+function toRouteString(value: unknown): string | null {
+    if (typeof value !== 'string') {
+        return null
+    }
+
+    return value
+}
+
+function toRouteTimestamp(value: unknown): number | null {
+    const routeValue = toRouteString(value)
+    if (routeValue === null || routeValue.trim() === '') {
+        return null
+    }
+
+    const parsed = Number.parseInt(routeValue, 10)
+    return Number.isFinite(parsed) ? parsed : null
+}
+
 
 type DiaryError = {
     message: string
@@ -91,10 +109,83 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
     const answersByEntryByQuestion = ref<Record<number, Record<number, Answer>>>({})
     const answerHistoryByEntryQuestion = ref<Record<number, Record<number, Answer[]>>>({})
+    const answerHistoryQuestionId = ref<number | null>(null)
 
     const questionTypes = ref<QuestionTypeDefinition[]>([])
     const loading = ref(0)
     const errors = ref<DiaryError[]>([])
+
+    const cachedDiarySearch = ref('')
+    const cachedQuestionSearch = ref('')
+    const cachedEntryFromTimestamp = ref<number | null>(null)
+    const cachedEntryUntilTimestamp = ref<number | null>(null)
+
+
+    async function setRouteParam(param:string, value:number|string|null) {
+            const query = {...route.query, [param]: value}
+            if (query[param] == '' || query[param] == null)
+                delete query[param]
+            await router.replace({name: route.name, params: route.params, query: query, hash: route.hash,})
+
+    }
+
+    const diarySearch = computed({
+        get: () => {
+            return toRouteString(route.query.diarySearch) ?? cachedDiarySearch.value
+        },
+        set: async (newValue) => {
+            cachedDiarySearch.value = newValue ?? ""
+            await setRouteParam('diarySearch', cachedDiarySearch.value)
+        }
+    })
+    const questionSearch = computed({
+        get: () => {
+            return toRouteString(route.query.questionSearch) ?? cachedQuestionSearch.value
+        },
+        set: async (newValue) => {
+            cachedQuestionSearch.value = newValue ?? ""
+            await setRouteParam('questionSearch', cachedQuestionSearch.value)
+        }
+    })
+    const entryFromTimestamp = computed({
+        get: () => {
+            return toRouteTimestamp(route.query.from) ?? cachedEntryFromTimestamp.value
+        },
+        set: async (newValue) => {
+            cachedEntryFromTimestamp.value = newValue ?? null
+            await setRouteParam('from', cachedEntryFromTimestamp.value)
+        }
+    })
+    const entryUntilTimestamp = computed({
+        get: () => {
+            return toRouteTimestamp(route.query.until) ?? cachedEntryUntilTimestamp.value
+        },
+        set: async (newValue) => {
+            cachedEntryUntilTimestamp.value = newValue ?? null
+            await setRouteParam('until', cachedEntryUntilTimestamp.value)
+        }
+    })
+
+    function isEntryRoute(routeName: unknown): boolean {
+        return typeof routeName === 'string' && routeName.startsWith('entr')
+    }
+
+    function isQuestionRoute(routeName: unknown): boolean {
+        return typeof routeName === 'string' && routeName.startsWith('quest')
+    }
+
+    function isDiaryRoute(routeName: unknown): boolean {
+        return typeof routeName === 'string' && routeName.startsWith('diar')
+    }
+    async function pushWorkspaceRoute(location: {
+        name: string,
+        params?: Record<string, string | number | null | undefined>
+    }): Promise<void> {
+        await router.push({
+            ...location,
+            query: {...route.query},
+        })
+    }
 
     // reworked
     const selectedDiaryId = computed<number | null>({
@@ -102,15 +193,15 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         set: async (diaryId: number | null) => {
             if (diaryId !== selectedDiaryId.value) {
                 if (diaryId === null) {
-                    await router.push({name: 'diaries'})
+                    await pushWorkspaceRoute({name: 'diaries'})
                     return
                 }
-                if (String(route.name).startsWith('entr')) {
-                    await router.push({name: 'entries', params: {diaryId}})
-                } else if (String(route.name).startsWith('quest')) {
-                    await router.push({name: 'questions', params: {diaryId}})
+                if (isEntryRoute(route.name)) {
+                    await pushWorkspaceRoute({name: 'entries', params: {diaryId}})
+                } else if (isQuestionRoute(route.name)) {
+                    await pushWorkspaceRoute({name: 'questions', params: {diaryId}})
                 } else {
-                    await router.push({name: 'diary', params: {diaryId}})
+                    await pushWorkspaceRoute({name: 'diary', params: {diaryId}})
                 }
             }
             await refreshSelectedDiaryWorkspace()
@@ -122,12 +213,12 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             if (entryId === null) {
                 const diaryId = selectedDiaryId.value
                 if (diaryId != null) {
-                    await router.push({name: 'entries', params: {diaryId}})
+                    await pushWorkspaceRoute({name: 'entries', params: {diaryId}})
                 }
                 return
             }
-            if (String(route.name).startsWith('entr')) {
-                await router.push({name: 'entry', params: {diaryId: selectedDiaryId.value, entryId}})
+            if (isEntryRoute(route.name)) {
+                await pushWorkspaceRoute({name: 'entry', params: {diaryId: selectedDiaryId.value, entryId}})
                 await loadEntry(entryId)
             }
         }
@@ -138,11 +229,11 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             if (questionId === null) {
                 const diaryId = selectedDiaryId.value
                 if (diaryId != null) {
-                    await router.push({name: 'questions', params: {diaryId}})
+                    await pushWorkspaceRoute({name: 'questions', params: {diaryId}})
                 }
                 return
             }
-            await router.push({name: 'question', params: {diaryId: selectedDiaryId.value, questionId}})
+            await pushWorkspaceRoute({name: 'question', params: {diaryId: selectedDiaryId.value, questionId}})
             await loadQuestion(questionId)
         }
     })
@@ -156,11 +247,6 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         return route.name === 'questionCreate'
     })
 
-
-    const diarySearch = ref('')
-    const questionSearch = ref('')
-    const entryFromTimestamp = ref<number | null>(null)
-    const entryUntilTimestamp = ref<number | null>(null)
 
     const selectedDiary = computed(() => selectedDiaryId.value === null ? null : diaries.value[selectedDiaryId.value] ?? null)
     const selectedDiaryShares = computed(() => selectedDiaryId.value === null ? [] : diaryShares.value[selectedDiaryId.value] ?? [])
@@ -212,8 +298,16 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const currentEntryQuestions = computed(() => _currentEntryQuestions.value.filter(i => i != null && i.active))
 
     const selectedQuestionVersionChain = computed(() =>
-        (selectedQuestionId.value === null ? [] : questionVersionIdsByChainId.value[selectedQuestionId.value] ?? []).map(
+        (selectedQuestion.value === null ? [] : questionVersionIdsByChainId.value[selectedQuestion.value.chain_id] ?? []).map(
             i => questionById.value[i]))
+    const questionVersionMap = computed<Record<number, Question[]>>(() => Object.fromEntries(
+        currentDiaryQuestions.value.map((question) => [
+            question.id,
+            (questionVersionIdsByChainId.value[question.chain_id] ?? []).map((id) => questionById.value[id]).filter(
+                (version): version is Question => version !== undefined,
+            ),
+        ]),
+    ))
 
     const user_permissions = computed(() => {
         const currentUserId = getCurrentUser()?.uid ?? null
@@ -376,60 +470,59 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     }
 
     async function startCreatingDiary(): Promise<void> {
-        await router.push({name: 'diaryCreate'})
+        await pushWorkspaceRoute({name: 'diaryCreate'})
     }
 
     async function editDiary(diaryId: number): Promise<void> {
-        await router.push({name: 'diaryEdit', params: {diaryId}})
+        await pushWorkspaceRoute({name: 'diaryEdit', params: {diaryId}})
     }
 
     async function editDiaryShares(diaryId: number): Promise<void> {
-        await router.push({name: 'diaryEditShare', params: {diaryId}})
+        await pushWorkspaceRoute({name: 'diaryEditShare', params: {diaryId}})
     }
 
     async function cancelCreateDiary(): Promise<void> {
-        await router.push({name: 'diaries'})
+        await pushWorkspaceRoute({name: 'diaries'})
     }
 
     async function startCreatingEntry(diaryId: number | null): Promise<void> {
         if (diaryId === null && selectedDiaryId.value == null) return
 
-        await router.push({name: 'entryCreate', params: {diaryId: diaryId ?? selectedDiaryId.value}})
+        await pushWorkspaceRoute({name: 'entryCreate', params: {diaryId: diaryId ?? selectedDiaryId.value}})
     }
 
     async function startEditingEntry(entryId: number | null, diaryId: number | null): Promise<void> {
         if (entryId === null && selectedEntryId.value == null) return
         if (diaryId === null && selectedDiaryId.value == null) return
 
-        await router.push({
+        await pushWorkspaceRoute({
             name: 'entryEdit',
             params: {diaryId: diaryId ?? selectedDiaryId.value, entryId: entryId ?? selectedEntryId.value}
         })
     }
 
     async function cancelEditingEntry(): Promise<void> {
-        await router.push({name: 'entries', params: {diaryId: selectedDiaryId.value}})
+        await pushWorkspaceRoute({name: 'entries', params: {diaryId: selectedDiaryId.value}})
     }
 
-    async function startCreatingQuestion(entryId: number | null, diaryId: number | null): Promise<void> {
-        if (entryId === null && selectedQuestionId.value == null) return
+    async function startCreatingQuestion(_questionId: number | null, diaryId: number | null): Promise<void> {
         if (diaryId === null && selectedDiaryId.value == null) return
 
-        await router.push({name: 'questionCreate', params: {diaryId: diaryId ?? selectedDiaryId.value}})
+        await pushWorkspaceRoute({name: 'questionCreate', params: {diaryId: diaryId ?? selectedDiaryId.value}})
     }
 
     async function startEditingQuestion(questionId: number | null, diaryId: number | null): Promise<void> {
         if (questionId === null && selectedQuestionId.value == null) return
         if (diaryId === null && selectedDiaryId.value == null) return
 
-        await router.push({
+        await pushWorkspaceRoute({
             name: 'questionEdit',
             params: {diaryId: diaryId ?? selectedDiaryId.value, questionId: questionId ?? selectedQuestionId.value}
         })
     }
 
     async function cancelEditingQuestion(): Promise<void> {
-        await router.push({name: 'questions', params: {diaryId: selectedDiaryId.value}})
+        await pushWorkspaceRoute({name: 'questions', params: {diaryId: selectedDiaryId.value}})
     }
 
 
@@ -455,7 +548,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         const questionsToDuplicate = (questionIdsByDiary.value[diaryId] ?? [])
             .map((id) => questionById.value[id])
             .filter((question): question is Question => question !== undefined)
-        await router.push({name: 'diaryCreate'})
+        await pushWorkspaceRoute({name: 'diaryCreate'})
         return {
             diaryId: null,
             diary: {
@@ -538,7 +631,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         if (answersByEntryByQuestion.value[res.entry_id]?.[res.question_id] != null)
             delete answersByEntryByQuestion.value[res.entry_id][res.question_id]
 
-        answersByEntryByQuestion.value[res.entry_id] = await runTask(() => answerService.list(res.entry_id))
+        const answers = await runTask(() => answerService.list(res.entry_id))
+        answersByEntryByQuestion.value[res.entry_id] = Object.fromEntries(answers.map((answer) => [answer.question_id, answer]))
     }
 
     async function deleteDiary(diaryId: number | null = null): Promise<void> {
@@ -638,7 +732,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
             const newShares: Record<string, DiaryShare> = {}
             const promises = []
-            const currentByUser = diaryShares.value[payload.diaryId]
+            const currentByUser = diaryShares.value[payload.diaryId] ?? {}
             for (const item of payload.shares) {
                 const existing = currentByUser[item.sharedWith]
                 if (item.sharedWith == ownerUserId) continue
@@ -679,7 +773,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
                 if (questionId) {
                     promises.push(questionService.update(questionId, question as QuestionUpdatePayload))
                 } else {
-                    promises.push(questionService.create(questionId, question as QuestionCreatePayload))
+                    promises.push(questionService.create(payload.diaryId, question as QuestionCreatePayload))
                 }
             }
             while (promises.length > 0) {
@@ -704,7 +798,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
 
         if (setDiary && selectedDiaryId.value !== savedDiary.id)
-            await router.push({name: 'diary', params: {diaryId: savedDiary.id}})
+            await pushWorkspaceRoute({name: 'diary', params: {diaryId: savedDiary.id}})
 
         await loadDiary(savedDiary.id).catch(() => undefined)
         await loadQuestions(savedDiary.id).catch(() => undefined)
@@ -718,6 +812,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         diaryShares,
         entriesByDiary,
         answerHistoryByEntryQuestion,
+        answerHistoryQuestionId,
         user_permissions,
         diaryStatsById,
         questionTypes,
@@ -738,16 +833,19 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         selectedQuestion,
         diaryGroups,
         currentEntries,
+        currentDiaryQuestions,
         currentAnswers,
         selectedDiaryShares,
         selectedDiaryStats,
         selectedQuestionVersionChain,
+        questionVersionMap,
         currentEntryQuestions,
         initialize,
         loadDiaries,
         loadDiary,
         loadDiaryStats,
         loadEntries,
+        loadEntry,
         loadQuestions,
         loadQuestionVersions,
         loadAnswerHistory,
@@ -769,5 +867,6 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         startEditingQuestion,
         cancelEditingQuestion,
         cancelEditingEntry,
+        cancelCreateDiary,
     }
 })

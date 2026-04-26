@@ -8,19 +8,11 @@ import type { NcSelectUsersModel } from '@nextcloud/vue/components/NcSelectUsers
 import NcTextArea from '@nextcloud/vue/components/NcTextArea'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import { computed, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { userService } from '@/services'
-import type { Diary, DiaryShare, DiaryUpdatePayload, SelectOption } from '@/types/types'
+import { type DiaryEditSubmitPayload, type DiaryShareInput, useStructuredDiaryStore } from '@/stores/structuredDiary'
+import type { DiaryUpdatePayload, SelectOption } from '@/types/types'
 import { dayTimeToSeconds, daysToScheduleSeconds, scheduleSecondsToDays, secondsToDayTime } from '@/utils/diary'
-
-interface DiaryShareInput {
-	sharedWith: string
-	permission: number
-}
-
-interface DiaryEditSubmitPayload {
-	diary: DiaryUpdatePayload
-	shares: DiaryShareInput[]
-}
 
 const signalSuggestions = [
 	'Default',
@@ -31,21 +23,17 @@ const signalSuggestions = [
 	'Vibrate',
 ]
 
-const props = defineProps<{
-	diary: Diary | null
-	canChangeOwner: boolean
-	shares: DiaryShare[]
-	entryCount: number | null
-	isCreating: boolean
-	initialDraft?: DiaryUpdatePayload | null
-}>()
+const store = useStructuredDiaryStore()
+const route = useRoute()
+const router = useRouter()
+const copiedDiaryPayload = ref<DiaryEditSubmitPayload | null>(null)
 
-const emit = defineEmits<{
-	(event: 'save', payload: DiaryEditSubmitPayload): void
-	(event: 'cancel'): void
-	(event: 'duplicate', payload: DiaryUpdatePayload): void
-	(event: 'delete'): void
-}>()
+const diary = computed(() => store.selectedDiary)
+const shares = computed(() => Object.values(store.selectedDiaryShares))
+const isCreating = computed(() => store.creatingDiary)
+const initialDraft = computed(() => copiedDiaryPayload.value?.diary ?? null)
+const entryCount = computed(() => store.selectedDiaryStats?.entry_count ?? null)
+const canChangeOwner = computed(() => isCreating.value || entryCount.value === 0)
 
 const form = reactive({
 	title: '',
@@ -111,7 +99,7 @@ async function searchUsers(query: string): Promise<void> {
 }
 
 function shareUsers(permissionMask: number): NcSelectUsersModel[] {
-	return props.shares
+	return shares.value
 		.filter((share) => (share.permission & permissionMask) === permissionMask)
 		.map((share) => fromUserId(share.shared_with))
 }
@@ -171,24 +159,24 @@ const sharePayload = computed<DiaryShareInput[]>(() => {
 
 const reminderMax = computed(() => form.entryScheduleDays === 0.5 ? '12:00' : '23:59')
 const deleteLabel = computed(() => {
-	if (props.entryCount === null) {
+	if (entryCount.value === null) {
 		return 'Delete diary'
 	}
-	return `Delete diary (${props.entryCount} entries)`
+	return `Delete diary (${entryCount.value} entries)`
 })
 
-watch(() => [props.diary, props.initialDraft, props.isCreating, props.shares] as const, ([diary, initialDraft, isCreating]) => {
-	const source = isCreating && initialDraft ? initialDraft : null
-	form.title = source?.title ?? diary?.title ?? ''
-	form.description = source?.description ?? diary?.description ?? ''
-	form.ownerUserId = source?.ownerUserId ?? diary?.user_id ?? ''
-	form.entryScheduleDays = source?.entrySchedule ? scheduleSecondsToDays(source.entrySchedule) : diary ? scheduleSecondsToDays(diary.entry_schedule) : 1
-	form.reminderActive = source?.reminderActive ?? diary?.reminder_active ?? false
-	form.reminderTime = secondsToDayTime(source?.reminderTime ?? diary?.reminder_time ?? 9 * 3600)
-	form.reminderCount = source?.reminderCount ?? diary?.reminder_count ?? 3
-	form.reminderDelay = source?.reminderDelay ?? diary?.reminder_delay ?? 2700
-	form.reminderSignalFirst = source?.reminderSignalFirst ?? diary?.reminder_signal_first ?? ''
-	form.reminderSignalRepeat = source?.reminderSignalRepeat ?? diary?.reminder_signal_repeat ?? ''
+watch(() => [diary.value, initialDraft.value, isCreating.value, shares.value] as const, ([currentDiary, draft, creating]) => {
+	const source = creating && draft ? draft : null
+	form.title = source?.title ?? currentDiary?.title ?? ''
+	form.description = source?.description ?? currentDiary?.description ?? ''
+	form.ownerUserId = source?.ownerUserId ?? currentDiary?.user_id ?? ''
+	form.entryScheduleDays = source?.entrySchedule ? scheduleSecondsToDays(source.entrySchedule) : currentDiary ? scheduleSecondsToDays(currentDiary.entry_schedule) : 1
+	form.reminderActive = source?.reminderActive ?? currentDiary?.reminder_active ?? false
+	form.reminderTime = secondsToDayTime(source?.reminderTime ?? currentDiary?.reminder_time ?? 9 * 3600)
+	form.reminderCount = source?.reminderCount ?? currentDiary?.reminder_count ?? 3
+	form.reminderDelay = source?.reminderDelay ?? currentDiary?.reminder_delay ?? 2700
+	form.reminderSignalFirst = source?.reminderSignalFirst ?? currentDiary?.reminder_signal_first ?? ''
+	form.reminderSignalRepeat = source?.reminderSignalRepeat ?? currentDiary?.reminder_signal_repeat ?? ''
 	owner.value = form.ownerUserId === '' ? null : fromUserId(form.ownerUserId)
 	readers.value = shareUsers(1)
 	writers.value = shareUsers(3)
@@ -202,6 +190,12 @@ watch(() => [props.diary, props.initialDraft, props.isCreating, props.shares] as
 	])
 }, { immediate: true })
 
+watch(() => route.name, (routeName) => {
+	if (routeName !== 'diaryCreate') {
+		copiedDiaryPayload.value = null
+	}
+})
+
 watch([writers, managers], () => {
 	ensureReadersIncludeElevated()
 }, { deep: true })
@@ -212,24 +206,54 @@ watch(() => form.entryScheduleDays, (days) => {
 	}
 })
 
-function submit(): void {
-	emit('save', {
+async function submit(): Promise<void> {
+	const currentDiary = diary.value
+	const savePayload: DiaryEditSubmitPayload = {
+		diaryId: isCreating.value ? null : currentDiary?.id ?? null,
 		diary: currentDraft(),
 		shares: sharePayload.value,
+		questions: copiedDiaryPayload.value?.questions ?? null,
+	}
+
+	const savedDiary = await store.saveDiary(savePayload)
+	await router.push({
+		name: 'diary',
+		params: { diaryId: savedDiary.id },
+		query: store.routeQueryFor('diary'),
 	})
 }
 
-function duplicate(): void {
-	const draft = currentDraft()
-	draft.ownerUserId = ''
-	emit('duplicate', draft)
+async function duplicate(): Promise<void> {
+	if (diary.value === null) {
+		return
+	}
+
+	copiedDiaryPayload.value = await store.copyDiary(diary.value.id)
 }
 
 function confirmDelete(): void {
-	const countLabel = props.entryCount === null ? 'an unknown number of entries' : `${props.entryCount} entries`
+	const countLabel = entryCount.value === null ? 'an unknown number of entries' : `${entryCount.value} entries`
 	if (window.confirm(`Delete this diary with ${countLabel}?`)) {
-		emit('delete')
+		void deleteDiary()
 	}
+}
+
+async function cancelEdit(): Promise<void> {
+	if (isCreating.value) {
+		await store.cancelCreateDiary()
+		return
+	}
+	if (diary.value !== null) {
+		await router.push({
+			name: 'diary',
+			params: { diaryId: diary.value.id },
+			query: store.routeQueryFor('diary'),
+		})
+	}
+}
+
+async function deleteDiary(): Promise<void> {
+	await store.deleteDiary(diary.value?.id ?? null)
 }
 </script>
 
@@ -286,7 +310,7 @@ function confirmDelete(): void {
 		</section>
 
 		<section :class="$style.card">
-			<h2 :class="$style.heading">{{ props.isCreating ? 'Create diary' : 'Edit diary' }}</h2>
+			<h2 :class="$style.heading">{{ isCreating ? 'Create diary' : 'Edit diary' }}</h2>
 
 			<div :class="$style.field">
 				<NcTextField
@@ -316,7 +340,7 @@ function confirmDelete(): void {
 					:loading="loadingUsers"
 					input-label="Owner"
 					placeholder="Select owner"
-					:disabled="!props.canChangeOwner"
+					:disabled="!canChangeOwner"
 					:label-outside="true"
 					@search="searchUsers"
 					@update:model-value="owner = Array.isArray($event) ? ($event[0] ?? null) : $event" />
@@ -391,7 +415,7 @@ function confirmDelete(): void {
 			<div :class="$style.footer">
 				<div>
 					<NcButton
-						v-if="!props.isCreating && props.diary"
+						v-if="!isCreating && diary"
 						variant="error"
 						@click="confirmDelete()">
 						{{ deleteLabel }}
@@ -400,18 +424,18 @@ function confirmDelete(): void {
 
 				<div :class="$style.actions">
 					<NcButton
-						v-if="!props.isCreating && props.diary"
+						v-if="!isCreating && diary"
 						variant="secondary"
 						@click="duplicate()">
 						Copy diary
 					</NcButton>
 					<NcButton
 						variant="secondary"
-						@click="emit('cancel')">
+						@click="cancelEdit()">
 						Cancel
 					</NcButton>
 					<NcButton @click="submit()">
-						{{ props.isCreating ? 'Create diary' : 'Save diary' }}
+						{{ isCreating ? 'Create diary' : 'Save diary' }}
 					</NcButton>
 				</div>
 			</div>

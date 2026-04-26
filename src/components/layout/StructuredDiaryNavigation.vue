@@ -5,7 +5,7 @@ import NcAppNavigationSearch from '@nextcloud/vue/components/NcAppNavigationSear
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import { mdiCogOutline, mdiShareVariantOutline } from '@mdi/js'
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import { isManagementRoute } from '@/services/workspaceRoute'
 import type { Diary, DiaryGroupSet } from '@/types/types'
@@ -18,8 +18,9 @@ const labels: Record<keyof DiaryGroupSet, string> = {
 }
 
 const store = useStructuredDiaryStore()
+const route = useRoute()
 const router = useRouter()
-const inManagement = computed(() => isManagementRoute(String(router.currentRoute.value.name ?? 'entries')))
+const inManagement = computed(() => isManagementRoute(String(route.name ?? 'diaries')))
 
 const visibleGroupEntries = computed(() =>
 	Object.entries(store.diaryGroups).filter(([, items]) => items.length > 0) as Array<[keyof DiaryGroupSet, Diary[]]>)
@@ -33,22 +34,28 @@ function diaryIcon(): string {
 }
 
 function selectDiary(diary: Diary): void {
-	store.setSelectedDiary(diary.id)
-	void router.push({ name: 'entriesIndex', params: { diaryId: diary.id } })
+	store.selectedDiaryId = diary.id
 }
 
 function openManagement(): void {
 	if (inManagement.value) {
 		if (store.selectedDiaryId !== null) {
-			void router.push({ name: 'entriesIndex', params: { diaryId: store.selectedDiaryId } })
+			void router.push({
+				name: 'entries',
+				params: { diaryId: store.selectedDiaryId },
+				query: store.routeQueryFor('entries'),
+			})
 		}
 		return
 	}
 
-	if (store.selectedDiaryId === null && store.diaries.length > 0) {
-		store.setSelectedDiary(store.diaries[0].id)
+	if (store.selectedDiaryId === null) {
+		const firstDiary = Object.values(store.diaries)[0]
+		if (firstDiary) {
+			store.selectedDiaryId = firstDiary.id
+		}
 	}
-	void router.push({ name: 'diaries' })
+	void router.push({ name: 'diaries', query: store.routeQueryFor('diaries') })
 }
 </script>
 

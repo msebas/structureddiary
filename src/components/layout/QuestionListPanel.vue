@@ -1,75 +1,70 @@
 <script setup lang="ts">
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
+import { ref } from 'vue'
+import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import type { Question } from '@/types/types'
 import { formatDateTime } from '@/utils/format'
 
-const props = defineProps<{
-	questions: Question[]
-	selectedQuestionId: number | null
-	versionMap: Record<number, Question[]>
-	expandedQuestionId: number | null
-	search: string
-}>()
-
-const emit = defineEmits<{
-	(event: 'update:search', value: string): void
-	(event: 'create'): void
-	(event: 'select', question: Question): void
-	(event: 'toggleVersions', question: Question): void
-}>()
+const store = useStructuredDiaryStore()
+const expandedQuestionId = ref<number | null>(null)
 
 function hasMultipleVersions(question: Question): boolean {
-	const versions = props.versionMap[question.id] ?? []
+	const versions = store.questionVersionMap[question.id] ?? []
 	return versions.length > 1 || question.previous_version_id !== null || question.next_version_id !== null
+}
+
+async function toggleVersions(question: Question): Promise<void> {
+	expandedQuestionId.value = expandedQuestionId.value === question.id ? null : question.id
+	await store.loadQuestionVersions(question.id)
 }
 </script>
 
 <template>
 	<aside :class="$style.panel">
 		<div :class="$style.actions">
-			<NcButton @click="emit('create')">
+			<NcButton @click="store.startCreatingQuestion(null, store.selectedDiaryId)">
 				New question
 			</NcButton>
 		</div>
 
 		<NcTextField
-			:model-value="props.search"
+			:model-value="store.questionSearch"
 			type="search"
 			label="Search questions"
 			placeholder="Search questions"
-			@update:model-value="emit('update:search', String($event))" />
+			@update:model-value="store.questionSearch = String($event)" />
 
 		<div :class="$style.list">
 			<div
-				v-for="question in props.questions"
+				v-for="question in store.currentDiaryQuestions"
 				:key="question.id"
 				:class="$style.questionWrap">
-				<div :class="[$style.item, question.id === props.selectedQuestionId && $style.itemActive]">
+				<div :class="[$style.item, question.id === store.selectedQuestionId && $style.itemActive]">
 					<span>{{ question.label }}</span>
 					<NcButton
 						v-if="hasMultipleVersions(question)"
 						variant="tertiary"
 						size="small"
-						@click.stop="emit('toggleVersions', question)">
+						@click.stop="toggleVersions(question)">
 						Versions
 					</NcButton>
 				</div>
 				<NcButton
 					variant="secondary"
 					:class="$style.selectButton"
-					@click="emit('select', question)">
+					@click="store.selectedQuestionId = question.id">
 					Open question
 				</NcButton>
 				<div
-					v-if="props.expandedQuestionId === question.id && props.versionMap[question.id]?.length"
+					v-if="expandedQuestionId === question.id && store.questionVersionMap[question.id]?.length"
 					:class="$style.versionList">
 					<button
-						v-for="version in props.versionMap[question.id]"
+						v-for="version in store.questionVersionMap[question.id]"
 						:key="version.id"
 						type="button"
 						:class="$style.versionItem"
-						@click="emit('select', version)">
+						@click="store.selectedQuestionId = version.id">
 						<div>{{ formatDateTime(version.created_at) }}</div>
 						<div v-if="version.label !== question.label" :class="$style.versionLabel">
 							{{ version.label }}

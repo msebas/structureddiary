@@ -24,7 +24,7 @@ function routerBase(): string {
 export const router = createRouter({
     history: createWebHistory(routerBase()),
     routes: [
-        {path: '/', redirect: {name: 'diaries'}},
+        {path: '/', redirect: (to) => ({name: 'diaries', query: to.query})},
         {
             path: '/entries/:diaryId(\\d+)', name: 'entries', components: {
                 default: EntryDetailView,

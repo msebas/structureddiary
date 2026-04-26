@@ -3,46 +3,22 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import { mdiPlus } from '@mdi/js'
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 
-const route = useRoute()
-const router = useRouter()
 const store = useStructuredDiaryStore()
-
-const diaryId = computed(() => toRouteNumber(route.params.diaryId))
-const entryId = computed(() => toRouteNumber(route.params.entryId))
-
-const diary = computed(() =>
-	diaryId.value === null ? store.selectedDiary : store.diaries.find((item) => item.id === diaryId.value) ?? null)
-const entry = computed(() =>
-	diaryId.value === null || entryId.value === null
-		? null
-		: (store.entriesByDiary[diaryId.value] ?? []).find((item) => item.id === entryId.value) ?? null)
-
-
-
-function toRouteNumber(value: unknown): number | null {
-	if (typeof value !== 'string' || value.trim() === '') {
-		return null
-	}
-
-	const parsed = Number.parseInt(value, 10)
-	return Number.isFinite(parsed) ? parsed : null
-}
+const diary = computed(() => store.selectedDiary)
+const entry = computed(() => store.selectedEntry)
 
 async function createEntry(): Promise<void> {
-	store.startCreatingEntry()
-	await router.push({ name: 'entryCreate' })
+	await store.startCreatingEntry(store.selectedDiaryId)
 }
 
 async function editEntry(): Promise<void> {
-	if (diaryId.value === null || entryId.value === null) {
+	if (store.selectedEntryId === null || store.selectedDiaryId === null) {
 		return
 	}
 
-	store.startEditingEntry()
-	await router.push({ name: 'entryEdit', params: { diaryId: diaryId.value, entryId: entryId.value } })
+	await store.startEditingEntry(store.selectedEntryId, store.selectedDiaryId)
 }
 </script>
 
