@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import EntryEditorForm from '@/components/entries/EntryEditorForm.vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import type { Answer } from '@/types/types'
 
 const store = useStructuredDiaryStore()
 const route = useRoute()
-const router = useRouter()
 
 const entry = computed(() => store.creatingEntry ? null : store.selectedEntry)
 const questions = computed(() => store.creatingEntry ? store.currentDiaryQuestions : store.currentEntryQuestions)
@@ -33,18 +32,16 @@ async function cancelEntryEdit(): Promise<void> {
 	}
 
 	if (route.name === 'entryEdit' && store.selectedEntryId !== null) {
-		await router.push({
+		await store.pushWorkspaceRoute({
 			name: 'entry',
 			params: { diaryId: store.selectedDiaryId, entryId: store.selectedEntryId },
-			query: store.routeQueryFor('entry'),
 		})
 		return
 	}
 
-	await router.push({
+	await store.pushWorkspaceRoute({
 		name: 'entries',
 		params: { diaryId: store.selectedDiaryId },
-		query: store.routeQueryFor('entries'),
 	})
 }
 </script>

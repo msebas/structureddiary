@@ -1,3 +1,5 @@
+import { generateOcsUrl } from '@nextcloud/router'
+import { getCurrentUser } from '@nextcloud/auth'
 import type {
 	Answer,
 	AnswerCreatePayload,
@@ -31,19 +33,10 @@ interface ApiErrorPayload {
 }
 
 function apiPath(path: string): string {
-	if (window.OC?.generateUrl) {
-		return window.OC.generateUrl(`/apps/structureddiary${path}`)
+	while (path.startsWith('/')) {
+		path = path.substring(1)
 	}
-
-	return `/apps/structureddiary${path}`
-}
-
-function ocsPath(path: string): string {
-	if (window.OC?.generateUrl) {
-		return window.OC.generateUrl(path)
-	}
-
-	return path
+	return `/ocs/v2.php/apps/structureddiary/api/v1/${path}`
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -51,6 +44,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
+			'OCS-APIRequest': 'true',
 			...(init?.headers ?? {}),
 		},
 		credentials: 'same-origin',
@@ -77,7 +71,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 async function ocsRequest<T>(path: string, init?: RequestInit): Promise<T> {
-	const response = await fetch(ocsPath(path), {
+	const response = await fetch(generateOcsUrl(path), {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -109,177 +103,193 @@ function withQuery(path: string, params: Record<string, string | number | null |
 
 export const diaryService = {
 	list(): Promise<Diary[]> {
-		return request('/api/v1/diaries')
+		return request('diaries')
 	},
 	get(id: number): Promise<Diary> {
-		return request(`/api/v1/diaries/${id}`)
+		return request(`diaries/${id}`)
 	},
 	create(payload: DiaryCreatePayload): Promise<Diary> {
-		return request('/api/v1/diaries', {
+		return request('diaries', {
 			method: 'POST',
 			body: JSON.stringify(payload),
 		})
 	},
 	update(id: number, payload: DiaryUpdatePayload): Promise<Diary> {
-		return request(`/api/v1/diaries/${id}`, {
+		return request(`diaries/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(payload),
 		})
 	},
 	remove(id: number): Promise<Diary> {
-		return request(`/api/v1/diaries/${id}`, { method: 'DELETE' })
+		return request(`diaries/${id}`, { method: 'DELETE' })
 	},
 	diary_shares(id: number): Promise<DiaryShare[]> {
-		return request(`/api/v1/diaries/${id}/shares`)
+		return request(`diaries/${id}/shares`)
 	},
 	shares(): Promise<DiaryShare[]> {
-		return request(`/api/v1/diary-shares`)
+		return request(`diary-shares`)
 	},
 	createShare(id: number, sharedWith: string, permission: number): Promise<DiaryShare> {
-		return request(`/api/v1/diaries/${id}/shares`, {
+		return request(`diaries/${id}/shares`, {
 			method: 'POST',
 			body: JSON.stringify({ sharedWith, permission }),
 		})
 	},
 	updateShare(id: number, shareId: number, permission: number): Promise<DiaryShare> {
-		return request(`/api/v1/diaries/${id}/shares/${shareId}`, {
+		return request(`diaries/${id}/shares/${shareId}`, {
 			method: 'PUT',
 			body: JSON.stringify({ permission }),
 		})
 	},
 	deleteShare(id: number, shareId: number): Promise<DiaryShare> {
-		return request(`/api/v1/diaries/${id}/shares/${shareId}`, { method: 'DELETE' })
+		return request(`diaries/${id}/shares/${shareId}`, { method: 'DELETE' })
 	},
 	stats(id: number): Promise<DiaryStats> {
-		return request(`/api/v1/diaries/${id}/stats`)
+		return request(`diaries/${id}/stats`)
 	},
 }
 
-interface OcsAutocompleteEntry {
-	id?: string
+interface ShareeEntry {
 	label?: string
-	displayName?: string
-	subline?: string
 	shareWithDisplayNameUnique?: string
+	value?: {
+		shareWith?: string
+	}
+}
+
+interface ShareesResponse {
+	exact?: {
+		users?: ShareeEntry[]
+	}
+	users?: ShareeEntry[]
 }
 
 export const userService = {
 	async search(search: string): Promise<SelectOption<string>[]> {
 		const query = search.trim()
-		if (query === '') {
-			return []
-		}
-
 		const params = new URLSearchParams()
 		params.set('search', query)
-		params.set('itemType', ' ')
-		params.set('itemId', ' ')
-		params.set('limit', '20')
-		params.append('shareTypes[]', '0')
+		params.set('format', 'json')
+		params.set('perPage', '20')
+		params.set('itemType', '0,1,4,7')
+		params.set('lookup', 'false')
 
-		const raw = await ocsRequest<OcsAutocompleteEntry[]>(`/ocs/v2.php/core/autocomplete/get?${params.toString()}`)
+		const raw = await ocsRequest<ShareesResponse>(`/apps/files_sharing/api/v1/sharees?${params.toString()}`)
 		const seen = new Set<string>()
+		const currentUserId = getCurrentUser()?.uid ?? null
+		const normalizedQuery = query.toLocaleLowerCase()
+		const currentUserMatches = currentUserId !== null
+			&& (normalizedQuery === '' || currentUserId.toLocaleLowerCase().includes(normalizedQuery))
+		const entries = [...(raw.exact?.users ?? []), ...(raw.users ?? [])]
+		const options: SelectOption<string>[] = []
 
-		return raw
-			.map((entry) => {
-				const value = entry.id ?? ''
-				const label = entry.displayName ?? entry.label ?? value
-				const suffix = entry.subline ?? entry.shareWithDisplayNameUnique
-				return {
-					value,
-					label: suffix && suffix !== label ? `${label} (${suffix})` : label,
-				}
+		if (currentUserMatches) {
+			seen.add(currentUserId)
+			options.push({
+				value: currentUserId,
+				label: currentUserId,
 			})
-			.filter((entry) => {
-				if (entry.value === '' || seen.has(entry.value)) {
-					return false
-				}
-				seen.add(entry.value)
-				return true
+		}
+
+		for (const entry of entries) {
+			const value = entry.value?.shareWith ?? ''
+			if (value === '' || seen.has(value)) {
+				continue
+			}
+
+			seen.add(value)
+			const label = entry.label ?? value
+			const suffix = entry.shareWithDisplayNameUnique
+			options.push({
+				value,
+				label: suffix && suffix !== label ? `${label} (${suffix})` : label,
 			})
+		}
+
+		return options
 	},
 }
 
 export const entryService = {
 	list(diaryId: number, fromTimestamp?: number | null, untilTimestamp?: number | null): Promise<Entry[]> {
-		return request(withQuery(`/api/v1/diaries/${diaryId}/entries`, { fromTimestamp, untilTimestamp }))
+		return request(withQuery(`diaries/${diaryId}/entries`, { fromTimestamp, untilTimestamp }))
 	},
 	get(id: number): Promise<Entry> {
-		return request(`/api/v1/entries/${id}`)
+		return request(`entries/${id}`)
 	},
 	create(diaryId: number, payload: EntryCreatePayload): Promise<Entry> {
-		return request(`/api/v1/diaries/${diaryId}/entries`, {
+		return request(`diaries/${diaryId}/entries`, {
 			method: 'POST',
 			body: JSON.stringify(payload),
 		})
 	},
 	update(id: number, payload: EntryUpdatePayload): Promise<Entry> {
-		return request(`/api/v1/entries/${id}`, {
+		return request(`entries/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(payload),
 		})
 	},
 	remove(id: number): Promise<Entry> {
-		return request(`/api/v1/entries/${id}`, { method: 'DELETE' })
+		return request(`entries/${id}`, { method: 'DELETE' })
 	},
 }
 
 export const questionService = {
 	list(diaryId: number): Promise<Question[]> {
-		return request(`/api/v1/diaries/${diaryId}/questions`)
+		return request(`diaries/${diaryId}/questions`)
 	},
 	listActive(diaryId: number, timestamp: number): Promise<Question[]> {
-		return request(withQuery(`/api/v1/diaries/${diaryId}/questions/active`, { timestamp }))
+		return request(withQuery(`diaries/${diaryId}/questions/active`, { timestamp }))
 	},
 	get(id: number): Promise<Question> {
-		return request(`/api/v1/questions/${id}`)
+		return request(`questions/${id}`)
 	},
 	versions(id: number): Promise<Question[]> {
-		return request(`/api/v1/questions/${id}/versions`)
+		return request(`questions/${id}/versions`)
 	},
 	create(diaryId: number, payload: QuestionCreatePayload): Promise<Question> {
-		return request(`/api/v1/diaries/${diaryId}/questions`, {
+		return request(`diaries/${diaryId}/questions`, {
 			method: 'POST',
 			body: JSON.stringify(payload),
 		})
 	},
 	update(id: number, payload: QuestionUpdatePayload): Promise<Question> {
-		return request(`/api/v1/questions/${id}`, {
+		return request(`questions/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(payload),
 		})
 	},
 	remove(id: number): Promise<Question> {
-		return request(`/api/v1/questions/${id}`, { method: 'DELETE' })
+		return request(`questions/${id}`, { method: 'DELETE' })
 	},
 	types(): Promise<QuestionTypeDefinition[]> {
-		return request('/api/v1/question-types')
+		return request('question-types')
 	},
 }
 
 export const answerService = {
 	list(entryId: number): Promise<Answer[]> {
-		return request(`/api/v1/entries/${entryId}/answers`)
+		return request(`entries/${entryId}/answers`)
 	},
 	get(id: number): Promise<Answer> {
-		return request(`/api/v1/answers/${id}`)
+		return request(`answers/${id}`)
 	},
 	history(entryId: number, questionId: number): Promise<Answer[]> {
-		return request(`/api/v1/entries/${entryId}/questions/${questionId}/answers/history`)
+		return request(`entries/${entryId}/questions/${questionId}/answers/history`)
 	},
 	create(entryId: number, payload: AnswerCreatePayload): Promise<Answer> {
-		return request(`/api/v1/entries/${entryId}/answers`, {
+		return request(`entries/${entryId}/answers`, {
 			method: 'POST',
 			body: JSON.stringify(payload),
 		})
 	},
 	update(id: number, payload: AnswerUpdatePayload): Promise<Answer> {
-		return request(`/api/v1/answers/${id}`, {
+		return request(`answers/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(payload),
 		})
 	},
 	remove(id: number): Promise<Answer> {
-		return request(`/api/v1/answers/${id}`, { method: 'DELETE' })
+		return request(`answers/${id}`, { method: 'DELETE' })
 	},
 }

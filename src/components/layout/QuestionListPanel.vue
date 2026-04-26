@@ -23,7 +23,7 @@ async function toggleVersions(question: Question): Promise<void> {
 <template>
 	<aside :class="$style.panel">
 		<div :class="$style.actions">
-			<NcButton @click="store.startCreatingQuestion(null, store.selectedDiaryId)">
+			<NcButton @click="store.startCreatingQuestion(null, store.selectedDiaryId)" :disabled="store.selectedDiaryId === null">
 				New question
 			</NcButton>
 		</div>

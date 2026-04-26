@@ -3,6 +3,9 @@ import vue from '@vitejs/plugin-vue'
 import {nodePolyfills} from 'vite-plugin-node-polyfills'
 import {resolve} from 'path';
 
+const APP_NAME = 'structureddiary'
+const APP_VERSION = '1.0.0'
+
 export default createAppConfig({
 		// entry points: {name: script}
 		settings: 'src/settings.ts',
@@ -14,6 +17,10 @@ export default createAppConfig({
 				alias: {
 					'@': resolve(__dirname, './src'),
 				},
+			},
+			define: {
+				appName: JSON.stringify(APP_NAME),
+				appVersion: JSON.stringify(APP_VERSION),
 			},
 			plugins: [
 				//vue(),

@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import QuestionEditorForm from '@/components/questions/QuestionEditorForm.vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import type { QuestionCreatePayload, QuestionUpdatePayload } from '@/types/types'
 
 const store = useStructuredDiaryStore()
 const route = useRoute()
-const router = useRouter()
 
 async function saveQuestion(payload: QuestionUpdatePayload): Promise<void> {
 	if (store.creatingQuestion) {
@@ -40,18 +39,16 @@ async function cancelQuestionEdit(): Promise<void> {
 	}
 
 	if (route.name === 'questionEdit' && store.selectedQuestion !== null) {
-		await router.push({
+		await store.pushWorkspaceRoute({
 			name: 'question',
 			params: { diaryId: store.selectedDiaryId, questionId: store.selectedQuestion.id },
-			query: store.routeQueryFor('question'),
 		})
 		return
 	}
 
-	await router.push({
+	await store.pushWorkspaceRoute({
 		name: 'questions',
 		params: { diaryId: store.selectedDiaryId },
-		query: store.routeQueryFor('questions'),
 	})
 }
 </script>

@@ -8,7 +8,7 @@ import type { NcSelectUsersModel } from '@nextcloud/vue/components/NcSelectUsers
 import NcTextArea from '@nextcloud/vue/components/NcTextArea'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import { computed, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { userService } from '@/services'
 import { type DiaryEditSubmitPayload, type DiaryShareInput, useStructuredDiaryStore } from '@/stores/structuredDiary'
 import type { DiaryUpdatePayload, SelectOption } from '@/types/types'
@@ -25,7 +25,6 @@ const signalSuggestions = [
 
 const store = useStructuredDiaryStore()
 const route = useRoute()
-const router = useRouter()
 const copiedDiaryPayload = ref<DiaryEditSubmitPayload | null>(null)
 
 const diary = computed(() => store.selectedDiary)
@@ -216,10 +215,9 @@ async function submit(): Promise<void> {
 	}
 
 	const savedDiary = await store.saveDiary(savePayload)
-	await router.push({
+	await store.pushWorkspaceRoute({
 		name: 'diary',
 		params: { diaryId: savedDiary.id },
-		query: store.routeQueryFor('diary'),
 	})
 }
 
@@ -244,10 +242,9 @@ async function cancelEdit(): Promise<void> {
 		return
 	}
 	if (diary.value !== null) {
-		await router.push({
+		await store.pushWorkspaceRoute({
 			name: 'diary',
 			params: { diaryId: diary.value.id },
-			query: store.routeQueryFor('diary'),
 		})
 	}
 }

@@ -31,7 +31,7 @@ class PageController extends Controller {
 	#[NoCSRFRequired]
 	#[NoAdminRequired]
 	#[OpenAPI(OpenAPI::SCOPE_IGNORE)]
-	#[FrontpageRoute(verb: 'GET', url: '/')]
+	#[FrontpageRoute(verb: 'GET', url: '/{path}', requirements: ['path' => '.*'], defaults: ['path' => ''])]
 	public function index(): TemplateResponse {
         $response = new TemplateResponse(Application::APP_ID, 'index');
         $devServerConfig = $this->config->getSystemValue('dev_server', []);

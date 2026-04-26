@@ -56,6 +56,38 @@ function cloneQuestionAsCreatePayload(question: Question): DuplicatedQuestionPay
     }
 }
 
+function normalizeDiaryShareInputs(
+    shares: DiaryShareInput[] | null | undefined,
+    ownerUserId: string,
+    currentUserId: string | null,
+): DiaryShareInput[] | null {
+    if (shares == null) {
+        return shares ?? null
+    }
+
+    const byUser = new Map<string, DiaryShareInput>()
+    for (const share of shares) {
+        if (share.sharedWith.trim() === '' || share.sharedWith === ownerUserId) {
+            continue
+        }
+
+        byUser.set(share.sharedWith, {
+            sharedWith: share.sharedWith,
+            permission: share.permission,
+        })
+    }
+
+    if (currentUserId !== null && currentUserId !== ownerUserId) {
+        const existing = byUser.get(currentUserId)
+        byUser.set(currentUserId, {
+            sharedWith: currentUserId,
+            permission: (existing?.permission ?? 0) | Permissions.READ | Permissions.MANAGE,
+        })
+    }
+
+    return Array.from(byUser.values())
+}
+
 
 function toRouteNumber(value: unknown): number | null {
     if (typeof value !== 'string' || value.trim() === '') {
@@ -91,6 +123,8 @@ type DiaryError = {
     timestamp: number
 }
 
+type WorkspaceRouteQuery = Record<string, string>
+
 export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const route = useRoute()
     const router = useRouter()
@@ -121,12 +155,68 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const cachedEntryUntilTimestamp = ref<number | null>(null)
 
 
-    async function setRouteParam(param:string, value:number|string|null) {
-            const query = {...route.query, [param]: value}
-            if (query[param] == '' || query[param] == null)
-                delete query[param]
-            await router.replace({name: route.name, params: route.params, query: query, hash: route.hash,})
+    function supportsRouteQueryParam(routeName: unknown, param: string): boolean {
+        if (param === 'diarySearch') {
+            return isDiaryRoute(routeName)
+        }
+        if (param === 'questionSearch') {
+            return isQuestionRoute(routeName)
+        }
+        if (param === 'from' || param === 'until') {
+            return isEntryRoute(routeName)
+        }
+        return false
+    }
 
+    function workspaceQueryForRoute(routeName: unknown): WorkspaceRouteQuery {
+        const query: WorkspaceRouteQuery = {}
+        const diarySearchValue = toRouteString(route.query.diarySearch) ?? cachedDiarySearch.value
+        const questionSearchValue = toRouteString(route.query.questionSearch) ?? cachedQuestionSearch.value
+        const entryFromValue = toRouteTimestamp(route.query.from) ?? cachedEntryFromTimestamp.value
+        const entryUntilValue = toRouteTimestamp(route.query.until) ?? cachedEntryUntilTimestamp.value
+
+        if (isDiaryRoute(routeName) && diarySearchValue.trim() !== '') {
+            query.diarySearch = diarySearchValue
+        }
+        if (isQuestionRoute(routeName) && questionSearchValue.trim() !== '') {
+            query.questionSearch = questionSearchValue
+        }
+        if (isEntryRoute(routeName)) {
+            if (entryFromValue !== null) {
+                query.from = String(entryFromValue)
+            }
+            if (entryUntilValue !== null) {
+                query.until = String(entryUntilValue)
+            }
+        }
+
+        return query
+    }
+
+    async function setRouteParam(param: string, value: number | string | null): Promise<void> {
+        if (!supportsRouteQueryParam(route.name, param) || typeof route.name !== 'string') {
+            return
+        }
+
+        const query = workspaceQueryForRoute(route.name)
+        if (value !== '' && value != null) {
+            query[param] = String(value)
+        }
+
+        if (String(route.query[param] ?? '') === String(query[param] ?? '')) {
+            const currentQueryKeys = Object.keys(route.query).sort().join(',')
+            const nextQueryKeys = Object.keys(query).sort().join(',')
+            if (currentQueryKeys === nextQueryKeys) {
+                return
+            }
+        }
+
+        await router.replace({
+            name: route.name,
+            params: route.params,
+            query,
+            hash: route.hash,
+        })
     }
 
     const diarySearch = computed({
@@ -183,7 +273,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     }): Promise<void> {
         await router.push({
             ...location,
-            query: {...route.query},
+            query: workspaceQueryForRoute(location.name),
         })
     }
 
@@ -326,7 +416,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const diaryGroups = computed(() => {
         const normalizedSearch = diarySearch.value.trim().toLocaleLowerCase()
         const user = getCurrentUser()?.uid ?? ""
-        const visible = Object.values(diaries).filter((diary: Diary) => {
+        const visible = Object.values(diaries.value).filter((diary: Diary) => {
             if (normalizedSearch === '') return true
             return diary.title.toLocaleLowerCase().includes(normalizedSearch)
                 || (diary.user_id != user && diary.user_id.toLocaleLowerCase().includes(normalizedSearch))
@@ -729,11 +819,13 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
         if (payload.shares != null) {
             const ownerUserId = payload.diary?.ownerUserId?.trim() ?? ''
+            const currentUserId = getCurrentUser()?.uid ?? null
+            const normalizedShares = normalizeDiaryShareInputs(payload.shares, ownerUserId, currentUserId)
 
             const newShares: Record<string, DiaryShare> = {}
             const promises = []
             const currentByUser = diaryShares.value[payload.diaryId] ?? {}
-            for (const item of payload.shares) {
+            for (const item of normalizedShares ?? []) {
                 const existing = currentByUser[item.sharedWith]
                 if (item.sharedWith == ownerUserId) continue
                 if (existing) {
@@ -749,7 +841,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             diaryShares.value[payload.diaryId] = newShares
             const del_promises = []
             for (const orphan of Object.values(currentByUser)) {
-                if (newShares[orphan.shared_with] == null) {
+                const protectCurrentUserShare = orphan.shared_with === currentUserId && currentUserId !== ownerUserId
+                if (!protectCurrentUserShare && newShares[orphan.shared_with] == null) {
                     del_promises.push(diaryService.deleteShare(savedDiary.id, orphan.id))
                 }
             }
@@ -850,6 +943,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         loadQuestionVersions,
         loadAnswerHistory,
         refreshSelectedDiaryWorkspace,
+        pushWorkspaceRoute,
         startCreatingDiary,
         editDiary,
         editDiaryShares,
