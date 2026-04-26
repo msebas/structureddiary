@@ -4,7 +4,9 @@ export type WorkspaceRouteName =
 	| 'entryCreate'
 	| 'entryEdit'
 	| 'diaries'
+	| 'diaryCreate'
 	| 'diaryEdit'
+	| 'diaryEditShare'
 	| 'questionsIndex'
 	| 'questions'
 	| 'questionCreate'
@@ -12,7 +14,9 @@ export type WorkspaceRouteName =
 
 export function isManagementRoute(routeName: string | null | undefined): boolean {
 	return routeName === 'diaries'
+		|| routeName === 'diaryCreate'
 		|| routeName === 'diaryEdit'
+		|| routeName === 'diaryEditShare'
 		|| routeName === 'questionsIndex'
 		|| routeName === 'questions'
 		|| routeName === 'questionCreate'
@@ -28,8 +32,10 @@ export function mobileOverlayTitleForRoute(routeName: WorkspaceRouteName): strin
 		case 'entryEdit':
 			return 'Edit entry'
 		case 'diaries':
+		case 'diaryCreate':
 			return 'Diary'
 		case 'diaryEdit':
+		case 'diaryEditShare':
 			return 'Edit diary'
 		case 'questionsIndex':
 		case 'questions':

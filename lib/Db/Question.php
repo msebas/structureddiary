@@ -8,8 +8,12 @@ use JsonSerializable;
 use OCP\AppFramework\Db\Entity;
 
 /**
+ * @method int getChainId()
+ * @method void setChainId(int $chainId)
  * @method int getDiaryId()
  * @method void setDiaryId(int $diaryId)
+ * @method int getDiaryQuestionOrder()
+ * @method void setDiaryQuestionOrder(int $diaryQuestionOrder)
  * @method int getCreatedAt()
  * @method void setCreatedAt(int $createdAt)
  * @method string getLabel()
@@ -43,7 +47,9 @@ class Question extends Entity implements JsonSerializable {
 	public const TYPE_SELECT = QuestionTypes::SELECT;
 	public const TYPE_EDITABLE_SELECT = QuestionTypes::EDITABLE_SELECT;
 
+	protected $chainId;
 	protected $diaryId;
+	protected $diaryQuestionOrder;
 	protected $createdAt;
 	protected $label;
 	protected $displayText;
@@ -57,7 +63,9 @@ class Question extends Entity implements JsonSerializable {
 	protected $nextVersionId;
 
 	public function __construct() {
+		$this->addType('chainId', 'integer');
 		$this->addType('diaryId', 'integer');
+		$this->addType('diaryQuestionOrder', 'integer');
 		$this->addType('createdAt', 'integer');
 		$this->addType('label', 'string');
 		$this->addType('displayText', 'string');
@@ -91,7 +99,9 @@ class Question extends Entity implements JsonSerializable {
 	public function jsonSerialize() {
 		return [
 			'id' => $this->id,
+			'chain_id' => (int)$this->chainId,
 			'diary_id' => (int)$this->diaryId,
+			'diary_question_order' => (int)$this->diaryQuestionOrder,
 			'created_at' => (int)$this->createdAt,
 			'label' => $this->label,
 			'display_text' => $this->displayText,

@@ -11,7 +11,9 @@ final class QuestionTest extends TestCase {
 	public function testJsonSerializeReturnsExpectedPayload(): void {
 		$question = new Question();
 		$question->setId(11);
+		$question->setChainId(11);
 		$question->setDiaryId(42);
+		$question->setDiaryQuestionOrder(7);
 		$question->setCreatedAt(1713254400);
 		$question->setLabel('Mood');
 		$question->setDisplayText('How is your mood?');
@@ -26,7 +28,9 @@ final class QuestionTest extends TestCase {
 
 		$this->assertSame([
 			'id' => 11,
+			'chain_id' => 11,
 			'diary_id' => 42,
+			'diary_question_order' => 7,
 			'created_at' => 1713254400,
 			'label' => 'Mood',
 			'display_text' => 'How is your mood?',
@@ -61,7 +65,9 @@ final class QuestionTest extends TestCase {
 	public function testJsonSerializeKeepsNullChoicesAndVersions(): void {
 		$question = new Question();
 		$question->setId(11);
+		$question->setChainId(19);
 		$question->setDiaryId(42);
+		$question->setDiaryQuestionOrder(3);
 		$question->setCreatedAt(1713254400);
 		$question->setLabel('Mood');
 		$question->setDisplayText('Mood');
@@ -76,7 +82,9 @@ final class QuestionTest extends TestCase {
 
 		$this->assertSame([
 			'id' => 11,
+			'chain_id' => 19,
 			'diary_id' => 42,
+			'diary_question_order' => 3,
 			'created_at' => 1713254400,
 			'label' => 'Mood',
 			'display_text' => 'Mood',

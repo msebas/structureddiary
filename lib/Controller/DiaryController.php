@@ -37,6 +37,16 @@ class DiaryController extends ApiController {
 	}
 
 	#[NoAdminRequired]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diary-shares', requirements: self::REQUIREMENTS)]
+	public function myShares(): DataResponse {
+		try {
+			return $this->respond($this->shareMapper->getSharesForUser($this->requireUser($this->userId)));
+		} catch (Throwable $e) {
+			return $this->respondError($e->getMessage());
+		}
+	}
+
+	#[NoAdminRequired]
 	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{id}', requirements: self::REQUIREMENTS)]
 	public function show(int $id): DataResponse {
 		try {

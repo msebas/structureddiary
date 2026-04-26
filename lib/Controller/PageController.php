@@ -34,9 +34,10 @@ class PageController extends Controller {
 	#[FrontpageRoute(verb: 'GET', url: '/')]
 	public function index(): TemplateResponse {
         $response = new TemplateResponse(Application::APP_ID, 'index');
-        $dev_server = in_array('structureddiary', $this->config->getSystemValue('dev_server', []), true);
-        if (!$dev_server){
-            $dev_server = $this->config->getSystemValue('dev_server', [])['structureddiary'];
+        $devServerConfig = $this->config->getSystemValue('dev_server', []);
+        $dev_server = in_array('structureddiary', $devServerConfig, true);
+        if (!$dev_server && is_array($devServerConfig) && array_key_exists('structureddiary', $devServerConfig)) {
+            $dev_server = $devServerConfig['structureddiary'];
         }
         if ($dev_server) {
             $response->addHeader("Access-Control-Allow-Origin","*");

@@ -81,4 +81,22 @@ final class DiaryShareMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->assertSame('bob', $fetched->getSharedWith());
 		$this->assertSame(DiaryPermissions::READ | DiaryPermissions::WRITE, $fetched->getPermission());
 	}
+
+	public function testGetSharesForUserReturnsOnlySharesForThatUserSortedByDiaryId(): void {
+		$diaryA = $this->diaryMapper->createDiary('alice', 'Diary A', 'desc');
+		$diaryB = $this->diaryMapper->createDiary('alice', 'Diary B', 'desc');
+		$this->shareMapper->upsertShare($diaryB->getId(), 'bob', DiaryPermissions::READ | DiaryPermissions::WRITE);
+		$this->shareMapper->upsertShare($diaryA->getId(), 'charlie', DiaryPermissions::READ);
+		$this->shareMapper->upsertShare($diaryA->getId(), 'bob', DiaryPermissions::READ);
+
+		$shares = $this->shareMapper->getSharesForUser('bob');
+
+		$this->assertCount(2, $shares);
+		$this->assertSame([$diaryA->getId(), $diaryB->getId()], array_map(static fn ($share) => $share->getDiaryId(), $shares));
+		$this->assertSame(['bob', 'bob'], array_map(static fn ($share) => $share->getSharedWith(), $shares));
+		$this->assertSame(
+			[DiaryPermissions::READ, DiaryPermissions::READ | DiaryPermissions::WRITE],
+			array_map(static fn ($share) => $share->getPermission(), $shares)
+		);
+	}
 }

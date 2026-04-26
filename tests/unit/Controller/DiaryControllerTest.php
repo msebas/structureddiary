@@ -322,6 +322,35 @@ final class DiaryControllerTest extends TestCase {
 		$this->assertSame($diaries, $response->getData());
 	}
 
+	public function testMySharesRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$shareMapper = $this->createMock(DiaryShareMapper::class);
+
+		$shareMapper->expects($this->never())->method('getSharesForUser');
+
+		$controller = new DiaryController(Application::APP_ID, $request, $diaryMapper, $shareMapper, null);
+		$response = $controller->myShares();
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
+
+	public function testMySharesReturnsSharesForCurrentUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$shareMapper = $this->createMock(DiaryShareMapper::class);
+		$shareA = new DiaryShare();
+		$shareB = new DiaryShare();
+		$shareMapper->expects($this->once())->method('getSharesForUser')->with('alice')->willReturn([$shareA, $shareB]);
+
+		$controller = new DiaryController(Application::APP_ID, $request, $diaryMapper, $shareMapper, 'alice');
+		$response = $controller->myShares();
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame([$shareA, $shareB], $response->getData());
+	}
+
 	public function testCreateTrimsTitleAndReturnsCreatedDiary(): void {
 		$request = $this->createMock(IRequest::class);
 		$diaryMapper = $this->createMock(DiaryMapper::class);

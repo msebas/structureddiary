@@ -99,6 +99,9 @@ class AnswerMapper extends QBMapper {
 		if ($answer->getNextVersionId() !== null) {
 			throw new InvalidArgumentException('Only the current answer version can be changed.');
 		}
+		if ($this->answerPayloadMatches($answer, $textContent, $numericContent)) {
+			return $answer;
+		}
 
 		$newAnswer = new Answer();
 		$newAnswer->setDiaryId($answer->getDiaryId());
@@ -174,5 +177,10 @@ class AnswerMapper extends QBMapper {
 
 	protected function getCurrentTimestamp(): int {
 		return time();
+	}
+
+	private function answerPayloadMatches(Answer $answer, ?string $textContent, ?float $numericContent): bool {
+		return $answer->getTextContent() === $textContent
+			&& $answer->getNumericContent() === $numericContent;
 	}
 }

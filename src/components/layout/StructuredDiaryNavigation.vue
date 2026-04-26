@@ -34,12 +34,14 @@ function diaryIcon(): string {
 
 function selectDiary(diary: Diary): void {
 	store.setSelectedDiary(diary.id)
-	void router.push({ name: 'entriesIndex' })
+	void router.push({ name: 'entriesIndex', params: { diaryId: diary.id } })
 }
 
 function openManagement(): void {
 	if (inManagement.value) {
-		void router.push({ name: 'entriesIndex' })
+		if (store.selectedDiaryId !== null) {
+			void router.push({ name: 'entriesIndex', params: { diaryId: store.selectedDiaryId } })
+		}
 		return
 	}
 

@@ -49,7 +49,9 @@ export interface Entry {
 
 export interface Question {
     id: number
+    chain_id: number
     diary_id: number
+    diary_question_order: number
     created_at: number
     label: string
     display_text: string
@@ -121,7 +123,7 @@ export interface DiaryUpdatePayload {
     entrySchedule?: number
 }
 
-export interface DiaryCreatePayload extends Required<Omit<DiaryUpdatePayload, 'ownerUserId'>> {
+export interface DiaryCreatePayload extends Required<DiaryUpdatePayload> {
     title: string
     description: string
 }
@@ -137,17 +139,20 @@ export interface EntryUpdatePayload {
 }
 
 export interface QuestionCreatePayload {
-    label?: string | null
+    diaryId: number
+    label: string | null
     displayText?: string | null
-    type?: QuestionType
+    type: QuestionType
     minimum?: number | null
     maximum?: number | null
     choices?: string[] | null
-    active?: boolean
+    active: boolean
     templateText?: string
 }
 
 export interface QuestionUpdatePayload {
+    questionId: number
+    chainId: number
     label?: string | null
     displayText?: string | null
     type?: QuestionType | null
@@ -156,8 +161,8 @@ export interface QuestionUpdatePayload {
     choices?: string[] | null
     active?: boolean | null
     templateText?: string | null
+    diaryId?: undefined
 }
-
 export interface AnswerCreatePayload {
     questionId: number
     textContent?: string | null
@@ -180,4 +185,3 @@ export interface SelectOption<T = string> {
     label: string
     value: T
 }
-

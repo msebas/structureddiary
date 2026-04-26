@@ -280,6 +280,50 @@ final class DiaryMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->diaryMapper->getDiaryStats($diary->getId(), 'bob');
 	}
 
+	public function testGetDiaryStatsForEmptyDiaryReturnsZeroAndNullDefaults(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+
+		$stats = $this->diaryMapper->getDiaryStats($diary->getId(), 'alice');
+
+		$this->assertSame(0, $stats['question_count']);
+		$this->assertSame(0, $stats['entry_count']);
+		$this->assertSame(0, $stats['answer_count']);
+		$this->assertSame(0.0, $stats['average_answer_count']);
+		$this->assertNull($stats['first_entry_at']);
+		$this->assertNull($stats['latest_entry_at']);
+		$this->assertNull($stats['latest_answer_at']);
+		$this->assertNull($stats['last_large_gap']);
+		$this->assertNull($stats['longest_gap']);
+		$this->assertNull($stats['average_entry_duration']);
+		$this->assertNull($stats['average_entry_duration_last_month']);
+	}
+
+	public function testGetDiaryStatsReportsLargeGapInformation(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc', false, 0, 3, 2700, '', '', 43200);
+		$this->entryMapper->createEntry($diary->getId(), 1000, 'one');
+		$this->entryMapper->createEntry($diary->getId(), 1000 + (11 * 43200), 'two');
+		$this->entryMapper->createEntry($diary->getId(), 1000 + (23 * 43200), 'three');
+
+		$stats = $this->diaryMapper->getDiaryStats($diary->getId(), 'alice');
+
+		$this->assertSame(2, $stats['gap_count_above_ten_target_intervals']);
+		$this->assertNotNull($stats['last_large_gap']);
+		$this->assertNotNull($stats['longest_gap']);
+		$this->assertSame(12 * 43200, $stats['last_large_gap']['duration']);
+		$this->assertSame(12 * 43200, $stats['longest_gap']['duration']);
+	}
+
+	public function testCreateDiaryAcceptsBoundaryReminderAndScheduleValues(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc', false, 86399, 0, 0, '', '', 43200);
+
+		$fetched = $this->diaryMapper->getDiary($diary->getId());
+
+		$this->assertSame(86399, $fetched->getReminderTime());
+		$this->assertSame(0, $fetched->getReminderCount());
+		$this->assertSame(0, $fetched->getReminderDelay());
+		$this->assertSame(43200, $fetched->getEntrySchedule());
+	}
+
 	public function testUpdateDiaryRejectsEmptyOwnerUserId(): void {
 		$created = $this->diaryMapper->createDiary('alice', 'Alice Diary', 'owned by alice');
 

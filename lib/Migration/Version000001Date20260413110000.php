@@ -57,7 +57,9 @@ class Version000001Date20260413110000 extends SimpleMigrationStep {
 		if (!$schema->hasTable(TableNames::QUESTIONS)) {
 			$table = $schema->createTable(TableNames::QUESTIONS);
 			$table->addColumn('id', Types::BIGINT, ['autoincrement' => true, 'notnull' => true]);
+            $table->addColumn('chain_id', Types::BIGINT, ['notnull' => true]);
 			$table->addColumn('diary_id', Types::BIGINT, ['notnull' => true]);
+            $table->addColumn('diary_question_order', Types::BIGINT, ['notnull' => true]);
 			$table->addColumn('created_at', Types::BIGINT, ['notnull' => true]);
 			$table->addColumn('label', Types::STRING, ['notnull' => true, 'length' => 255]);
 			$table->addColumn('display_text', Types::TEXT, ['notnull' => true]);
@@ -71,6 +73,7 @@ class Version000001Date20260413110000 extends SimpleMigrationStep {
 			$table->addColumn('next_version_id', Types::BIGINT, ['notnull' => false]);
 			$table->setPrimaryKey(['id']);
 			$table->addIndex(['diary_id'], 'sd_question_diary_idx');
+            $table->addIndex(['diary_question_order'], 'sd_question_diary_question_idx');
 			$table->addIndex(['next_version_id'], 'sd_question_next_idx');
 		}
 

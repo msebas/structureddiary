@@ -219,6 +219,24 @@ final class AnswerMapperTest extends TestCase {
 		$mapper->updateAnswer($answer, 'v2', 2.0);
 	}
 
+	public function testUpdateAnswerReturnsCurrentAnswerForNoOpUpdate(): void {
+		$answer = $this->createAnswerEntity(10, null, null, 'v1', 1.0);
+
+		$mapper = $this->getMockBuilder(AnswerMapper::class)
+			->setConstructorArgs([$this->db])
+			->onlyMethods(['insert', 'update', 'getCurrentTimestamp'])
+			->getMock();
+
+		$mapper->expects($this->never())->method('getCurrentTimestamp');
+		$mapper->expects($this->never())->method('insert');
+		$mapper->expects($this->never())->method('update');
+
+		$result = $mapper->updateAnswer($answer, 'v1', 1.0);
+
+		$this->assertSame($answer, $result);
+		$this->assertNull($answer->getNextVersionId());
+	}
+
 	public function testDeleteAnswerReconnectsNeighboursWhenDeletingMiddleVersion(): void {
 		$first = $this->createAnswerEntity(10, null, 11, 'v1', 1.0);
 		$middle = $this->createAnswerEntity(11, 10, 12, 'v2', 2.0);

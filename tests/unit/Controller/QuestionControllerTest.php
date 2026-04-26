@@ -411,4 +411,49 @@ final class QuestionControllerTest extends TestCase {
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($question, $response->getData());
 	}
+
+	public function testReorderUsesManagePermissionAndReturnsReorderedQuestion(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$diary = new Diary();
+		$question = new Question();
+		$question->setId(11);
+		$question->setDiaryId(42);
+		$question->setChainId(11);
+		$question->setDiaryQuestionOrder(4);
+
+		$questionMapper->expects($this->once())->method('getQuestion')->with(11)->willReturn($question);
+		$diaryMapper->expects($this->once())->method('getDiaryForUser')->with(42, 'alice', DiaryPermissions::MANAGE)->willReturn($diary);
+		$diaryMapper->expects($this->once())->method('assertManageAccess')->with($diary, 'alice');
+		$questionMapper->expects($this->once())->method('reorderQuestion')->with($question, 2)->willReturn($question);
+
+		$controller = new QuestionController(Application::APP_ID, $request, $diaryMapper, $questionMapper, 'alice');
+		$response = $controller->reorder(11, 2);
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame($question, $response->getData());
+	}
+
+	public function testReorderReturnsErrorWhenManagePermissionIsMissing(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$question = new Question();
+		$question->setId(11);
+		$question->setDiaryId(42);
+
+		$questionMapper->expects($this->once())->method('getQuestion')->with(11)->willReturn($question);
+		$diaryMapper->expects($this->once())
+			->method('getDiaryForUser')
+			->with(42, 'alice', DiaryPermissions::MANAGE)
+			->willThrowException(new DoesNotExistException('Diary not manageable'));
+		$questionMapper->expects($this->never())->method('reorderQuestion');
+
+		$controller = new QuestionController(Application::APP_ID, $request, $diaryMapper, $questionMapper, 'alice');
+		$response = $controller->reorder(11, 2);
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$this->assertSame(['error' => 'Diary not manageable'], $response->getData());
+	}
 }

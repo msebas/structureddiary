@@ -4,7 +4,9 @@ import NcContent from '@nextcloud/vue/components/NcContent'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import StructuredDiaryNavigation from '@/components/layout/StructuredDiaryNavigation.vue'
-import WorkspaceHeader from '@/components/layout/WorkspaceHeader.vue'
+import HeaderDiaries from '@/components/layout/HeaderDiaries.vue'
+import HeaderEntries from '@/components/layout/HeaderEntries.vue'
+import HeaderQuestions from '@/components/layout/HeaderQuestions.vue'
 import EntryListPanel from '@/components/layout/EntryListPanel.vue'
 import QuestionListPanel from '@/components/layout/QuestionListPanel.vue'
 import OverlayPanel from '@/components/common/OverlayPanel.vue'
@@ -32,6 +34,13 @@ const currentRouteName = computed<WorkspaceRouteName>(() => {
 })
 const routeEntryId = computed(() => routeParamAsNumber(route.params.entryId))
 const routeQuestionId = computed(() => routeParamAsNumber(route.params.questionId))
+const currentHeader = computed<'entries' | 'questions' | 'diaries'>(() => {
+	if (currentRouteName.value === 'diaries' || currentRouteName.value === 'diaryCreate' || currentRouteName.value === 'diaryEdit' || currentRouteName.value === 'diaryEditShare') {
+		return 'diaries'
+	}
+
+	return currentSidebar.value
+})
 const currentSidebar = computed<'entries' | 'questions'>(() =>
 	currentRouteName.value === 'entriesIndex'
 		|| currentRouteName.value === 'entries'
@@ -40,18 +49,6 @@ const currentSidebar = computed<'entries' | 'questions'>(() =>
 		? 'entries'
 		: 'questions')
 const mobileOverlayTitle = computed(() => mobileOverlayTitleForRoute(currentRouteName.value))
-const headerView = computed(() => ({
-	entriesIndex: 'entry',
-	entries: 'entry',
-	entryCreate: 'entry-edit',
-	entryEdit: 'entry-edit',
-	diaries: 'diary',
-	diaryEdit: 'diary-edit',
-	questionsIndex: 'question',
-	questions: 'question',
-	questionCreate: 'question-edit',
-	questionEdit: 'question-edit',
-} as const)[currentRouteName.value])
 const entryQuestions = computed(() => store.entryQuestionsForTimestamp(store.selectedEntry?.timestamp ?? null))
 const entryEditorTimestamp = computed(() =>
 	store.creatingEntry ? Math.floor(Date.now() / 1000) : (store.selectedEntry?.timestamp ?? Math.floor(Date.now() / 1000)))
@@ -82,7 +79,9 @@ const centerProps = computed<Record<string, unknown>>(() => {
 				shares: store.selectedDiaryShares,
 				stats: store.selectedDiaryStats,
 			}
+		case 'diaryCreate':
 		case 'diaryEdit':
+		case 'diaryEditShare':
 			return {
 				diary: store.creatingDiary ? null : store.selectedDiary,
 				isCreating: store.creatingDiary,
@@ -119,7 +118,9 @@ const centerListeners = computed<CenterListeners>(() => {
 				save: saveEntry,
 				cancel: cancelEntryEdit,
 			}
+		case 'diaryCreate':
 		case 'diaryEdit':
+		case 'diaryEditShare':
 			return {
 				save: saveDiary,
 				duplicate: duplicateDiary,
@@ -186,30 +187,48 @@ async function routeTo(routeName: WorkspaceRouteName): Promise<void> {
 	await router.push({ name: routeName })
 }
 
-async function routeToEntry(entryId: number | null): Promise<void> {
-	if (entryId === null) {
-		await routeTo('entriesIndex')
+async function routeToEntriesIndex(): Promise<void> {
+	if (store.selectedDiaryId === null) {
+		await router.push({ name: 'diaries' })
 		return
 	}
 
-	await router.push({ name: 'entries', params: { entryId } })
+	await router.push({ name: 'entriesIndex', params: { diaryId: store.selectedDiaryId } })
 }
 
-async function routeToEntryEdit(entryId: number): Promise<void> {
-	await router.push({ name: 'entryEdit', params: { entryId } })
+async function routeToEntry(entryId: number | null): Promise<void> {
+	if (entryId === null) {
+		await routeToEntriesIndex()
+		return
+	}
+
+	if (store.selectedDiaryId === null) {
+		return
+	}
+
+	await router.push({ name: 'entries', params: { diaryId: store.selectedDiaryId, entryId } })
+}
+
+async function routeToQuestionsIndex(): Promise<void> {
+	if (store.selectedDiaryId === null) {
+		await router.push({ name: 'diaries' })
+		return
+	}
+
+	await router.push({ name: 'questionsIndex', params: { diaryId: store.selectedDiaryId } })
 }
 
 async function routeToQuestion(questionId: number | null): Promise<void> {
 	if (questionId === null) {
-		await routeTo('questionsIndex')
+		await routeToQuestionsIndex()
 		return
 	}
 
-	await router.push({ name: 'questions', params: { questionId } })
-}
+	if (store.selectedDiaryId === null) {
+		return
+	}
 
-async function routeToQuestionEdit(questionId: number): Promise<void> {
-	await router.push({ name: 'questionEdit', params: { questionId } })
+	await router.push({ name: 'questions', params: { diaryId: store.selectedDiaryId, questionId } })
 }
 
 async function openCenter(routeName: WorkspaceRouteName): Promise<void> {
@@ -249,48 +268,21 @@ async function deleteCurrentAnswer(answerId: number): Promise<void> {
 	await store.deleteAnswer(answerId, store.selectedEntryId)
 }
 
-async function createDiary(): Promise<void> {
-	store.startCreatingDiary()
-	await openCenter('diaryEdit')
-}
-
 async function createEntry(): Promise<void> {
 	store.startCreatingEntry()
 	await openCenter('entryCreate')
 }
 
-async function editEntry(): Promise<void> {
-	if (store.selectedEntryId === null) {
-		return
-	}
-
-	store.startEditingEntry()
-	if (isCompact.value) {
-		mobileCenterOpen.value = true
-	}
-	await routeToEntryEdit(store.selectedEntryId)
-}
-
-async function editDiary(): Promise<void> {
-	store.cancelDiaryCreation()
-	await openCenter('diaryEdit')
-}
-
 async function createQuestion(): Promise<void> {
-	store.startCreatingQuestion()
-	await openCenter('questionCreate')
-}
-
-async function editQuestion(): Promise<void> {
-	if (store.selectedQuestionId === null) {
+	if (store.selectedDiaryId === null) {
 		return
 	}
 
-	store.cancelQuestionCreation()
+	store.startCreatingQuestion()
 	if (isCompact.value) {
 		mobileCenterOpen.value = true
 	}
-	await routeToQuestionEdit(store.selectedQuestionId)
+	await router.push({ name: 'questionCreate', params: { diaryId: store.selectedDiaryId } })
 }
 
 async function selectEntry(entryId: number): Promise<void> {
@@ -336,7 +328,7 @@ async function cancelDiaryEdit(): Promise<void> {
 
 async function deleteCurrentDiary(): Promise<void> {
 	await store.deleteSelectedDiary()
-	await routeTo('entriesIndex')
+	await router.push({ name: 'diaries' })
 }
 
 async function saveQuestion(payload: QuestionCreatePayload | QuestionUpdatePayload): Promise<void> {
@@ -448,18 +440,7 @@ watch([currentRouteName, () => store.selectedQuestionId], async ([routeName, que
 			<div :class="$style.workspace">
 				<div :class="$style.columns">
 					<section v-if="!isCompact" :class="$style.centerColumn">
-						<WorkspaceHeader
-							:diary="store.selectedDiary"
-							:entry="store.selectedEntry"
-							:question="store.selectedQuestion"
-							:view="headerView"
-							:show-new-entry-button="true"
-							@open-diary="diaryOverlayOpen = true"
-							@new-diary="createDiary()"
-							@new-entry="createEntry()"
-							@edit-entry="editEntry()"
-							@edit-diary="editDiary()"
-							@edit-question="editQuestion()" />
+            <router-view name="nav">
 
 						<main :class="$style.center">
 							<div v-if="store.error" :class="$style.error">
@@ -504,18 +485,9 @@ watch([currentRouteName, () => store.selectedQuestionId], async ([routeName, que
 					:title="mobileOverlayTitle"
 					@close="closeMobileCenter()">
 					<div :class="$style.mobileCenter">
-						<WorkspaceHeader
-							:diary="store.selectedDiary"
-							:entry="store.selectedEntry"
-							:question="store.selectedQuestion"
-							:view="headerView"
-							:show-new-entry-button="false"
-							@open-diary="diaryOverlayOpen = true"
-							@new-diary="createDiary()"
-							@new-entry="createEntry()"
-							@edit-entry="editEntry()"
-							@edit-diary="editDiary()"
-							@edit-question="editQuestion()" />
+						<HeaderEntries v-if="currentHeader === 'entries'" />
+						<HeaderQuestions v-else-if="currentHeader === 'questions'" />
+						<HeaderDiaries v-else />
 
 						<main :class="$style.center">
 							<div v-if="store.error" :class="$style.error">

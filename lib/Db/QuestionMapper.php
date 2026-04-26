@@ -44,7 +44,8 @@ class QuestionMapper extends QBMapper {
 				$qb->expr()->eq('diary_id', $qb->createNamedParameter($diaryId, IQueryBuilder::PARAM_INT))
 			)
 			->andWhere($qb->expr()->isNull('next_version_id'))
-			->orderBy('id', 'ASC');
+			->orderBy('diary_question_order', 'ASC')
+			->addOrderBy('id', 'ASC');
 
 		return $this->findEntities($qb);
 	}
@@ -57,21 +58,17 @@ class QuestionMapper extends QBMapper {
 	 */
 	public function getQuestionChain(int $questionId): array {
 		$question = $this->getQuestion($questionId);
-		$chain = [$question];
 
-		$current = $question;
-		while ($current->getPreviousVersionId() !== null) {
-			$current = $this->getQuestion($current->getPreviousVersionId());
-			array_unshift($chain, $current);
-		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where(
+				$qb->expr()->eq('chain_id', $qb->createNamedParameter($question->getChainId(), IQueryBuilder::PARAM_INT))
+			)
+			->orderBy('created_at', 'ASC')
+			->addOrderBy('id', 'ASC');
 
-		$current = $question;
-		while ($current->getNextVersionId() !== null) {
-			$current = $this->getQuestion($current->getNextVersionId());
-			$chain[] = $current;
-		}
-
-		return $chain;
+		return $this->findEntities($qb);
 	}
 
 	/**
@@ -85,37 +82,26 @@ class QuestionMapper extends QBMapper {
 			->where(
 				$qb->expr()->eq('diary_id', $qb->createNamedParameter($diaryId, IQueryBuilder::PARAM_INT))
 			)
+			->andWhere(
+				$qb->expr()->lte('created_at', $qb->createNamedParameter($timestamp, IQueryBuilder::PARAM_INT))
+			)
 			->orderBy('created_at', 'ASC')
 			->addOrderBy('id', 'ASC');
 
 		/** @var list<Question> $questions */
-		$questions = array_values(array_filter(
-			$this->findEntities($qb),
-			static fn (Question $question): bool => $question->getCreatedAt() <= $timestamp
-		));
-		$byId = [];
+		$questions = $this->findEntities($qb);
+		$currentByChain = [];
 		foreach ($questions as $question) {
-			$byId[$question->getId()] = $question;
-		}
-
-		$currentByRoot = [];
-		foreach ($questions as $question) {
-			$rootId = $question->getId();
-			$current = $question;
-			while ($current->getPreviousVersionId() !== null && isset($byId[$current->getPreviousVersionId()])) {
-				$current = $byId[$current->getPreviousVersionId()];
-				$rootId = $current->getId();
-			}
-			$currentByRoot[$rootId] = $question;
+			$currentByChain[$question->getChainId()] = $question;
 		}
 
 		$result = array_values(array_filter(
-			$currentByRoot,
+			$currentByChain,
 			static fn (Question $question): bool => !$onlyActive || $question->getActive()
 		));
 		usort(
 			$result,
-			static fn (Question $a, Question $b): int => [$a->getLabel(), $a->getId()] <=> [$b->getLabel(), $b->getId()]
+			static fn (Question $a, Question $b): int => [$a->getDiaryQuestionOrder(), $a->getId()] <=> [$b->getDiaryQuestionOrder(), $b->getId()]
 		);
 
 		return $result;
@@ -138,7 +124,9 @@ class QuestionMapper extends QBMapper {
 	): Question {
 		QuestionTypeValidator::validateQuestionDefinition($type, $minimum, $maximum, $choices);
 		$question = new Question();
+		$question->setChainId(0);
 		$question->setDiaryId($diaryId);
+		$question->setDiaryQuestionOrder(0);
 		$question->setCreatedAt($this->getCurrentTimestamp());
 		$question->setLabel($label);
 		$question->setDisplayText($displayText);
@@ -150,8 +138,13 @@ class QuestionMapper extends QBMapper {
 		$question->setTemplateText($templateText);
 		$question->setPreviousVersionId(null);
 		$question->setNextVersionId(null);
+		$question = $this->insert($question);
 
-		return $this->insert($question);
+		$question->setChainId($question->getId());
+		$question->setDiaryQuestionOrder($question->getId());
+		$this->assertUniqueCurrentOrder($question->getDiaryId(), $question->getDiaryQuestionOrder(), null);
+
+		return $this->update($question);
 	}
 
 	/**
@@ -179,6 +172,19 @@ class QuestionMapper extends QBMapper {
 		$targetActive = $active ?? $question->getActive();
 		$targetTemplateText = $templateText ?? $question->getTemplateText();
 		QuestionTypeValidator::validateQuestionDefinition($targetType, $targetMinimum, $targetMaximum, $targetChoices);
+		if ($this->questionPayloadMatches(
+			$question,
+			$targetLabel,
+			$targetDisplayText,
+			$targetType,
+			$targetMinimum,
+			$targetMaximum,
+			$targetChoices,
+			$targetActive,
+			$targetTemplateText
+		)) {
+			return $question;
+		}
 
 		if (!$hasAnswers) {
 			$question->setLabel($targetLabel);
@@ -189,6 +195,7 @@ class QuestionMapper extends QBMapper {
 			$question->setJsonChoices($targetChoices === null ? null : json_encode($targetChoices, JSON_THROW_ON_ERROR));
 			$question->setActive($targetActive);
 			$question->setTemplateText($targetTemplateText);
+			$this->assertUniqueCurrentOrder($question->getDiaryId(), $question->getDiaryQuestionOrder(), $question->getId());
 
 			return $this->update($question);
 		}
@@ -197,25 +204,79 @@ class QuestionMapper extends QBMapper {
 			throw new InvalidArgumentException('Only the current question version can be changed.');
 		}
 
-		$newQuestion = new Question();
-		$newQuestion->setDiaryId($question->getDiaryId());
-		$newQuestion->setCreatedAt($this->getCurrentTimestamp());
-		$newQuestion->setLabel($targetLabel);
-		$newQuestion->setDisplayText($targetDisplayText);
-		$newQuestion->setType($targetType);
-		$newQuestion->setMinimum($targetMinimum);
-		$newQuestion->setMaximum($targetMaximum);
-		$newQuestion->setJsonChoices($targetChoices === null ? null : json_encode($targetChoices, JSON_THROW_ON_ERROR));
-		$newQuestion->setActive($targetActive);
-		$newQuestion->setTemplateText($targetTemplateText);
-		$newQuestion->setPreviousVersionId($question->getId());
-		$newQuestion->setNextVersionId(null);
-		$newQuestion = $this->insert($newQuestion);
-
-		$question->setNextVersionId($newQuestion->getId());
-		$this->update($question);
+		$newQuestion = $this->createVersionFromQuestion(
+			$question,
+			$targetLabel,
+			$targetDisplayText,
+			$targetType,
+			$targetMinimum,
+			$targetMaximum,
+			$targetChoices,
+			$targetActive,
+			$targetTemplateText,
+			$question->getDiaryQuestionOrder(),
+		);
 
 		return $newQuestion;
+	}
+
+	/**
+	 * @throws Exception
+	 */
+	public function reorderQuestion(Question $question, int $targetOrder): Question {
+		if ($question->getNextVersionId() !== null) {
+			throw new InvalidArgumentException('Only the current question version can be reordered.');
+		}
+
+		$current = $this->getCurrentQuestionsForDiary($question->getDiaryId());
+		if ($current === []) {
+			throw new InvalidArgumentException('The diary has no current questions.');
+		}
+
+		$ordered = array_values($current);
+		$movedIndex = null;
+		foreach ($ordered as $index => $candidate) {
+			if ($candidate->getId() === $question->getId()) {
+				$movedIndex = $index;
+				break;
+			}
+		}
+		if ($movedIndex === null) {
+			throw new InvalidArgumentException('Only the current question version can be reordered.');
+		}
+
+		$normalizedTarget = max(1, min($targetOrder, count($ordered)));
+		if ($question->getDiaryQuestionOrder() === $normalizedTarget) {
+			return $question;
+		}
+
+		$moved = $ordered[$movedIndex];
+		array_splice($ordered, $movedIndex, 1);
+		array_splice($ordered, $normalizedTarget - 1, 0, [$moved]);
+
+		foreach ($ordered as $index => $candidate) {
+			$desiredOrder = $index + 1;
+			if ($candidate->getId() === $question->getId()) {
+				continue;
+			}
+			if ($candidate->getDiaryQuestionOrder() !== $desiredOrder) {
+				$candidate->setDiaryQuestionOrder($desiredOrder);
+				$this->update($candidate);
+			}
+		}
+
+		return $this->createVersionFromQuestion(
+			$question,
+			$question->getLabel(),
+			$question->getDisplayText(),
+			$question->getType(),
+			$question->getMinimum(),
+			$question->getMaximum(),
+			$question->getChoices(),
+			$question->getActive(),
+			$question->getTemplateText(),
+			$normalizedTarget,
+		);
 	}
 
 	/**
@@ -257,12 +318,12 @@ class QuestionMapper extends QBMapper {
 	 * @throws Exception
 	 */
 	public function hasAnswersInChain(Question $question): bool {
-		$ids = $this->collectQuestionChainIds($question);
 		$qb = $this->db->getQueryBuilder();
 		$qb->selectAlias($qb->createFunction('COUNT(*)'), 'cnt')
-			->from(TableNames::ANSWERS)
+			->from(TableNames::ANSWERS, 'a')
+			->innerJoin('a', TableNames::QUESTIONS, 'q', $qb->expr()->eq('a.question_id', 'q.id'))
 			->where(
-				$qb->expr()->in('question_id', $qb->createNamedParameter($ids, IQueryBuilder::PARAM_INT_ARRAY))
+				$qb->expr()->eq('q.chain_id', $qb->createNamedParameter($question->getChainId(), IQueryBuilder::PARAM_INT))
 			);
 
 		$result = $qb->executeQuery();
@@ -270,27 +331,6 @@ class QuestionMapper extends QBMapper {
 		$result->closeCursor();
 
 		return ((int)($row['cnt'] ?? 0)) > 0;
-	}
-
-	/**
-	 * @return list<int>
-	 * @throws Exception
-	 */
-	private function collectQuestionChainIds(Question $question): array {
-		$ids = [$question->getId()];
-		$current = $question;
-		while ($current->getPreviousVersionId() !== null) {
-			$current = $this->getQuestion($current->getPreviousVersionId());
-			$ids[] = $current->getId();
-		}
-
-		$current = $question;
-		while ($current->getNextVersionId() !== null) {
-			$current = $this->getQuestion($current->getNextVersionId());
-			$ids[] = $current->getId();
-		}
-
-		return array_values(array_unique($ids));
 	}
 
 	/**
@@ -378,7 +418,102 @@ class QuestionMapper extends QBMapper {
 		return null;
 	}
 
+	/**
+	 * @param list<string>|null $choices
+	 * @throws Exception
+	 */
+	private function createVersionFromQuestion(
+		Question $question,
+		string $label,
+		string $displayText,
+		string $type,
+		?float $minimum,
+		?float $maximum,
+		?array $choices,
+		bool $active,
+		string $templateText,
+		int $diaryQuestionOrder,
+	): Question {
+		$this->assertUniqueCurrentOrder($question->getDiaryId(), $diaryQuestionOrder, $question->getId());
+
+		$newQuestion = new Question();
+		$newQuestion->setChainId($question->getChainId());
+		$newQuestion->setDiaryId($question->getDiaryId());
+		$newQuestion->setDiaryQuestionOrder($diaryQuestionOrder);
+		$newQuestion->setCreatedAt($this->getCurrentTimestamp());
+		$newQuestion->setLabel($label);
+		$newQuestion->setDisplayText($displayText);
+		$newQuestion->setType($type);
+		$newQuestion->setMinimum($minimum);
+		$newQuestion->setMaximum($maximum);
+		$newQuestion->setJsonChoices($choices === null ? null : json_encode($choices, JSON_THROW_ON_ERROR));
+		$newQuestion->setActive($active);
+		$newQuestion->setTemplateText($templateText);
+		$newQuestion->setPreviousVersionId($question->getId());
+		$newQuestion->setNextVersionId(null);
+		$newQuestion = $this->insert($newQuestion);
+
+		$question->setNextVersionId($newQuestion->getId());
+		$this->update($question);
+
+		return $newQuestion;
+	}
+
+	/**
+	 * @throws Exception
+	 */
+	protected function assertUniqueCurrentOrder(int $diaryId, int $order, ?int $ignoreQuestionId): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from($this->getTableName())
+			->where(
+				$qb->expr()->eq('diary_id', $qb->createNamedParameter($diaryId, IQueryBuilder::PARAM_INT))
+			)
+			->andWhere(
+				$qb->expr()->eq('diary_question_order', $qb->createNamedParameter($order, IQueryBuilder::PARAM_INT))
+			)
+			->andWhere($qb->expr()->isNull('next_version_id'))
+			->setMaxResults(1);
+
+		if ($ignoreQuestionId !== null) {
+			$qb->andWhere(
+				$qb->expr()->neq('id', $qb->createNamedParameter($ignoreQuestionId, IQueryBuilder::PARAM_INT))
+			);
+		}
+
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		if ($row !== false) {
+			throw new InvalidArgumentException('Current question order values must be unique per diary.');
+		}
+	}
+
 	protected function getCurrentTimestamp(): int {
 		return time();
+	}
+
+	/**
+	 * @param list<string>|null $choices
+	 */
+	private function questionPayloadMatches(
+		Question $question,
+		string $label,
+		string $displayText,
+		string $type,
+		?float $minimum,
+		?float $maximum,
+		?array $choices,
+		bool $active,
+		string $templateText,
+	): bool {
+		return $question->getLabel() === $label
+			&& $question->getDisplayText() === $displayText
+			&& $question->getType() === $type
+			&& $question->getMinimum() === $minimum
+			&& $question->getMaximum() === $maximum
+			&& $question->getChoices() === $choices
+			&& $question->getActive() === $active
+			&& $question->getTemplateText() === $templateText;
 	}
 }

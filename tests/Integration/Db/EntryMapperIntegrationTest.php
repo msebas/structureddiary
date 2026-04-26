@@ -80,4 +80,56 @@ final class EntryMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->assertNotContains($tooOld->getId(), array_map(static fn ($entry) => $entry->getId(), $entries));
 		$this->assertNotContains($tooNew->getId(), array_map(static fn ($entry) => $entry->getId(), $entries));
 	}
+
+	public function testGetEntriesForDiaryCanFilterByFromTimestampOnly(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+		$tooOld = $this->entryMapper->createEntry($diary->getId(), 1000, 'too old');
+		$matching = $this->entryMapper->createEntry($diary->getId(), 2000, 'matching');
+		$newest = $this->entryMapper->createEntry($diary->getId(), 3000, 'newest');
+
+		$entries = $this->entryMapper->getEntriesForDiary($diary->getId(), 1500, null);
+
+		$this->assertSame([$newest->getId(), $matching->getId()], array_map(static fn ($entry) => $entry->getId(), $entries));
+		$this->assertNotContains($tooOld->getId(), array_map(static fn ($entry) => $entry->getId(), $entries));
+	}
+
+	public function testGetEntriesForDiaryCanFilterByUntilTimestampOnly(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+		$oldest = $this->entryMapper->createEntry($diary->getId(), 1000, 'oldest');
+		$matching = $this->entryMapper->createEntry($diary->getId(), 2000, 'matching');
+		$tooNew = $this->entryMapper->createEntry($diary->getId(), 3000, 'too new');
+
+		$entries = $this->entryMapper->getEntriesForDiary($diary->getId(), null, 2500);
+
+		$this->assertSame([$matching->getId(), $oldest->getId()], array_map(static fn ($entry) => $entry->getId(), $entries));
+		$this->assertNotContains($tooNew->getId(), array_map(static fn ($entry) => $entry->getId(), $entries));
+	}
+
+	public function testUpdateEntryOnlyTitlePreservesTimestamp(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+		$entry = $this->entryMapper->createEntry($diary->getId(), 1713254400, 'old');
+
+		$this->entryMapper->updateEntry($entry, null, 'new');
+		$reloaded = $this->entryMapper->getEntry($entry->getId());
+
+		$this->assertSame(1713254400, $reloaded->getTimestamp());
+		$this->assertSame('new', $reloaded->getTitle());
+	}
+
+	public function testUpdateEntryOnlyTimestampPreservesTitle(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+		$entry = $this->entryMapper->createEntry($diary->getId(), 1713254400, 'title');
+
+		$this->entryMapper->updateEntry($entry, 1713340800, null);
+		$reloaded = $this->entryMapper->getEntry($entry->getId());
+
+		$this->assertSame(1713340800, $reloaded->getTimestamp());
+		$this->assertSame('title', $reloaded->getTitle());
+	}
+
+	public function testGetEntriesForDiaryReturnsEmptyArrayWhenDiaryHasNoEntries(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+
+		$this->assertSame([], $this->entryMapper->getEntriesForDiary($diary->getId()));
+	}
 }

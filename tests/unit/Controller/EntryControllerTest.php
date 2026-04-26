@@ -100,6 +100,28 @@ final class EntryControllerTest extends TestCase {
 		$this->assertSame($entry, $response->getData());
 	}
 
+	public function testCreateAllowsNullTitle(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$entry = new Entry();
+
+		$diaryMapper->expects($this->once())
+			->method('getDiaryForUser')
+			->with(42, 'alice', DiaryPermissions::WRITE)
+			->willReturn($this->createStub(Diary::class));
+		$entryMapper->expects($this->once())
+			->method('createEntry')
+			->with(42, 1713254400, null)
+			->willReturn($entry);
+
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$response = $controller->create(42, 1713254400);
+
+		$this->assertSame(Http::STATUS_CREATED, $response->getStatus());
+		$this->assertSame($entry, $response->getData());
+	}
+
 	public function testCreateReturnsErrorWhenWritePermissionIsMissing(): void {
 		$request = $this->createMock(IRequest::class);
 		$diaryMapper = $this->createMock(DiaryMapper::class);
@@ -212,6 +234,66 @@ final class EntryControllerTest extends TestCase {
 		$this->assertSame($updated, $response->getData());
 	}
 
+	public function testUpdateCanChangeOnlyTitle(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+		$updated = new Entry();
+		$updated->setId(5);
+		$updated->setDiaryId(42);
+		$updated->setTimestamp(1713254400);
+		$updated->setTitle('Changed');
+
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->once())
+			->method('getDiaryForUser')
+			->with(42, 'alice', DiaryPermissions::WRITE)
+			->willReturn($this->createStub(Diary::class));
+		$entryMapper->expects($this->once())
+			->method('updateEntry')
+			->with($entry, null, 'Changed')
+			->willReturn($updated);
+
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$response = $controller->update(5, null, 'Changed');
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame($updated, $response->getData());
+	}
+
+	public function testUpdateCanChangeOnlyTimestamp(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+		$updated = new Entry();
+		$updated->setId(5);
+		$updated->setDiaryId(42);
+		$updated->setTimestamp(1713254500);
+		$updated->setTitle('Original');
+
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->once())
+			->method('getDiaryForUser')
+			->with(42, 'alice', DiaryPermissions::WRITE)
+			->willReturn($this->createStub(Diary::class));
+		$entryMapper->expects($this->once())
+			->method('updateEntry')
+			->with($entry, 1713254500, null)
+			->willReturn($updated);
+
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$response = $controller->update(5, 1713254500);
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame($updated, $response->getData());
+	}
+
 	public function testDeleteUsesWritePermissionAndReturnsDeletedEntry(): void {
 		$request = $this->createMock(IRequest::class);
 		$diaryMapper = $this->createMock(DiaryMapper::class);
@@ -254,5 +336,91 @@ final class EntryControllerTest extends TestCase {
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 		$this->assertSame(['error' => 'Diary not writable'], $response->getData());
+	}
+
+	public function testIndexRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+		$entryMapper->expects($this->never())->method('getEntriesForDiary');
+
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, null);
+		$response = $controller->index(42);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
+
+	public function testCreateRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+		$entryMapper->expects($this->never())->method('createEntry');
+
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, null);
+		$response = $controller->create(42, 1713254400, 'Note');
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
+
+	public function testShowRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, null);
+		$response = $controller->show(5);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
+
+	public function testUpdateRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+		$entryMapper->expects($this->never())->method('updateEntry');
+
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, null);
+		$response = $controller->update(5, 1713254401, 'Changed');
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
+
+	public function testDeleteRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+		$entryMapper->expects($this->never())->method('deleteEntry');
+
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, null);
+		$response = $controller->delete(5);
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
 	}
 }

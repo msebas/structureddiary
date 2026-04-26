@@ -702,4 +702,185 @@ final class AnswerControllerTest extends TestCase {
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($answer, $response->getData());
 	}
+
+	public function testHistoryReturnsErrorWhenReadPermissionIsMissing(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$answerMapper = $this->createMock(AnswerMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->once())
+			->method('getDiaryForUser')
+			->with(42, 'alice', DiaryPermissions::READ)
+			->willThrowException(new DoesNotExistException('Diary not accessible'));
+		$questionMapper->expects($this->never())->method('getQuestion');
+		$answerMapper->expects($this->never())->method('getAnswerChainForEntryQuestion');
+
+		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, 'alice');
+		$response = $controller->history(5, 11);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$this->assertSame(['error' => 'Diary not accessible'], $response->getData());
+	}
+
+	public function testHistoryReturnsEmptyChainWhenQuestionHasNoAnswers(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$answerMapper = $this->createMock(AnswerMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+		$question = new Question();
+		$question->setId(11);
+		$question->setDiaryId(42);
+		$question->setType(QuestionTypes::TEXT);
+		$question->setActive(true);
+		$question->setNextVersionId(null);
+
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->once())->method('getDiaryForUser')->with(42, 'alice', DiaryPermissions::READ)->willReturn($this->createStub(Diary::class));
+		$questionMapper->expects($this->once())->method('getQuestion')->with(11)->willReturn($question);
+		$answerMapper->expects($this->once())->method('getAnswerChainForEntryQuestion')->with(5, 11)->willReturn([]);
+
+		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, 'alice');
+		$response = $controller->history(5, 11);
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame([], $response->getData());
+	}
+
+	public function testIndexRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$answerMapper = $this->createMock(AnswerMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+		$answerMapper->expects($this->never())->method('getCurrentAnswersForEntry');
+
+		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, null);
+		$response = $controller->index(5);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
+
+	public function testCreateRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$answerMapper = $this->createMock(AnswerMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+		$questionMapper->expects($this->never())->method('getQuestion');
+		$answerMapper->expects($this->never())->method('createAnswer');
+
+		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, null);
+		$response = $controller->create(5, 11, 'text');
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
+
+	public function testShowRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$answerMapper = $this->createMock(AnswerMapper::class);
+		$answer = new Answer();
+		$answer->setId(5);
+		$answer->setDiaryId(42);
+
+		$answerMapper->expects($this->once())->method('getAnswer')->with(5)->willReturn($answer);
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+
+		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, null);
+		$response = $controller->show(5);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
+
+	public function testUpdateRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$answerMapper = $this->createMock(AnswerMapper::class);
+		$answer = new Answer();
+		$answer->setId(5);
+		$answer->setDiaryId(42);
+
+		$answerMapper->expects($this->once())->method('getAnswer')->with(5)->willReturn($answer);
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+		$questionMapper->expects($this->never())->method('getQuestion');
+		$answerMapper->expects($this->never())->method('updateAnswer');
+
+		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, null);
+		$response = $controller->update(5, 'text');
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
+
+	public function testDeleteRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$answerMapper = $this->createMock(AnswerMapper::class);
+		$answer = new Answer();
+		$answer->setId(5);
+		$answer->setDiaryId(42);
+
+		$answerMapper->expects($this->once())->method('getAnswer')->with(5)->willReturn($answer);
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+		$answerMapper->expects($this->never())->method('deleteAnswer');
+
+		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, null);
+		$response = $controller->delete(5);
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
+
+	public function testHistoryRejectsMissingAuthenticatedUser(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$answerMapper = $this->createMock(AnswerMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->never())->method('getDiaryForUser');
+		$questionMapper->expects($this->never())->method('getQuestion');
+		$answerMapper->expects($this->never())->method('getAnswerChainForEntryQuestion');
+
+		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, null);
+		$response = $controller->history(5, 11);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
+	}
 }

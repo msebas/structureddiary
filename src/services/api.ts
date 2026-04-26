@@ -129,8 +129,11 @@ export const diaryService = {
 	remove(id: number): Promise<Diary> {
 		return request(`/api/v1/diaries/${id}`, { method: 'DELETE' })
 	},
-	shares(id: number): Promise<DiaryShare[]> {
+	diary_shares(id: number): Promise<DiaryShare[]> {
 		return request(`/api/v1/diaries/${id}/shares`)
+	},
+	shares(): Promise<DiaryShare[]> {
+		return request(`/api/v1/diary-shares`)
 	},
 	createShare(id: number, sharedWith: string, permission: number): Promise<DiaryShare> {
 		return request(`/api/v1/diaries/${id}/shares`, {

@@ -2,22 +2,17 @@
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import { mdiPlus } from '@mdi/js'
+
 import { computed } from 'vue'
-import {useStructuredDiaryStore} from "@/stores/structuredDiary";
-import {useRoute} from "vue-router";
+import { useRoute } from 'vue-router'
+import { useStructuredDiaryStore } from '@/stores/structuredDiary'
+import { Permissions } from '@/types/types'
 
-const router = useRoute();
+
 const store = useStructuredDiaryStore()
-const diary = computed(() => store.diaries[Number(router.params.diaryId)])
+const diary = computed(() => store.selectedDiary)
 
-import { getCurrentUser } from '@nextcloud/auth'
-import {Permissions} from "@/types/types";
-
-const user = computed(()=> getCurrentUser()?.uid)
-
-const manage_permissions_on_diary = computed(()=>{
-  return (store.diaryShares?.[diary.value?.id]?.[user.value || ""].permission & Permissions.MANAGE) !==0
-})
+const managePermissionsOnDiary = computed(() => ((store.user_permissions & Permissions.MANAGE) !== 0))
 
 </script>
 
@@ -30,21 +25,19 @@ const manage_permissions_on_diary = computed(()=>{
 		</div>
 
 		<div :class="$style.actions">
-			<NcButton
-				aria-label="Create new diary"
-				@click="store.startCreatingDiary()">
+			<NcButton aria-label="Create new diary" @click="store.startCreatingDiary()">
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiPlus" />
 				</template>
 			</NcButton>
 			<NcButton
-				v-if="diary!=null && manage_permissions_on_diary"
+				v-if="diary !== null && managePermissionsOnDiary"
 				variant="secondary"
 				@click="store.editDiary(diary.id)">
 				Edit diary
 			</NcButton>
 			<NcButton
-				v-if="diary!=null && manage_permissions_on_diary"
+				v-if="diary !== null && managePermissionsOnDiary"
 				variant="secondary"
 				@click="store.editDiaryShares(diary.id)">
 				Edit diary share
@@ -72,10 +65,6 @@ const manage_permissions_on_diary = computed(()=>{
 	align-items: center;
 	gap: 14px;
 	min-width: 0;
-}
-
-.diaryButton {
-	margin-inline-start: 18px;
 }
 
 .title {

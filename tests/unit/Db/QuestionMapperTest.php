@@ -23,14 +23,19 @@ final class QuestionMapperTest extends TestCase {
 	public function testCreateQuestionInitializesEntityIncludingCreatedAt(): void {
 		$mapper = $this->getMockBuilder(QuestionMapper::class)
 			->setConstructorArgs([$this->db])
-			->onlyMethods(['insert', 'getCurrentTimestamp'])
+			->onlyMethods(['assertUniqueCurrentOrder', 'insert', 'update', 'getCurrentTimestamp'])
 			->getMock();
 
 		$mapper->expects($this->once())->method('getCurrentTimestamp')->willReturn(1713254400);
 		$mapper->expects($this->once())
+			->method('assertUniqueCurrentOrder')
+			->with(42, 15, null);
+		$mapper->expects($this->once())
 			->method('insert')
 			->willReturnCallback(function (Question $question): Question {
+				$this->assertSame(0, $question->getChainId());
 				$this->assertSame(42, $question->getDiaryId());
+				$this->assertSame(0, $question->getDiaryQuestionOrder());
 				$this->assertSame(1713254400, $question->getCreatedAt());
 				$this->assertSame('Mood', $question->getLabel());
 				$this->assertSame('Mood', $question->getDisplayText());
@@ -42,20 +47,34 @@ final class QuestionMapperTest extends TestCase {
 				$this->assertSame('template', $question->getTemplateText());
 				$this->assertNull($question->getPreviousVersionId());
 				$this->assertNull($question->getNextVersionId());
+				$question->setId(15);
+				$question->resetUpdatedFields();
+				return $question;
+			});
+		$mapper->expects($this->once())
+			->method('update')
+			->willReturnCallback(function (Question $question): Question {
+				$this->assertSame(15, $question->getChainId());
+				$this->assertSame(15, $question->getDiaryQuestionOrder());
 				return $question;
 			});
 
-		$mapper->createQuestion(42, 'Mood', 'Mood', QuestionTypes::SELECT, 1.0, 5.0, ['yes', 'no'], true, 'template');
+		$created = $mapper->createQuestion(42, 'Mood', 'Mood', QuestionTypes::SELECT, 1.0, 5.0, ['yes', 'no'], true, 'template');
+
+		$this->assertSame(15, $created->getChainId());
+		$this->assertSame(15, $created->getDiaryQuestionOrder());
 	}
 
 	public function testCreateQuestionRejectsInvalidDefinitionBeforeInsert(): void {
 		$mapper = $this->getMockBuilder(QuestionMapper::class)
 			->setConstructorArgs([$this->db])
-			->onlyMethods(['insert', 'getCurrentTimestamp'])
+			->onlyMethods(['assertUniqueCurrentOrder', 'insert', 'update', 'getCurrentTimestamp'])
 			->getMock();
 
 		$mapper->expects($this->never())->method('getCurrentTimestamp');
+		$mapper->expects($this->never())->method('assertUniqueCurrentOrder');
 		$mapper->expects($this->never())->method('insert');
+		$mapper->expects($this->never())->method('update');
 
 		$this->expectException(\InvalidArgumentException::class);
 		$this->expectExceptionMessage('Selection questions require at least one choice.');
@@ -69,15 +88,20 @@ final class QuestionMapperTest extends TestCase {
 
 		$mapper = $this->getMockBuilder(QuestionMapper::class)
 			->setConstructorArgs([$this->db])
-			->onlyMethods(['hasAnswersInChain', 'update', 'getCurrentTimestamp'])
+			->onlyMethods(['assertUniqueCurrentOrder', 'hasAnswersInChain', 'update', 'getCurrentTimestamp'])
 			->getMock();
 
 		$mapper->expects($this->never())->method('getCurrentTimestamp');
+		$mapper->expects($this->once())
+			->method('assertUniqueCurrentOrder')
+			->with(42, 10, 10);
 		$mapper->expects($this->once())->method('hasAnswersInChain')->with($question)->willReturn(false);
 		$mapper->expects($this->once())
 			->method('update')
 			->with($question)
 			->willReturnCallback(function (Question $updated) use ($originalCreatedAt): Question {
+				$this->assertSame(10, $updated->getChainId());
+				$this->assertSame(10, $updated->getDiaryQuestionOrder());
 				$this->assertSame(QuestionTypes::NUMBER, $updated->getType());
 				$this->assertSame(1.0, $updated->getMinimum());
 				$this->assertSame(9.0, $updated->getMaximum());
@@ -97,14 +121,19 @@ final class QuestionMapperTest extends TestCase {
 
 		$mapper = $this->getMockBuilder(QuestionMapper::class)
 			->setConstructorArgs([$this->db])
-			->onlyMethods(['hasAnswersInChain', 'insert', 'update', 'getCurrentTimestamp'])
+			->onlyMethods(['assertUniqueCurrentOrder', 'hasAnswersInChain', 'insert', 'update', 'getCurrentTimestamp'])
 			->getMock();
 
 		$mapper->method('hasAnswersInChain')->with($current)->willReturn(true);
 		$mapper->expects($this->once())->method('getCurrentTimestamp')->willReturn(1713254400);
 		$mapper->expects($this->once())
+			->method('assertUniqueCurrentOrder')
+			->with(42, 10, 10);
+		$mapper->expects($this->once())
 			->method('insert')
 			->willReturnCallback(function (Question $newQuestion): Question {
+				$this->assertSame(10, $newQuestion->getChainId());
+				$this->assertSame(10, $newQuestion->getDiaryQuestionOrder());
 				$this->assertSame(QuestionTypes::SELECT, $newQuestion->getType());
 				$this->assertSame(['yes', 'no'], $newQuestion->getChoices());
 				$this->assertSame(10, $newQuestion->getPreviousVersionId());
@@ -298,16 +327,121 @@ final class QuestionMapperTest extends TestCase {
 		$mapper->updateQuestion($question, 'x', 'x', QuestionTypes::TEXT, null, null, null, true, '');
 	}
 
+	public function testUpdateQuestionWithoutAnswersReturnsCurrentQuestionForNoOpUpdate(): void {
+		$question = $this->createQuestionEntity(10, null, null, QuestionTypes::TEXT);
+
+		$mapper = $this->getMockBuilder(QuestionMapper::class)
+			->setConstructorArgs([$this->db])
+			->onlyMethods(['assertUniqueCurrentOrder', 'hasAnswersInChain', 'insert', 'update', 'getCurrentTimestamp'])
+			->getMock();
+
+		$mapper->expects($this->once())->method('hasAnswersInChain')->with($question)->willReturn(false);
+		$mapper->expects($this->never())->method('assertUniqueCurrentOrder');
+		$mapper->expects($this->never())->method('getCurrentTimestamp');
+		$mapper->expects($this->never())->method('insert');
+		$mapper->expects($this->never())->method('update');
+
+		$result = $mapper->updateQuestion($question, 'Question', 'Question', QuestionTypes::TEXT, null, null, null, true, '');
+
+		$this->assertSame($question, $result);
+	}
+
+	public function testUpdateQuestionWithAnswersReturnsCurrentQuestionForNoOpUpdate(): void {
+		$current = $this->createQuestionEntity(10, 9, null, QuestionTypes::TEXT);
+
+		$mapper = $this->getMockBuilder(QuestionMapper::class)
+			->setConstructorArgs([$this->db])
+			->onlyMethods(['assertUniqueCurrentOrder', 'hasAnswersInChain', 'insert', 'update', 'getCurrentTimestamp'])
+			->getMock();
+
+		$mapper->expects($this->once())->method('hasAnswersInChain')->with($current)->willReturn(true);
+		$mapper->expects($this->never())->method('assertUniqueCurrentOrder');
+		$mapper->expects($this->never())->method('getCurrentTimestamp');
+		$mapper->expects($this->never())->method('insert');
+		$mapper->expects($this->never())->method('update');
+
+		$result = $mapper->updateQuestion($current, 'Question', 'Question', QuestionTypes::TEXT, null, null, null, true, '');
+
+		$this->assertSame($current, $result);
+		$this->assertNull($current->getNextVersionId());
+	}
+
+	public function testReorderQuestionCreatesNewVersionOnlyForMovedQuestion(): void {
+		$first = $this->createQuestionEntity(1, null, null, QuestionTypes::TEXT, null, 1, 1);
+		$second = $this->createQuestionEntity(2, null, null, QuestionTypes::TEXT, null, 2, 2);
+		$third = $this->createQuestionEntity(3, null, null, QuestionTypes::TEXT, null, 3, 3);
+
+		$updatedQuestions = [];
+		$mapper = $this->getMockBuilder(QuestionMapper::class)
+			->setConstructorArgs([$this->db])
+			->onlyMethods(['assertUniqueCurrentOrder', 'getCurrentQuestionsForDiary', 'insert', 'update', 'getCurrentTimestamp'])
+			->getMock();
+
+		$mapper->expects($this->once())->method('getCurrentQuestionsForDiary')->with(42)->willReturn([$first, $second, $third]);
+		$mapper->expects($this->once())->method('getCurrentTimestamp')->willReturn(1713254400);
+		$mapper->expects($this->once())
+			->method('assertUniqueCurrentOrder')
+			->with(42, 2, 3);
+		$mapper->expects($this->once())
+			->method('insert')
+			->willReturnCallback(function (Question $newQuestion): Question {
+				$this->assertSame(3, $newQuestion->getChainId());
+				$this->assertSame(42, $newQuestion->getDiaryId());
+				$this->assertSame(2, $newQuestion->getDiaryQuestionOrder());
+				$this->assertSame(3, $newQuestion->getPreviousVersionId());
+				$this->assertNull($newQuestion->getNextVersionId());
+				$newQuestion->setId(30);
+				$newQuestion->resetUpdatedFields();
+				return $newQuestion;
+			});
+		$mapper->expects($this->exactly(2))
+			->method('update')
+			->willReturnCallback(function (Question $question) use (&$updatedQuestions): Question {
+				$updatedQuestions[] = $question;
+				return $question;
+			});
+
+		$newVersion = $mapper->reorderQuestion($third, 2);
+
+		$this->assertSame(30, $newVersion->getId());
+		$this->assertSame(3, $newVersion->getChainId());
+		$this->assertSame(2, $newVersion->getDiaryQuestionOrder());
+		$this->assertSame(30, $third->getNextVersionId());
+		$this->assertSame(3, $second->getDiaryQuestionOrder());
+		$this->assertCount(2, $updatedQuestions);
+		$this->assertSame([2, 3], array_map(static fn (Question $question): int => $question->getId(), $updatedQuestions));
+	}
+
+	public function testReorderQuestionReturnsQuestionWhenOrderStaysUnchanged(): void {
+		$first = $this->createQuestionEntity(1, null, null, QuestionTypes::TEXT, null, 1, 1);
+		$second = $this->createQuestionEntity(2, null, null, QuestionTypes::TEXT, null, 2, 2);
+
+		$mapper = $this->getMockBuilder(QuestionMapper::class)
+			->setConstructorArgs([$this->db])
+			->onlyMethods(['getCurrentQuestionsForDiary', 'insert', 'update'])
+			->getMock();
+
+		$mapper->expects($this->once())->method('getCurrentQuestionsForDiary')->with(42)->willReturn([$first, $second]);
+		$mapper->expects($this->never())->method('insert');
+		$mapper->expects($this->never())->method('update');
+
+		$this->assertSame($second, $mapper->reorderQuestion($second, 2));
+	}
+
 	private function createQuestionEntity(
 		int $id,
 		?int $previousVersionId,
 		?int $nextVersionId,
 		string $type,
 		?array $choices = null,
+		?int $chainId = null,
+		?int $diaryQuestionOrder = null,
 	): Question {
 		$question = new Question();
 		$question->setId($id);
+		$question->setChainId($chainId ?? $id);
 		$question->setDiaryId(42);
+		$question->setDiaryQuestionOrder($diaryQuestionOrder ?? $id);
 		$question->setCreatedAt(1713000000 + $id);
 		$question->setLabel('Question');
 		$question->setDisplayText('Question');

@@ -33,6 +33,23 @@ class DiaryShareMapper extends QBMapper {
 	}
 
 	/**
+	 * @return list<DiaryShare>
+	 * @throws Exception
+	 */
+	public function getSharesForUser(string $userId): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where(
+				$qb->expr()->eq('shared_with', $qb->createNamedParameter($userId, IQueryBuilder::PARAM_STR))
+			)
+			->orderBy('diary_id', 'ASC')
+			->addOrderBy('id', 'ASC');
+
+		return $this->findEntities($qb);
+	}
+
+	/**
 	 * @throws Exception
 	 */
 	public function upsertShare(int $diaryId, string $sharedWith, int $permission): DiaryShare {

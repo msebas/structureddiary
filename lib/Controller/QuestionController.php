@@ -172,6 +172,21 @@ class QuestionController extends ApiController {
 	}
 
 	#[NoAdminRequired]
+	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/questions/{id}/order', requirements: self::REQUIREMENTS)]
+	public function reorder(int $id, int $diaryQuestionOrder): DataResponse {
+		try {
+			$userId = $this->requireUser($this->userId);
+			$question = $this->questionMapper->getQuestion($id);
+			$diary = $this->diaryMapper->getDiaryForUser($question->getDiaryId(), $userId, DiaryPermissions::MANAGE);
+			$this->diaryMapper->assertManageAccess($diary, $userId);
+
+			return $this->respond($this->questionMapper->reorderQuestion($question, $diaryQuestionOrder));
+		} catch (Throwable $e) {
+			return $this->respondError($e->getMessage());
+		}
+	}
+
+	#[NoAdminRequired]
 	#[ApiRoute(verb: 'DELETE', url: '/api/{apiVersion}/questions/{id}', requirements: self::REQUIREMENTS)]
 	public function delete(int $id): DataResponse {
 		try {

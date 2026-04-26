@@ -158,6 +158,57 @@ final class AnswerMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->assertSame([$second->getId()], array_map(static fn ($answer) => $answer->getId(), $chain));
 	}
 
+	public function testGetCurrentAnswersForEntryReturnsEmptyArrayWhenEntryHasNoAnswers(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+		$entry = $this->entryMapper->createEntry($diary->getId(), 1713254400, 'day');
+
+		$this->assertSame([], $this->answerMapper->getCurrentAnswersForEntry($entry->getId()));
+	}
+
+	public function testDeletingCurrentTailVersionLeavesPreviousAsOnlyCurrentAnswer(): void {
+		[$diaryId, $entryId, $questionId] = $this->createDiaryEntryAndQuestion();
+
+		$first = $this->answerMapper->createAnswer($diaryId, $entryId, $questionId, 'first', null);
+		$second = $this->answerMapper->updateAnswer($first, 'second', null);
+
+		$this->answerMapper->deleteAnswer($second);
+
+		$current = $this->answerMapper->getCurrentAnswersForEntry($entryId);
+		$chain = $this->answerMapper->getAnswerChainForEntryQuestion($entryId, $questionId);
+
+		$this->assertCount(1, $current);
+		$this->assertSame($first->getId(), $current[0]->getId());
+		$this->assertSame([$first->getId()], array_map(static fn ($answer) => $answer->getId(), $chain));
+		$this->assertNull($this->answerMapper->getAnswer($first->getId())->getNextVersionId());
+	}
+
+	public function testUpdateAnswerRejectsHistoricalVersion(): void {
+		[$diaryId, $entryId, $questionId] = $this->createDiaryEntryAndQuestion();
+
+		$first = $this->answerMapper->createAnswer($diaryId, $entryId, $questionId, 'first', null);
+		$this->answerMapper->updateAnswer($first, 'second', null);
+
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('Only the current answer version can be changed.');
+
+		$this->answerMapper->updateAnswer($this->answerMapper->getAnswer($first->getId()), 'third', null);
+	}
+
+	public function testUpdateAnswerNoOpDoesNotCreateNewVersion(): void {
+		[$diaryId, $entryId, $questionId] = $this->createDiaryEntryAndQuestion();
+
+		$first = $this->answerMapper->createAnswer($diaryId, $entryId, $questionId, 'first', null);
+		$result = $this->answerMapper->updateAnswer($first, 'first', null);
+		$current = $this->answerMapper->getCurrentAnswersForEntry($entryId);
+		$chain = $this->answerMapper->getAnswerChainForEntryQuestion($entryId, $questionId);
+
+		$this->assertSame($first->getId(), $result->getId());
+		$this->assertCount(1, $current);
+		$this->assertSame($first->getId(), $current[0]->getId());
+		$this->assertSame([$first->getId()], array_map(static fn ($answer) => $answer->getId(), $chain));
+		$this->assertNull($this->answerMapper->getAnswer($first->getId())->getNextVersionId());
+	}
+
 	private function createDiaryEntryAndQuestion(): array {
 		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
 		$entry = $this->entryMapper->createEntry($diary->getId(), 1713254400, 'day');
