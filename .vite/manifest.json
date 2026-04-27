@@ -1,20 +1,32 @@
 {
+  "_index-k3l-QGfa.chunk.mjs.license": {
+    "file": "js/index-k3l-QGfa.chunk.mjs.license",
+    "src": "_index-k3l-QGfa.chunk.mjs.license"
+  },
   "_structureddiary-main.css": {
     "file": "css/structureddiary-main.css",
     "src": "_structureddiary-main.css"
   },
-  "_vendor-DR6U724j.chunk.mjs": {
-    "file": "js/vendor-DR6U724j.chunk.mjs",
+  "_structureddiary-main.mjs.license": {
+    "file": "js/structureddiary-main.mjs.license",
+    "src": "_structureddiary-main.mjs.license"
+  },
+  "_vendor-DjHY4bAb.chunk.mjs": {
+    "file": "js/vendor-DjHY4bAb.chunk.mjs",
     "name": "vendor"
   },
+  "_vendor-DjHY4bAb.chunk.mjs.license": {
+    "file": "js/vendor-DjHY4bAb.chunk.mjs.license",
+    "src": "_vendor-DjHY4bAb.chunk.mjs.license"
+  },
   "node_modules/rehype-highlight/index.js": {
-    "file": "js/index-lOLtl3lT.chunk.mjs",
+    "file": "js/index-k3l-QGfa.chunk.mjs",
     "name": "index",
     "src": "node_modules/rehype-highlight/index.js",
     "isDynamicEntry": true,
     "imports": [
       "src/main.ts",
-      "_vendor-DR6U724j.chunk.mjs"
+      "_vendor-DjHY4bAb.chunk.mjs"
     ]
   },
   "src/main.ts": {
@@ -23,13 +35,13 @@
     "src": "src/main.ts",
     "isEntry": true,
     "imports": [
-      "_vendor-DR6U724j.chunk.mjs"
+      "_vendor-DjHY4bAb.chunk.mjs"
     ],
     "dynamicImports": [
       "node_modules/rehype-highlight/index.js"
     ],
     "css": [
-      "css/main-EeK-mSP8.chunk.css"
+      "css/main--iVea4zA.chunk.css"
     ]
   }
 }
