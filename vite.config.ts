@@ -5,6 +5,9 @@ import {resolve} from 'path';
 
 const APP_NAME = 'structureddiary'
 const APP_VERSION = '1.0.0'
+const SRC_DIR = resolve(__dirname, './src')
+//const VUE_ROUTER_ENTRY = resolve(__dirname, './node_modules/vue-router/dist/vue-router.mjs')
+//const VUE_ENTRY = resolve(__dirname, './node_modules/vue/dist/vue.runtime.esm-bundler.js')
 
 export default createAppConfig({
 		// entry points: {name: script}
@@ -14,8 +17,11 @@ export default createAppConfig({
 	{
 		config: {
 			resolve: {
+				//dedupe: ['vue', 'vue-router'],
 				alias: {
-					'@': resolve(__dirname, './src'),
+					'@': SRC_DIR,
+				//	'vue': VUE_ENTRY,
+				//	'vue-router': VUE_ROUTER_ENTRY,
 				},
 			},
 			define: {

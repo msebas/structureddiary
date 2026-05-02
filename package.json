@@ -26,14 +26,15 @@
   "dependencies": {
     "@mdi/js": "~7.4.47",
     "@nextcloud/vue": "^9.6.0",
+    "@nextcloud/router": "^3.1.0",
     "@primeuix/themes": "^2.0.3",
     "easymde": "^2.20.0",
     "pinia": "^3.0.4",
     "primevue": "^4.5.5",
     "vite": "^7.3.2",
     "vue": "^3.5.32",
-    "vue-router": "^4.5.1",
-    "vue3-easymde": "^1.0.1"
+    "vue3-easymde": "^1.0.1",
+    "vue-router": "^5.0.6"
   },
   "devDependencies": {
     "@nextcloud/browserslist-config": "^3.1.2",

@@ -24,7 +24,13 @@ function routerBase(): string {
 export const router = createRouter({
     history: createWebHistory(routerBase()),
     routes: [
-        {path: '/', redirect: (to) => ({name: 'diaries', query: to.query})},
+        {path: '/', redirect: (to) => ({name: 'entriesAllDiaries', query: to.query})},
+        {
+            path: '/entries', name: 'entriesAllDiaries', components: {
+                default: EntryDetailView,
+                nav: HeaderEntries
+            }
+        },
         {
             path: '/entries/:diaryId(\\d+)', name: 'entries', components: {
                 default: EntryDetailView,
@@ -105,3 +111,15 @@ export const router = createRouter({
         },
     ],
 })
+
+// let stateBackup: History['state'] | null = null
+// router.beforeEach(() => {
+//     if (!history.state && stateBackup) {
+//         history.replaceState(stateBackup, '', location.href)
+//     }
+// })
+//
+// router.afterEach(() => {
+//     if (history.state)
+//         stateBackup = history.state
+// })

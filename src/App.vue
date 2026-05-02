@@ -7,7 +7,6 @@ import StructuredDiaryNavigation from '@/components/layout/StructuredDiaryNaviga
 import EntryListPanel from '@/components/layout/EntryListPanel.vue'
 import QuestionListPanel from '@/components/layout/QuestionListPanel.vue'
 import OverlayPanel from '@/components/common/OverlayPanel.vue'
-import AnswerHistoryList from '@/components/answers/AnswerHistoryList.vue'
 import DiaryDetailView from '@/views/DiaryDetailView.vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import type { WorkspaceRouteName } from '@/services/workspaceRoute'
@@ -97,7 +96,7 @@ watch(() => store.selectedEntryId, async (entryId) => {
 
 				<OverlayPanel
 					:open="isCompact && mobileCenterOpen"
-					:title="mobileOverlayTitle"
+					:title="String(mobileOverlayTitle)"
 					@close="closeMobileCenter()">
 					<div :class="$style.mobileCenter">
 						<router-view name="nav" />

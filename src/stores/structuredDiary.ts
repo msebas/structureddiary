@@ -210,13 +210,17 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
                 return
             }
         }
-
-        await router.replace({
+        const data = {
             name: route.name,
             params: route.params,
             query,
             hash: route.hash,
-        })
+        }
+        if (route.name == data.name)
+            await router.replace(data)
+        else {
+            await router.push(data)
+        }
     }
 
     const diarySearch = computed({
@@ -283,7 +287,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         set: async (diaryId: number | null) => {
             if (diaryId !== selectedDiaryId.value) {
                 if (diaryId === null) {
-                    await pushWorkspaceRoute({name: 'diaries'})
+                    await pushWorkspaceRoute({name: (isEntryRoute(route.name)) ? 'entriesAllDiaries': 'diaries'})
                     return
                 }
                 if (isEntryRoute(route.name)) {

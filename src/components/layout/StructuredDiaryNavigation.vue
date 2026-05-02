@@ -36,8 +36,8 @@ function selectDiary(diary: Diary): void {
 }
 
 function openManagement(): void {
-  let name = "entries"
-  if (inManagement.value) {
+  let name = "entriesAllDiaries"
+  if (!inManagement.value) {
     name = "diaries"
   }
   store.pushWorkspaceRoute({name: name})
