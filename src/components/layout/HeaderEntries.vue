@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
-import { mdiPlus } from '@mdi/js'
-import { computed } from 'vue'
-import { useStructuredDiaryStore } from '@/stores/structuredDiary'
+import {mdiDeleteOutline, mdiPencil, mdiPlus} from '@mdi/js'
+import {computed} from 'vue'
+import {useStructuredDiaryStore} from '@/stores/structuredDiary'
 import '@/components/layout/workspaceHeader.css'
 
 const store = useStructuredDiaryStore()
@@ -21,6 +21,20 @@ async function editEntry(): Promise<void> {
 
 	await store.startEditingEntry(store.selectedEntryId, store.selectedDiaryId)
 }
+
+async function deleteEntry(): Promise<void> {
+	if (store.selectedEntryId === null) {
+		return
+	}
+
+	const answerCount = await store.countEntryAnswers(store.selectedEntryId)
+	const answerLabel = answerCount === 1 ? '1 answer' : `${answerCount} answers`
+	if (!window.confirm(`Delete this entry? This will delete ${answerLabel}, including all answer history.`)) {
+		return
+	}
+
+	await store.deleteEntry(store.selectedEntryId)
+}
 </script>
 
 <template>
@@ -36,12 +50,25 @@ async function editEntry(): Promise<void> {
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiPlus" />
 				</template>
+				Add entry
 			</NcButton>
 			<NcButton
 				v-if="entry !== null"
 				variant="secondary"
 				@click="editEntry()">
+				<template #icon>
+					<NcIconSvgWrapper :path="mdiPencil" />
+				</template>
 				Edit entry
+			</NcButton>
+			<NcButton
+				v-if="entry !== null"
+				variant="error"
+				@click="deleteEntry()">
+				<template #icon>
+					<NcIconSvgWrapper :path="mdiDeleteOutline" />
+				</template>
+				Delete entry
 			</NcButton>
 		</div>
 	</header>

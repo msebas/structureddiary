@@ -1,6 +1,14 @@
 <script setup lang="ts">
+import {computed} from 'vue'
+import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import NcDateTimePicker from '@nextcloud/vue/components/NcDateTimePicker'
+import NcTextField from '@nextcloud/vue/components/NcTextField'
+import FloatLabel from 'primevue/floatlabel'
+import Rating from 'primevue/rating'
+import Select from 'primevue/select'
+import {VueEasyMDE} from 'vue3-easymde'
 import type { Answer, Question } from '@/types/types'
-import { supportsNumericInput } from '@/utils/format'
+import {ensureQuestionEditorToolbarStyles, questionEditorToolbar} from '@/components/questions/easymdeToolbar'
 
 const props = defineProps<{
 	question: Question
@@ -11,6 +19,48 @@ const props = defineProps<{
 const emit = defineEmits<{
 	(event: 'update:modelValue', value: Answer): void
 }>()
+
+ensureQuestionEditorToolbarStyles()
+
+const FLOATING_LABEL_MAX_LENGTH = 42
+
+const markdownEditorOptions = {
+	autofocus: false,
+	autoDownloadFontAwesome: false,
+	forceSync: true,
+	spellChecker: false,
+	status: false,
+	minHeight: '120px',
+	toolbar: questionEditorToolbar,
+}
+
+const textValue = computed({
+	get: () => props.modelValue?.text_content ?? props.question.template_text ?? '',
+	set: (value: string) => nextValue({text_content: value}),
+})
+
+const selectValue = computed({
+	get: () => props.modelValue?.text_content ?? '',
+	set: (value: string | null) => nextValue({text_content: value}),
+})
+
+const selectOptions = computed(() => props.question.choices ?? [])
+const selectInputId = computed(() => `answer-select-${props.question.id}`)
+const useOutsideLabel = computed(() => props.question.display_text.length > FLOATING_LABEL_MAX_LENGTH)
+
+const timeValue = computed(() => parseTimeValue(props.modelValue?.text_content ?? ''))
+
+const numericValue = computed({
+	get: () => props.modelValue?.numeric_content ?? '',
+	set: (value: string | number) => {
+		nextValue({numeric_content: value === '' ? null : Number(value)})
+	},
+})
+
+const ratingValue = computed({
+	get: () => props.modelValue?.numeric_content ?? 0,
+	set: (value: number) => nextValue({numeric_content: value}),
+})
 
 function nextValue(patch: Partial<Answer>): void {
 	emit('update:modelValue', {
@@ -26,38 +76,114 @@ function nextValue(patch: Partial<Answer>): void {
 		...patch,
 	})
 }
+
+function parseTimeValue(value: string): Date | null {
+	const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(value.trim())
+	if (match === null) {
+		return null
+	}
+
+	const hours = Number(match[1])
+	const minutes = Number(match[2])
+	const seconds = Number(match[3] ?? 0)
+	if (hours > 23 || minutes > 59 || seconds > 59) {
+		return null
+	}
+
+	return new Date(1970, 0, 1, hours, minutes, seconds)
+}
+
+function formatTimeValue(value: Date): string {
+	const hours = value.getHours().toString().padStart(2, '0')
+	const minutes = value.getMinutes().toString().padStart(2, '0')
+	return `${hours}:${minutes}`
+}
+
+function updateTimeValue(value: Date | [Date, Date] | null): void {
+	if (value instanceof Date && Number.isFinite(value.getTime())) {
+		nextValue({text_content: formatTimeValue(value)})
+	}
+}
+
 </script>
 
 <template>
 	<div :class="[$style.field, props.highlightEmpty && $style.fieldEmpty]">
-		<label :class="$style.label">{{ props.question.display_text }}</label>
-
-		<textarea
-			v-if="['text', 'select', 'editable_select', 'time'].includes(props.question.type)"
-			:value="props.modelValue?.text_content ?? props.question.template_text"
-			:class="$style.textarea"
-			rows="4"
-			@input="nextValue({ text_content: ($event.target as HTMLTextAreaElement).value })" />
-
-		<input
-			v-else-if="supportsNumericInput(props.question.type)"
-			:value="props.modelValue?.numeric_content ?? ''"
-			:type="props.question.type === 'integer' ? 'number' : 'number'"
-			:min="props.question.minimum ?? undefined"
-			:max="props.question.maximum ?? undefined"
-			:step="props.question.type === 'integer' ? 1 : props.question.type === 'rating' ? 0.1 : 0.01"
-			:class="$style.input"
-			@input="nextValue({ numeric_content: ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value) })">
-
-		<label v-else-if="props.question.type === 'boolean'" :class="$style.booleanRow">
-			<input
-				type="checkbox"
-				:checked="props.modelValue?.numeric_content === 1"
-				@change="nextValue({ numeric_content: ($event.target as HTMLInputElement).checked ? 1 : 0 })">
-			<span>Yes / No</span>
+		<label v-if="props.question.type === 'text' || props.question.type === 'rating' || props.question.type === 'boolean'" :class="$style.label">
+			{{ props.question.display_text }}
 		</label>
 
-		<p v-if="props.question.template_text" :class="$style.template">
+		<VueEasyMDE
+			v-if="props.question.type === 'text'"
+			v-model="textValue"
+			:options="markdownEditorOptions"
+			:class="$style.markdownEditor" />
+
+		<div
+			v-else-if="props.question.type === 'select' || props.question.type === 'editable_select'"
+			:class="$style.selectField">
+			<label v-if="useOutsideLabel" :for="selectInputId" :class="$style.label">
+				{{ props.question.display_text }}
+			</label>
+			<FloatLabel v-if="!useOutsideLabel" variant="on" :class="$style.selectLabel">
+				<Select
+					v-model="selectValue"
+					:input-id="selectInputId"
+					:options="selectOptions"
+					:editable="props.question.type === 'editable_select'"
+					:class="['structured-diary-select', $style.selectInput]" />
+				<label :for="selectInputId">{{ props.question.display_text }}</label>
+			</FloatLabel>
+			<Select
+				v-else
+				v-model="selectValue"
+				:input-id="selectInputId"
+				:options="selectOptions"
+				:editable="props.question.type === 'editable_select'"
+				:class="['structured-diary-select', $style.selectInput]" />
+		</div>
+
+		<div v-else-if="props.question.type === 'time'" :class="$style.dateTimeField">
+			<label v-if="useOutsideLabel" :class="$style.label">
+				{{ props.question.display_text }}
+			</label>
+			<NcDateTimePicker
+				:model-value="timeValue"
+				format="HH:mm"
+				:placeholder="useOutsideLabel ? undefined : props.question.display_text"
+				type="time"
+				:minute-step="1"
+				@update:model-value="updateTimeValue" />
+		</div>
+
+		<div v-else-if="props.question.type === 'integer' || props.question.type === 'number'" :class="$style.numericRow">
+			<NcTextField
+				v-model="numericValue"
+				:class="$style.numericField"
+				:input-class="$style.numericInput"
+				:label="props.question.display_text"
+				:label-outside="useOutsideLabel"
+				type="number" />
+			<span v-if="props.question.template_text" :class="$style.inlineTemplate">
+				{{ props.question.template_text }}
+			</span>
+		</div>
+
+		<Rating
+			v-else-if="props.question.type === 'rating'"
+			v-model="ratingValue"
+			:stars="10"
+			:cancel="false" />
+
+		<NcCheckboxRadioSwitch
+			v-else-if="props.question.type === 'boolean'"
+			:model-value="props.modelValue?.numeric_content === 1"
+			type="switch"
+			@update:model-value="nextValue({numeric_content: $event ? 1 : 0})">
+			Yes / No
+		</NcCheckboxRadioSwitch>
+
+		<p v-if="props.question.template_text && !['integer', 'number', 'text'].includes(props.question.type)" :class="$style.template">
 			{{ props.question.template_text }}
 		</p>
 	</div>
@@ -68,41 +194,99 @@ function nextValue(patch: Partial<Answer>): void {
 	display: grid;
 	gap: 10px;
 	padding: 16px;
-	border: 1px solid rgba(16, 37, 66, 0.08);
-	border-radius: 18px;
-	background: rgba(255, 255, 255, 0.8);
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius-container);
+	background: var(--color-main-background);
 }
 
 .fieldEmpty {
-	border-color: rgba(217, 105, 65, 0.5);
-	box-shadow: inset 0 0 0 1px rgba(217, 105, 65, 0.18);
+	border-color: var(--color-warning);
+	box-shadow: inset 0 0 0 1px var(--color-warning-hover);
 }
 
 .label {
 	font-weight: 700;
-	color: #13253d;
+	color: var(--color-main-text);
 }
 
-.textarea,
-.input {
-	width: 100%;
-	border: 1px solid rgba(16, 37, 66, 0.15);
-	border-radius: 14px;
-	padding: 12px 14px;
-	background: rgba(255, 255, 255, 0.96);
+.markdownEditor {
+	min-width: 0;
 }
 
-.booleanRow {
+.selectField,
+.dateTimeField {
+	display: grid;
+	gap: 6px;
+	min-width: 25%;
+	max-width: 100%;
+}
+
+.selectInput {
+	width: min(100%, 28rem);
+	min-width: 25%;
+	max-width: 100%;
+	border-color: var(--color-border);
+	background: var(--color-main-background);
+	box-shadow: none;
+}
+
+:global(.structured-diary-select.p-select),
+:global(.structured-diary-select.p-focus),
+:global(.structured-diary-select.p-inputwrapper-focus),
+:global(.structured-diary-select.p-select-open),
+:global(.structured-diary-select.p-select:not(.p-disabled):hover) {
+	border-color: var(--color-border);
+	box-shadow: none;
+	outline: none;
+}
+
+:global(.structured-diary-select input),
+:global(.structured-diary-select .p-select-label) {
+	border: 0;
+	background: transparent;
+	outline: none;
+	box-shadow: none;
+}
+
+.selectLabel {
+	width: min(100%, 28rem);
+	min-width: 25%;
+	max-width: 100%;
+}
+
+.selectLabel label {
+	max-width: calc(100% - 1rem);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	background: var(--color-main-background);
+	color: var(--color-text-maxcontrast);
+}
+
+.numericRow {
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.numericField {
+	max-width: 12rem;
+}
+
+.numericInput {
+	max-width: 9ch;
+}
+
+.inlineTemplate {
+	color: var(--color-text-maxcontrast);
+	white-space: pre-wrap;
 }
 
 .template {
 	margin: 0;
 	font-size: 0.88rem;
-	color: #5f6e82;
+	color: var(--color-text-maxcontrast);
 	white-space: pre-wrap;
 }
 </style>
-

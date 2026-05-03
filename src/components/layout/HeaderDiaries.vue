@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
-import { mdiPlus } from '@mdi/js'
+import { mdiPlus, mdiPencil, mdiShareVariant } from '@mdi/js'
 
 import { computed } from 'vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
@@ -29,17 +29,24 @@ const managePermissionsOnDiary = computed(() => ((store.user_permissions & Permi
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiPlus" />
 				</template>
+        Add Diary
 			</NcButton>
 			<NcButton
 				v-if="diary !== null && managePermissionsOnDiary"
 				variant="secondary"
 				@click="store.editDiary(diary.id)">
+        <template #icon>
+          <NcIconSvgWrapper :path="mdiPencil" />
+        </template>
 				Edit diary
 			</NcButton>
 			<NcButton
 				v-if="diary !== null && managePermissionsOnDiary"
 				variant="secondary"
 				@click="store.editDiaryShares(diary.id)">
+        <template #icon>
+          <NcIconSvgWrapper :path="mdiShareVariant" />
+        </template>
 				Edit diary share
 			</NcButton>
 		</div>

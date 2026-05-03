@@ -256,7 +256,7 @@ async function deleteDiary(): Promise<void> {
 
 <template>
 	<section :class="$style.view">
-		<section :class="$style.card">
+		<section class="workspace-card">
 			<h2 :class="$style.heading">Share diary</h2>
 
 			<NcNoteCard v-if="shareWarning" type="warning">
@@ -306,7 +306,7 @@ async function deleteDiary(): Promise<void> {
 			</div>
 		</section>
 
-		<section :class="$style.card">
+		<section class="workspace-card">
 			<h2 :class="$style.heading">{{ isCreating ? 'Create diary' : 'Edit diary' }}</h2>
 
 			<div :class="$style.field">
@@ -444,17 +444,6 @@ async function deleteDiary(): Promise<void> {
 .view {
 	display: grid;
 	gap: 16px;
-}
-
-.card {
-	display: grid;
-	gap: 16px;
-	width: 100%;
-	padding: 22px;
-	box-sizing: border-box;
-	border-radius: 24px;
-	background: var(--color-main-background);
-	box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
 .heading {

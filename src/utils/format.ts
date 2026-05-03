@@ -21,6 +21,14 @@ export function formatDate(timestamp: number | null | undefined): string {
 	}).format(new Date(timestamp * 1000))
 }
 
+export function hasExplicitEntryTitle(entry: Pick<Entry, 'title'>): boolean {
+	return (entry.title?.trim() ?? '') !== ''
+}
+
+export function formatEntryTitle(entry: Pick<Entry, 'title' | 'timestamp'>): string {
+	return hasExplicitEntryTitle(entry) ? entry.title!.trim() : formatDateTime(entry.timestamp)
+}
+
 export function formatTimeOnly(secondsOrTimestamp: number | null | undefined): string {
 	if (secondsOrTimestamp === null || secondsOrTimestamp === undefined) {
 		return 'n/a'
@@ -61,14 +69,18 @@ export function formatQuestionValue(answer: Answer | undefined, question: Questi
 		case 'rating':
 			return numeric === null ? '' : `${numeric.toFixed(1)} / 10`
 		case 'number':
-			return numeric === null ? '' : numeric.toFixed(2)
+			return numeric === null ? '' : formatValueWithTemplate(numeric.toFixed(2), question.template_text)
 		case 'integer':
-			return numeric === null ? '' : Math.round(numeric).toString()
+			return numeric === null ? '' : formatValueWithTemplate(Math.round(numeric).toString(), question.template_text)
 		case 'time':
 			return text
 		default:
 			return text
 	}
+}
+
+function formatValueWithTemplate(value: string, templateText: string): string {
+	return templateText.trim() === '' ? value : `${value} ${templateText}`
 }
 
 export function isAnswerEmptyForQuestion(question: Question, answer: Answer | undefined): boolean {
@@ -108,4 +120,3 @@ export function frequencyLabel(stats: DiaryStats['entry_frequency']): string {
 export function supportsNumericInput(type: QuestionType): boolean {
 	return type === 'number' || type === 'integer' || type === 'rating'
 }
-

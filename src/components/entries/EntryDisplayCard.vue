@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Answer, Entry, Question } from '@/types/types'
-import { entryQuestionProgress, formatDateTime } from '@/utils/format'
+import { entryQuestionProgress, formatDateTime, formatEntryTitle, hasExplicitEntryTitle } from '@/utils/format'
 import AnswerDisplay from '@/components/answers/AnswerDisplay.vue'
 
 const props = defineProps<{
@@ -32,21 +32,22 @@ function hasMultipleVersions(questionId: number): boolean {
 	const history = props.answerHistories[historyKey(questionId)] ?? []
 	return history.length > 1 || answer.previous_version_id !== null || answer.next_version_id !== null
 }
+
 </script>
 
 <template>
-	<section :class="$style.card">
+	<section class="workspace-card workspace-card--full-height">
 		<template v-if="props.entry">
-			<header :class="$style.header">
+			<header :class="['workspace-card-header', $style.header]">
 				<div>
 					<h2 :class="$style.title">
-						{{ props.entry.title || 'Untitled entry' }}
+						{{ formatEntryTitle(props.entry) }}
 					</h2>
-					<div :class="$style.meta">
+					<div v-if="hasExplicitEntryTitle(props.entry)" :class="['workspace-card-muted', $style.meta]">
 						{{ formatDateTime(props.entry.timestamp) }}
 					</div>
 				</div>
-				<div :class="$style.progress">
+				<div :class="['workspace-card-pill', $style.progress]">
 					{{ entryQuestionProgress(props.entry, props.questions, props.answers) }}
 				</div>
 			</header>
@@ -55,11 +56,11 @@ function hasMultipleVersions(questionId: number): boolean {
 				<article
 					v-for="question in props.questions.filter((item) => currentAnswer(item.id))"
 					:key="question.id"
-					:class="$style.questionCard">
+					:class="['workspace-card-subcard', $style.questionCard]">
 					<div :class="$style.questionHeader">
 						<div>
 							<h3 :class="$style.questionTitle">{{ question.display_text }}</h3>
-							<div :class="$style.questionMeta">
+							<div :class="['workspace-card-muted', $style.questionMeta]">
 								{{ formatDateTime(question.created_at) }}
 							</div>
 						</div>
@@ -82,37 +83,28 @@ function hasMultipleVersions(questionId: number): boolean {
 					</div>
 					<AnswerDisplay :question="question" :answer="currentAnswer(question.id)" />
 				</article>
+				<div aria-hidden="true" :class="$style.answerSpacer" />
 			</div>
+      <div class="workspace-end-space"></div>
 		</template>
 
 		<template v-else>
-			<div :class="$style.empty">
+			<div :class="['workspace-card-empty', $style.empty]">
 				Select an entry to inspect it here.
 			</div>
+      <div class="workspace-end-space"></div>
 		</template>
+
 	</section>
 </template>
 
 <style module>
-.card {
-	display: grid;
-	gap: 18px;
-	padding: 22px;
-	min-height: 100%;
-	border-radius: 26px;
-	background:
-		radial-gradient(circle at top right, rgba(245, 193, 155, 0.22), transparent 38%),
-		linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 252, 0.98));
-	box-shadow: 0 20px 48px rgba(12, 25, 46, 0.09);
-}
 
 .header {
 	display: flex;
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: 14px;
-	padding-bottom: 16px;
-	border-bottom: 1px solid rgba(16, 37, 66, 0.12);
 }
 
 .title {
@@ -122,14 +114,10 @@ function hasMultipleVersions(questionId: number): boolean {
 
 .meta {
 	margin-top: 8px;
-	color: #657587;
 }
 
 .progress {
-	border-radius: 999px;
 	padding: 8px 12px;
-	background: rgba(16, 37, 66, 0.08);
-	font-weight: 700;
 }
 
 .questionList {
@@ -141,8 +129,6 @@ function hasMultipleVersions(questionId: number): boolean {
 	display: grid;
 	gap: 10px;
 	padding: 16px;
-	border-radius: 18px;
-	background: rgba(246, 248, 252, 0.92);
 }
 
 .questionHeader {
@@ -160,7 +146,6 @@ function hasMultipleVersions(questionId: number): boolean {
 .questionMeta {
 	margin-top: 4px;
 	font-size: 0.82rem;
-	color: #6a798c;
 }
 
 .answerActions {
@@ -170,16 +155,19 @@ function hasMultipleVersions(questionId: number): boolean {
 
 .miniButton {
 	border: 0;
-	border-radius: 999px;
+	border-radius: var(--border-radius-pill);
 	padding: 8px 10px;
-	background: rgba(16, 37, 66, 0.1);
+	background: var(--color-background-dark);
+	color: var(--color-main-text);
 	cursor: pointer;
 }
 
 .empty {
-	display: grid;
-	place-items: center;
 	min-height: 300px;
-	color: #718194;
+}
+
+.answerSpacer {
+	min-height: 20%;
+	pointer-events: none;
 }
 </style>

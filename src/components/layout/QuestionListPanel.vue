@@ -23,7 +23,8 @@ async function toggleVersions(question: Question): Promise<void> {
 <template>
 	<aside :class="$style.panel">
 		<div :class="$style.actions">
-			<NcButton @click="store.startCreatingQuestion(null, store.selectedDiaryId)" :disabled="store.selectedDiaryId === null">
+			<NcButton @click="store.startCreatingQuestion(null, store.selectedDiaryId)"
+                :disabled="store.selectedDiaryId === null">
 				New question
 			</NcButton>
 		</div>
@@ -40,8 +41,9 @@ async function toggleVersions(question: Question): Promise<void> {
 				v-for="question in store.currentDiaryQuestions"
 				:key="question.id"
 				:class="$style.questionWrap">
-				<div :class="[$style.item, question.id === store.selectedQuestionId && $style.itemActive]">
-					<span>{{ question.label }}</span>
+				<div :class="[$style.item, question.id === store.selectedQuestionId && $style.itemActive]"
+             @click="store.selectedQuestionId = question.id">
+					<span >{{ question.label }}</span>
 					<NcButton
 						v-if="hasMultipleVersions(question)"
 						variant="tertiary"
@@ -50,12 +52,6 @@ async function toggleVersions(question: Question): Promise<void> {
 						Versions
 					</NcButton>
 				</div>
-				<NcButton
-					variant="secondary"
-					:class="$style.selectButton"
-					@click="store.selectedQuestionId = question.id">
-					Open question
-				</NcButton>
 				<div
 					v-if="expandedQuestionId === question.id && store.questionVersionMap[question.id]?.length"
 					:class="$style.versionList">
@@ -117,10 +113,6 @@ async function toggleVersions(question: Question): Promise<void> {
 .itemActive {
 	border-color: var(--color-primary-element);
 	background: var(--color-background-hover);
-}
-
-.selectButton {
-	justify-self: start;
 }
 
 .versionList {

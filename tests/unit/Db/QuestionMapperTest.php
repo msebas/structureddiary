@@ -44,6 +44,7 @@ final class QuestionMapperTest extends TestCase {
 				$this->assertSame(5.0, $question->getMaximum());
 				$this->assertSame(['yes', 'no'], $question->getChoices());
 				$this->assertTrue($question->getActive());
+				$this->assertArrayHasKey('active', $question->getUpdatedFields());
 				$this->assertSame('template', $question->getTemplateText());
 				$this->assertNull($question->getPreviousVersionId());
 				$this->assertNull($question->getNextVersionId());

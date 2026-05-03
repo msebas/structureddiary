@@ -38,6 +38,8 @@ class IntegrationTestParentClass extends TestCase {
     }
 
     protected function resetDatabase(): void {
+        $this->assertIntegrationDatabaseOptIn();
+
         $schemaManager = self::$connection->createSchemaManager();
         $tables = $schemaManager->listTableNames();
 
@@ -64,5 +66,16 @@ class IntegrationTestParentClass extends TestCase {
     protected function createSchema(): void {
         $migrationService = new MigrationService('structureddiary', self::$connection);
         $migrationService->migrate('latest');
+    }
+
+    protected function assertIntegrationDatabaseOptIn(): void {
+        if (getenv('INTEGRATION_TEST_DB') === '1') {
+            return;
+        }
+
+        throw new \RuntimeException(
+            'Refusing to reset Structured Diary tables without INTEGRATION_TEST_DB=1. ' .
+            'Run integration tests only against a disposable integration-test database.'
+        );
     }
 }

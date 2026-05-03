@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\StructuredDiary\Controller;
 
 use Throwable;
+use OCA\StructuredDiary\Db\AnswerMapper;
 use OCA\StructuredDiary\Db\DiaryMapper;
 use OCA\StructuredDiary\Db\DiaryPermissions;
 use OCA\StructuredDiary\Db\EntryMapper;
@@ -21,6 +22,7 @@ class EntryController extends ApiController {
 		IRequest $request,
 		private DiaryMapper $diaryMapper,
 		private EntryMapper $entryMapper,
+		private AnswerMapper $answerMapper,
 		private ?string $userId,
 	) {
 		parent::__construct($appName, $request);
@@ -83,9 +85,24 @@ class EntryController extends ApiController {
 			$entry = $this->entryMapper->getEntry($id);
 			$this->diaryMapper->getDiaryForUser($entry->getDiaryId(), $this->requireUser($this->userId), DiaryPermissions::WRITE);
 
+			$this->answerMapper->deleteAnswersForEntry($entry->getId());
+
 			return $this->respond($this->entryMapper->deleteEntry($entry));
 		} catch (Throwable $e) {
 			return $this->respondError($e->getMessage());
+		}
+	}
+
+	#[NoAdminRequired]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/entries/{id}/answer-count', requirements: self::REQUIREMENTS)]
+	public function answerCount(int $id): DataResponse {
+		try {
+			$entry = $this->entryMapper->getEntry($id);
+			$this->diaryMapper->getDiaryForUser($entry->getDiaryId(), $this->requireUser($this->userId), DiaryPermissions::READ);
+
+			return $this->respond(['count' => $this->answerMapper->countAnswersForEntry($entry->getId())]);
+		} catch (Throwable $e) {
+			return $this->respondError($e->getMessage(), 404);
 		}
 	}
 }

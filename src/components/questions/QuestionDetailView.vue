@@ -17,14 +17,14 @@ watch(() => store.selectedQuestionId, async (questionId) => {
 </script>
 
 <template>
-	<section :class="$style.card">
+	<section class="workspace-card">
 		<template v-if="question">
 			<header :class="$style.header">
 				<div>
 					<h2 :class="$style.title">{{ question.label }}</h2>
-					<div :class="$style.meta">{{ formatDateTime(question.created_at) }}</div>
+					<div :class="['workspace-card-muted', $style.meta]">{{ formatDateTime(question.created_at) }}</div>
 				</div>
-				<div :class="$style.state">
+				<div :class="['workspace-card-pill', $style.state]">
 					{{ question.active ? 'Active' : 'Inactive' }}
 				</div>
 			</header>
@@ -46,21 +46,12 @@ watch(() => store.selectedQuestionId, async (questionId) => {
 			</section>
 		</template>
 		<template v-else>
-			<div :class="$style.empty">Select a question to inspect it here.</div>
+			<div :class="['workspace-card-empty', $style.empty]">Select a question to inspect it here.</div>
 		</template>
 	</section>
 </template>
 
 <style module>
-.card {
-	display: grid;
-	gap: 18px;
-	padding: 22px;
-	border-radius: 24px;
-	background: rgba(255, 255, 255, 0.98);
-	box-shadow: 0 20px 48px rgba(12, 25, 46, 0.09);
-}
-
 .header {
 	display: flex;
 	align-items: flex-start;
@@ -74,14 +65,10 @@ watch(() => store.selectedQuestionId, async (questionId) => {
 
 .meta {
 	margin-top: 6px;
-	color: #69798b;
 }
 
 .state {
-	border-radius: 999px;
 	padding: 8px 12px;
-	background: rgba(16, 37, 66, 0.08);
-	font-weight: 700;
 }
 
 .body p {
@@ -94,9 +81,6 @@ watch(() => store.selectedQuestionId, async (questionId) => {
 }
 
 .empty {
-	display: grid;
-	place-items: center;
 	min-height: 240px;
-	color: #718194;
 }
 </style>

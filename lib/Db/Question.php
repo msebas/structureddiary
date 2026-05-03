@@ -57,7 +57,7 @@ class Question extends Entity implements JsonSerializable {
 	protected $minimum;
 	protected $maximum;
 	protected $jsonChoices;
-	protected $active = true;
+	protected $active = false;
 	protected $templateText = '';
 	protected $previousVersionId;
 	protected $nextVersionId;

@@ -17,12 +17,17 @@ async function saveEntry(payload: { title: string | null, timestamp: number, ans
 		return
 	}
 
-	await store.saveEntry({
+	const savedEntry = await store.saveEntry({
 		entryId: store.creatingEntry ? null : store.selectedEntryId,
 		diaryId: store.selectedDiaryId,
 		title: payload.title,
 		timestamp: payload.timestamp,
 		answers: payload.answers,
+	}, false)
+
+	await store.pushWorkspaceRoute({
+		name: 'entry',
+		params: {diaryId: savedEntry.diary_id, entryId: savedEntry.id},
 	})
 }
 

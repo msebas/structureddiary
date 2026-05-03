@@ -87,6 +87,7 @@ final class QuestionMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->assertGreaterThan(0, $reloaded->getCreatedAt());
 		$this->assertSame($reloaded->getId(), $reloaded->getChainId());
 		$this->assertSame($reloaded->getId(), $reloaded->getDiaryQuestionOrder());
+		$this->assertTrue($reloaded->getActive());
 	}
 
 	public function testCreateQuestionRejectsEmptySelectionChoice(): void {

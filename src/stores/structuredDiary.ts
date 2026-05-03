@@ -1,6 +1,6 @@
 import {computed, ref} from 'vue'
 import {defineStore} from 'pinia'
-import {answerService, diaryService, entryService, questionService} from '@/services'
+import {answerService, ApiError, diaryService, entryService, questionService} from '@/services'
 import {compareDiaryLabel} from '@/utils/diary'
 import type {
     Answer,
@@ -117,13 +117,16 @@ function toRouteTimestamp(value: unknown): number | null {
 }
 
 
-type DiaryError = {
+export type DiaryError = {
+    id: number
     message: string
     type: 'error' | 'warning' | 'info' | 'success'
     timestamp: number
+    cause?: unknown
 }
 
 type WorkspaceRouteQuery = Record<string, string>
+const ERROR_TIMEOUT_MS = 60_000
 
 export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const route = useRoute()
@@ -148,6 +151,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const questionTypes = ref<QuestionTypeDefinition[]>([])
     const loading = ref(0)
     const errors = ref<DiaryError[]>([])
+    const errorTimeouts = new Map<number, ReturnType<typeof setTimeout>>()
+    let nextErrorId = 1
 
     const cachedDiarySearch = ref('')
     const cachedQuestionSearch = ref('')
@@ -453,15 +458,58 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         return groups
     })
 
+    function reconcileErrorTimeouts(): void {
+        const lastErrorId = errors.value.at(-1)?.id ?? null
+        const visibleErrorIds = new Set(errors.value.map((error) => error.id))
+
+        for (const [errorId, timeout] of errorTimeouts.entries()) {
+            if (!visibleErrorIds.has(errorId) || errorId === lastErrorId) {
+                clearTimeout(timeout)
+                errorTimeouts.delete(errorId)
+            }
+        }
+
+        for (const error of errors.value) {
+            if (error.id === lastErrorId || errorTimeouts.has(error.id)) {
+                continue
+            }
+
+            errorTimeouts.set(error.id, setTimeout(() => {
+                removeError(error.id)
+            }, ERROR_TIMEOUT_MS))
+        }
+    }
+
+    function addError(error: Omit<DiaryError, 'id' | 'timestamp'> & { timestamp?: number }): void {
+        errors.value.push({
+            ...error,
+            id: nextErrorId++,
+            timestamp: error.timestamp ?? Date.now(),
+        })
+        reconcileErrorTimeouts()
+    }
+
+    function removeError(errorId: number): void {
+        const timeout = errorTimeouts.get(errorId)
+        if (timeout !== undefined) {
+            clearTimeout(timeout)
+            errorTimeouts.delete(errorId)
+        }
+
+        errors.value = errors.value.filter((error) => error.id !== errorId)
+        reconcileErrorTimeouts()
+    }
+
     async function runTask<T>(task: () => Promise<T>): Promise<T> {
         loading.value += 1
         try {
             return await task()
         } catch (taskError) {
-            errors.value.push({
-                message: taskError instanceof Error ? taskError.message : 'Unknown error',
+            const  msg = (taskError as ApiError)?.result?.ocs?.data?.error
+            addError({
+                message: msg ?? (taskError instanceof Error ? (taskError as Error).message : 'Unknown error'),
                 type: 'error',
-                timestamp: Date.now(),
+                cause: taskError
             })
             throw taskError
         } finally {
@@ -479,7 +527,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
                 if (res[i.diary_id] === undefined) res[i.diary_id] = {}
                 res[i.diary_id][i.shared_with] = i
             })
-            Object.keys(res).forEach(id => res[Number(id)] = Object.freeze(res[Number(id)]))
+            Object.keys(res).forEach(id => res[Number(id)] = res[Number(id)])
             diaryShares.value = res
         })
     }
@@ -489,8 +537,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             const res = await diaryService.get(id)
             if (!res) return
             diaries.value[id] = await diaryService.get(id)
-            diaryShares.value[id] = Object.freeze(Object.fromEntries((await runTask(() => diaryService.diary_shares(id))).map(
-                i => [i.shared_with, i])))
+            diaryShares.value[id] = Object.fromEntries((await runTask(() => diaryService.diary_shares(id))).map(
+                i => [i.shared_with, i]))
         })
     }
 
@@ -500,9 +548,13 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
     async function loadEntries(diaryId: number, fromTimestamp?: number | null, untilTimestamp?: number | null): Promise<void> {
         const entries = await runTask(() => entryService.list(diaryId, fromTimestamp, untilTimestamp))
-        entriesByDiary.value[diaryId] = Object.freeze({
+        entriesByDiary.value[diaryId] = {
             ...(entriesByDiary.value[diaryId] ?? {}), ...Object.fromEntries(entries.map(i => [i.id, i]))
-        })
+        }
+    }
+
+    function setAnswersForEntry(entryId: number, answers: Answer[]): void {
+        answersByEntryByQuestion.value[entryId] = Object.fromEntries(answers.map(i => [i.question_id, i]))
     }
 
     async function loadEntry(entryId: number): Promise<void> {
@@ -519,13 +571,14 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             questionById.value[question.id] = question
             return question.id
         })
-        await answer_promise
+        setAnswersForEntry(entryId, await answer_promise)
     }
 
     async function loadAnswers(entryId: number): Promise<Answer[]> {
         const answer_promise = runTask(() => answerService.list(entryId))
-        answersByEntryByQuestion.value[entryId] = Object.fromEntries((await answer_promise).map(i => [i.question_id, i]))
-        return answer_promise
+        const answers = await answer_promise
+        setAnswersForEntry(entryId, answers)
+        return answers
     }
 
     async function loadQuestions(diaryId: number): Promise<void> {
@@ -597,6 +650,10 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
     async function cancelEditingEntry(): Promise<void> {
         await pushWorkspaceRoute({name: 'entries', params: {diaryId: selectedDiaryId.value}})
+    }
+
+    async function countEntryAnswers(entryId: number): Promise<number> {
+        return runTask(() => entryService.answerCount(entryId))
     }
 
     async function startCreatingQuestion(_questionId: number | null, diaryId: number | null): Promise<void> {
@@ -715,6 +772,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             }
             return answerService.create(entryId, payload as AnswerCreatePayload)
         })
+        if (answersByEntryByQuestion.value[saved.entry_id] == null)
+            answersByEntryByQuestion.value[saved.entry_id] = {}
         answersByEntryByQuestion.value[saved.entry_id][saved.question_id] = saved
         return saved
     }
@@ -726,7 +785,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             delete answersByEntryByQuestion.value[res.entry_id][res.question_id]
 
         const answers = await runTask(() => answerService.list(res.entry_id))
-        answersByEntryByQuestion.value[res.entry_id] = Object.fromEntries(answers.map((answer) => [answer.question_id, answer]))
+        setAnswersForEntry(res.entry_id, answers)
     }
 
     async function deleteDiary(diaryId: number | null = null): Promise<void> {
@@ -755,7 +814,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     async function saveEntry(payload: EntryEditSubmitPayload, setEntry: boolean = true): Promise<Entry> {
         if (!payload.diaryId) {
             const msg = 'No diary selected.'
-            errors.value.push({message: msg, type: 'error', timestamp: Date.now()})
+            addError({message: msg, type: 'error'})
             throw new Error()
         }
 
@@ -809,6 +868,24 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         }
 
         return saved_entry
+    }
+
+    async function deleteEntry(entryId: number | null = null): Promise<void> {
+        const targetEntryId = entryId ?? selectedEntryId.value
+        if (targetEntryId === null) {
+            return
+        }
+
+        const removedEntry = await runTask(() => entryService.remove(targetEntryId))
+        delete entriesByDiary.value[removedEntry.diary_id]?.[removedEntry.id]
+        delete answersByEntryByQuestion.value[removedEntry.id]
+        delete answerHistoryByEntryQuestion.value[removedEntry.id]
+
+        if (selectedEntryId.value === removedEntry.id) {
+            await pushWorkspaceRoute({name: 'entries', params: {diaryId: removedEntry.diary_id}})
+        }
+
+        await loadEntries(removedEntry.diary_id, entryFromTimestamp.value, entryUntilTimestamp.value)
     }
 
     async function saveDiary(payload: DiaryEditSubmitPayload, setDiary = true): Promise<Diary> {
@@ -915,6 +992,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         questionTypes,
         loading,
         errors,
+        removeError,
         creatingDiary,
         creatingEntry,
         creatingQuestion,
@@ -954,9 +1032,11 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         copyDiary,
         startCreatingEntry,
         startEditingEntry,
+        countEntryAnswers,
         startCreatingQuestion,
         saveDiary,
         saveEntry,
+        deleteEntry,
         saveQuestion,
         saveQuestionAndReloadVersions,
         saveAnswer,

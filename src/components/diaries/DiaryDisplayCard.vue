@@ -12,22 +12,22 @@ const props = defineProps<{
 </script>
 
 <template>
-	<section :class="$style.card">
+	<section class="workspace-card">
 		<template v-if="props.diary">
-			<header :class="$style.header">
+			<header :class="['workspace-card-header', $style.header]">
 				<div>
 					<h2 :class="$style.title">{{ props.diary.title }}</h2>
-					<div :class="$style.owner">Owner: {{ props.diary.user_id }}</div>
+					<div :class="['workspace-card-muted', $style.owner]">Owner: {{ props.diary.user_id }}</div>
 				</div>
 			</header>
 
 			<div :class="$style.grid">
-				<article :class="$style.block">
+				<article :class="['workspace-card-subcard', $style.block]">
 					<h3>Description</h3>
 					<p :class="$style.copy">{{ props.diary.description || 'No description.' }}</p>
 				</article>
 
-				<article :class="$style.block">
+				<article :class="['workspace-card-subcard', $style.block]">
 					<h3>Schedule</h3>
 					<ul :class="$style.definitionList">
 						<li>Target cadence: {{ scheduleSecondsToDays(props.diary.entry_schedule) }} day(s)</li>
@@ -40,7 +40,7 @@ const props = defineProps<{
 					</ul>
 				</article>
 
-				<article :class="$style.block">
+				<article :class="['workspace-card-subcard', $style.block]">
 					<h3>Shares</h3>
 					<ul :class="$style.definitionList">
 						<li v-if="props.shares.length === 0">No shares configured.</li>
@@ -50,7 +50,7 @@ const props = defineProps<{
 					</ul>
 				</article>
 
-				<article v-if="!props.hideStats" :class="$style.block">
+				<article v-if="!props.hideStats" :class="['workspace-card-subcard', $style.block]">
 					<h3>Statistics</h3>
 					<div v-if="props.stats" :class="$style.statsGrid">
 						<div>Questions: {{ props.stats.question_count }}</div>
@@ -62,36 +62,22 @@ const props = defineProps<{
 						<div>Avg duration: {{ formatDurationSeconds(props.stats.average_entry_duration ?? undefined) }}</div>
 						<div>Avg duration last month: {{ formatDurationSeconds(props.stats.average_entry_duration_last_month ?? undefined) }}</div>
 					</div>
-					<div v-else class="muted">
+					<div v-else class="workspace-card-muted">
 						Statistics not loaded yet.
 					</div>
 				</article>
+        <div class="workspace-end-space"></div>
 			</div>
 		</template>
 
 		<template v-else>
-			<div :class="$style.empty">Select a diary to inspect it here.</div>
-		</template>
+			<div :class="['workspace-card-empty', $style.empty]">Select a diary to inspect it here.</div>
+      <div class="workspace-end-space"></div>
+    </template>
 	</section>
 </template>
 
 <style module>
-.card {
-	display: grid;
-	gap: 18px;
-	width: 100%;
-	padding: 22px;
-	box-sizing: border-box;
-	border-radius: 26px;
-	background: rgba(255, 255, 255, 0.98);
-	box-shadow: 0 20px 48px rgba(12, 25, 46, 0.09);
-}
-
-.header {
-	padding-bottom: 16px;
-	border-bottom: 1px solid rgba(16, 37, 66, 0.12);
-}
-
 .title {
 	margin: 0;
 	font-size: 1.5rem;
@@ -99,7 +85,6 @@ const props = defineProps<{
 
 .owner {
 	margin-top: 8px;
-	color: #66768a;
 }
 
 .grid {
@@ -111,8 +96,6 @@ const props = defineProps<{
 .block {
 	min-width: 0;
 	padding: 16px;
-	border-radius: 18px;
-	background: rgba(246, 248, 252, 0.92);
 }
 
 .block h3 {
@@ -139,10 +122,7 @@ const props = defineProps<{
 }
 
 .empty {
-	display: grid;
-	place-items: center;
 	min-height: 260px;
-	color: #718194;
 }
 
 @media (max-width: 900px) {

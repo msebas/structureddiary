@@ -27,16 +27,38 @@ declare global {
 	}
 }
 
-interface ApiErrorPayload {
-	error?: string
-	message?: string
-}
 
 function apiPath(path: string): string {
 	while (path.startsWith('/')) {
 		path = path.substring(1)
 	}
 	return `/ocs/v2.php/apps/structureddiary/api/v1/${path}`
+}
+
+export class ApiError extends Error {
+	public request: { path: string; init?:RequestInit };
+	public http_code: number;
+	public result: { ocs: { data: any | {error:string}; meta: { statuscode: number; status: string; message: string } } } | null;
+	constructor(message: string, request: {path:string, init?:RequestInit}, http_code:number,
+				result: null | {ocs: {data: any | {error:string}, meta: {statuscode: number, status: string, message: string}}}) {
+		super(message)
+		this.request = request
+		this.http_code = http_code
+		this.result=result
+	}
+}
+
+async function handleError(path:string, init?:RequestInit, response?:Response){
+	let message = `HTTP ${response?.status}`
+	let payload = null
+	try {
+		payload = await response?.json()
+		message = payload.error ?? payload.message ?? message
+	} catch {
+		// ignore invalid error payloads
+	}
+	throw new ApiError(message, {path, init: init}, response?.status ?? 500, payload)
+
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -52,14 +74,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 	})
 
 	if (!response.ok) {
-		let message = `HTTP ${response.status}`
-		try {
-			const payload = await response.json() as ApiErrorPayload
-			message = payload.error ?? payload.message ?? message
-		} catch {
-			// ignore invalid error payloads
-		}
-		throw new Error(message)
+		await handleError(path, init, response)
 	}
 
 	const payload = await response.json() as T | { ocs?: { data?: T } }
@@ -83,7 +98,7 @@ async function ocsRequest<T>(path: string, init?: RequestInit): Promise<T> {
 	})
 
 	if (!response.ok) {
-		throw new Error(`HTTP ${response.status}`)
+		await handleError(path, init, response)
 	}
 
 	const payload = await response.json() as { ocs?: { data?: T } }
@@ -216,6 +231,10 @@ export const entryService = {
 	},
 	get(id: number): Promise<Entry> {
 		return request(`entries/${id}`)
+	},
+	async answerCount(id: number): Promise<number> {
+		const response = await request<{ count: number }>(`entries/${id}/answer-count`)
+		return response.count
 	},
 	create(diaryId: number, payload: EntryCreatePayload): Promise<Entry> {
 		return request(`diaries/${diaryId}/entries`, {

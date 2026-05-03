@@ -6,7 +6,7 @@ import type {
   QuestionUpdatePayload,
   QuestionType,
 } from '@/types/types'
-import {computed, reactive} from 'vue'
+import {computed, reactive, watch} from 'vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
@@ -65,6 +65,24 @@ const form = reactive({
   active: true,
   templateText: '',
 })
+
+
+watch(
+    () => [store.creatingQuestion, store.selectedQuestion] as const,
+    ([creatingQuestion, question]) => {
+      if (!creatingQuestion && question === null) return
+      form.label = question?.label ?? ''
+      form.displayText = question?.display_text ?? ''
+      form.type = question?.type ?? 'text'
+      form.minimum = String(question?.minimum ?? '')
+      form.maximum = String(question?.maximum ?? '')
+      form.choices = question?.choices?.join(', ') ?? ''
+      form.active = question?.active ?? true
+      form.templateText = question?.template_text ?? ''
+
+    },
+    {immediate: true},
+)
 
 const rangeStep = computed<'1' | '0.01' | null>(() => {
   switch (form.type) {
@@ -141,7 +159,7 @@ async function saveQuestion(): Promise<void> {
 
   const payload = {
     label: form.label ?? null,
-    displayText: form.displayText ?? null,
+    displayText: form.displayText || form.label,
     type: form.type ?? 'text',
     minimum: form.minimum === '' ? null : Number(form.minimum),
     maximum: form.maximum === '' ? null : Number(form.maximum),
@@ -152,7 +170,11 @@ async function saveQuestion(): Promise<void> {
 
   if (store.creatingQuestion) {
     if (store.selectedDiaryId === null) return;
-    await store.saveQuestionAndReloadVersions({...payload, diaryId: store.selectedDiaryId,} as QuestionCreatePayload)
+    try {
+      await store.saveQuestionAndReloadVersions({...payload, diaryId: store.selectedDiaryId,} as QuestionCreatePayload)
+    } catch (error) {
+      console.error('Failed to save question:', error)
+    }
   } else {
     if (store.selectedQuestion === null) return;
 
@@ -166,14 +188,14 @@ async function saveQuestion(): Promise<void> {
 
 const minimumHelperText = computed<string | undefined>(() => {
   if (form.minimum === '') return undefined
-  if (minimumHasError) return `Invalid value. ${rangeHelperText.value}`
-  if (rangeOrderError) return 'Minimum must be smaller than or equal to maximum.'
+  if (minimumHasError.value) return `Invalid value. ${rangeHelperText.value}`
+  if (rangeOrderError.value) return 'Minimum must be smaller than or equal to maximum.'
   return rangeHelperText.value
 })
 const maximumHelperText = computed<string | undefined>(() => {
   if (form.maximum === '') return undefined
-  if (maximumHasError) return `Invalid value. ${rangeHelperText.value}`
-  if (rangeOrderError) return 'maximum must be smaller than or equal to maximum.'
+  if (maximumHasError.value) return `Invalid value. ${rangeHelperText.value}`
+  if (rangeOrderError.value) return 'Maximum must be greater than or equal to minimum.'
   return rangeHelperText.value
 })
 
@@ -230,12 +252,10 @@ const maximumHelperText = computed<string | undefined>(() => {
         v-model="form.choices"
         helper-text="Comma-separated values, for example: a, b, c"
         label="Choices"
-        label-outside
         resize="vertical"/>
     <NcTextArea
         v-model="form.templateText"
         label="Template text"
-        label-outside
         resize="vertical"/>
     <div :class="$style.actions">
       <NcButton variant="secondary" @click="cancelQuestionEdit">

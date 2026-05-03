@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NcRichText from '@nextcloud/vue/components/NcRichText'
 import type { Answer, Question } from '@/types/types'
 import { formatQuestionValue } from '@/utils/format'
 
@@ -25,6 +26,12 @@ const props = defineProps<{
 					★
 				</span>
 			</div>
+		</template>
+		<template v-else-if="props.question.type === 'text'">
+			<NcRichText
+				:text="props.answer?.text_content ?? ''"
+				:use-markdown="true"
+				:use-extended-markdown="true" />
 		</template>
 		<template v-else>
 			<div :class="$style.text">
@@ -89,4 +96,3 @@ const props = defineProps<{
 	color: #d96941;
 }
 </style>
-

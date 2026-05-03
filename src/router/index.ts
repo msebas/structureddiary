@@ -47,13 +47,13 @@ export const router = createRouter({
             path: '/entries/:diaryId(\\d+)/:entryId(\\d+)', name: 'entry', components: {
                 default: EntryDetailView,
                 nav: HeaderEntries
-            }, props: true
+            },
         },
         {
             path: '/entries/:diaryId(\\d+)/:entryId(\\d+)/edit', name: 'entryEdit', components: {
                 default: EntryEditView,
                 nav: HeaderEntries
-            }, props: true
+            },
         },
         {
             path: '/diaries', name: 'diaries', components: {
@@ -65,7 +65,7 @@ export const router = createRouter({
             path: '/diaries/:diaryId(\\d+)', name: 'diary', components: {
                 default: DiaryDetailView,
                 nav: HeaderDiaries
-            }, props: true
+            },
         },
         {
             path: '/diaries/new', name: 'diaryCreate', components: {
@@ -77,13 +77,13 @@ export const router = createRouter({
             path: '/diaries/:diaryId(\\d+)/edit', name: 'diaryEdit', components: {
                 default: DiaryEditView,
                 nav: HeaderDiaries
-            }, props: true
+            },
         },
         {
             path: '/diaries/:diaryId(\\d+)/edit_share', name: 'diaryEditShare', components: {
                 default: DiaryEditView,
                 nav: HeaderDiaries
-            }, props: true
+            },
         },
         {
             path: '/questions/:diaryId(\\d+)', name: 'questions', components: {
@@ -101,25 +101,25 @@ export const router = createRouter({
             path: '/questions/:diaryId(\\d+)/:questionId(\\d+)', name: 'question', components: {
                 default: QuestionDetailView,
                 nav: HeaderQuestions
-            }, props: true
+            },
         },
         {
             path: '/questions/:diaryId(\\d+)/:questionId(\\d+)/edit', name: 'questionEdit', components: {
                 default: QuestionEditView,
                 nav: HeaderQuestions
-            }, props: true
+            },
         },
     ],
 })
 
-// let stateBackup: History['state'] | null = null
-// router.beforeEach(() => {
-//     if (!history.state && stateBackup) {
-//         history.replaceState(stateBackup, '', location.href)
-//     }
-// })
-//
-// router.afterEach(() => {
-//     if (history.state)
-//         stateBackup = history.state
-// })
+let stateBackup: History['state'] | null = null
+router.beforeEach(() => {
+    if (!history.state && stateBackup) {
+        history.replaceState(stateBackup, '', location.href)
+    }
+})
+
+router.afterEach(() => {
+    if (history.state)
+        stateBackup = history.state
+})

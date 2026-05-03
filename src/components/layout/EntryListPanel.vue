@@ -4,7 +4,7 @@ import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import { mdiCheck } from '@mdi/js'
 import { computed } from 'vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
-import { formatDate, formatDateTime } from '@/utils/format'
+import { formatDate, formatDateTime, formatEntryTitle, hasExplicitEntryTitle } from '@/utils/format'
 
 const store = useStructuredDiaryStore()
 
@@ -61,6 +61,7 @@ async function applyFilter(): Promise<void> {
 
 	await store.loadEntries(store.selectedDiaryId, store.entryFromTimestamp, store.entryUntilTimestamp)
 }
+
 </script>
 
 <template>
@@ -104,8 +105,10 @@ async function applyFilter(): Promise<void> {
 				type="button"
 				:class="[$style.item, entry.id === store.selectedEntryId && $style.itemActive]"
 				@click="store.selectedEntryId = entry.id">
-				<strong>{{ entry.title || 'Untitled entry' }}</strong>
-				<span>{{ duplicateDays.get(formatDate(entry.timestamp))! > 1 ? formatDateTime(entry.timestamp) : formatDate(entry.timestamp) }}</span>
+				<strong>{{ formatEntryTitle(entry) }}</strong>
+				<span v-if="hasExplicitEntryTitle(entry)">
+					{{ duplicateDays.get(formatDate(entry.timestamp))! > 1 ? formatDateTime(entry.timestamp) : formatDate(entry.timestamp) }}
+				</span>
 			</button>
 		</div>
 	</aside>

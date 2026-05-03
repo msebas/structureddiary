@@ -1,0 +1,49 @@
+.workspace-card {
+	display: grid;
+	gap: calc(var(--default-grid-baseline) * 4.5);
+	grid-template-rows: auto auto minmax(10vh, 1fr);
+	width: 100%;
+	box-sizing: border-box;
+	padding: calc(var(--default-grid-baseline) * 5.5);
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius-container-large);
+	background:
+			radial-gradient(circle at top right, color-mix(in srgb, var(--color-background-plain) 10%, transparent), transparent 38%),
+			linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 252, 0.98));
+	box-shadow: 0 2px 12px color-mix(in srgb, var(--color-box-shadow) 18%, transparent);
+}
+
+.workspace-card--full-height {
+	min-height: 100%;
+}
+
+.workspace-card-header {
+	padding-bottom: calc(var(--default-grid-baseline) * 4);
+	border-bottom: 1px solid var(--color-border);
+}
+
+.workspace-card-muted {
+	color: var(--color-text-maxcontrast);
+}
+
+.workspace-card-subcard {
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius-container);
+	background: var(--color-background-hover);
+}
+
+.workspace-card-pill {
+	border-radius: var(--border-radius-pill);
+	background: var(--color-background-dark);
+	color: var(--color-main-text);
+	font-weight: 700;
+}
+
+.workspace-card-empty {
+	display: grid;
+	place-items: center;
+	color: var(--color-text-maxcontrast);
+}
+.workspace-end-space {
+	min-height: 10vh;
+}

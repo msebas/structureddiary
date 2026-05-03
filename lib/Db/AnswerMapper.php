@@ -51,6 +51,53 @@ class AnswerMapper extends QBMapper {
 	}
 
 	/**
+	 * @throws Exception
+	 */
+	public function countAnswersForEntry(int $entryId): int {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('*'))
+			->from($this->getTableName())
+			->where(
+				$qb->expr()->eq('entry_id', $qb->createNamedParameter($entryId, IQueryBuilder::PARAM_INT))
+			);
+
+		$result = $qb->executeQuery();
+		$count = (int)$result->fetchOne();
+		$result->closeCursor();
+
+		return $count;
+	}
+
+	/**
+	 * @throws Exception
+	 */
+	public function deleteAnswersForEntry(int $entryId): int {
+		$count = $this->countAnswersForEntry($entryId);
+
+		if ($count === 0) {
+			return 0;
+		}
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('previous_version_id', $qb->createNamedParameter(null))
+			->set('next_version_id', $qb->createNamedParameter(null))
+			->where(
+				$qb->expr()->eq('entry_id', $qb->createNamedParameter($entryId, IQueryBuilder::PARAM_INT))
+			);
+		$qb->executeStatement();
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where(
+				$qb->expr()->eq('entry_id', $qb->createNamedParameter($entryId, IQueryBuilder::PARAM_INT))
+			);
+		$qb->executeStatement();
+
+		return $count;
+	}
+
+	/**
 	 * @return list<Answer>
 	 * @throws Exception
 	 * @throws \OCP\AppFramework\Db\DoesNotExistException
