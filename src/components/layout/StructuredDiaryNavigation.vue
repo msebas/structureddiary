@@ -19,6 +19,7 @@ const labels: Record<keyof DiaryGroupSet, string> = {
 const store = useStructuredDiaryStore()
 const route = useRoute()
 const inManagement = computed(() => route.name?.toString()?.startsWith("diar") || route.name?.toString()?.startsWith("question"))
+const selectedQuestionRoute = computed(() => route.name === 'question' || route.name === 'questionEdit')
 
 const visibleGroupEntries = computed(() =>
     Object.entries(store.diaryGroups).filter(([, items]) => items.length > 0) as Array<[keyof DiaryGroupSet, Diary[]]>)
@@ -32,15 +33,29 @@ function diaryIcon(): string {
 }
 
 function selectDiary(diary: Diary): void {
+  if (selectedQuestionRoute.value) {
+    store.pushWorkspaceRoute({name: 'diary', params: {diaryId: diary.id}})
+    return
+  }
   store.selectedDiaryId = diary.id
 }
 
 function openManagement(): void {
-  let name = "entriesAllDiaries"
-  if (!inManagement.value) {
-    name = "diaries"
+  const diaryId = store.selectedDiaryId
+  if (inManagement.value) {
+    if (diaryId !== null) {
+      store.pushWorkspaceRoute({name: 'entries', params: {diaryId}})
+      return
+    }
+    store.pushWorkspaceRoute({name: 'entriesAllDiaries'})
+    return
   }
-  store.pushWorkspaceRoute({name: name})
+
+  if (diaryId !== null) {
+    store.pushWorkspaceRoute({name: 'diary', params: {diaryId}})
+    return
+  }
+  store.pushWorkspaceRoute({name: 'diaries'})
 }
 </script>
 

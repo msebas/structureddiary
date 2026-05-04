@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\StructuredDiary\Controller;
 
 use Throwable;
+use OCA\StructuredDiary\ResponseDefinitions;
 use OCA\StructuredDiary\Db\Answer;
 use OCA\StructuredDiary\Db\AnswerMapper;
 use OCA\StructuredDiary\Db\DiaryMapper;
@@ -13,14 +14,16 @@ use OCA\StructuredDiary\Db\EntryMapper;
 use OCA\StructuredDiary\Db\Question;
 use OCA\StructuredDiary\Db\QuestionMapper;
 use OCA\StructuredDiary\Db\QuestionTypeValidator;
+use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
 
-class AnswerController extends ApiController {
-	public const REQUIREMENTS = ['apiVersion' => 'v1'];
-
+/**
+ * @psalm-import-type StructuredDiaryAnswer from ResponseDefinitions
+ */
+class AnswerController extends ApiOCSController {
 	public function __construct(
 		string $appName,
 		IRequest $request,
@@ -33,8 +36,15 @@ class AnswerController extends ApiController {
 		parent::__construct($appName, $request);
 	}
 
+	/**
+	 * List current answers for an entry
+	 *
+	 * @return DataResponse<Http::STATUS_OK, list<StructuredDiaryAnswer>, array{}>
+	 *
+	 * 200: Answers returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/entries/{entryId}/answers', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/entries/{entryId}/answers', requirements: ['apiVersion' => '(v1)'])]
 	public function index(int $entryId): DataResponse {
 		try {
 			$entry = $this->entryMapper->getEntry($entryId);
@@ -46,8 +56,15 @@ class AnswerController extends ApiController {
 		}
 	}
 
+	/**
+	 * List answer history for one entry/question pair
+	 *
+	 * @return DataResponse<Http::STATUS_OK, list<StructuredDiaryAnswer>, array{}>
+	 *
+	 * 200: Answer history returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/entries/{entryId}/questions/{questionId}/answers/history', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/entries/{entryId}/questions/{questionId}/answers/history', requirements: ['apiVersion' => '(v1)'])]
 	public function history(int $entryId, int $questionId): DataResponse {
 		try {
 			$entry = $this->entryMapper->getEntry($entryId);
@@ -61,8 +78,15 @@ class AnswerController extends ApiController {
 		}
 	}
 
+	/**
+	 * Show one answer
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryAnswer, array{}>
+	 *
+	 * 200: Answer returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/answers/{id}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/answers/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function show(int $id): DataResponse {
 		try {
 			$answer = $this->answerMapper->getAnswer($id);
@@ -74,8 +98,15 @@ class AnswerController extends ApiController {
 		}
 	}
 
+	/**
+	 * Create an answer
+	 *
+	 * @return DataResponse<Http::STATUS_CREATED, StructuredDiaryAnswer, array{}>
+	 *
+	 * 201: Answer created
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/entries/{entryId}/answers', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/entries/{entryId}/answers', requirements: ['apiVersion' => '(v1)'])]
 	public function create(int $entryId, int $questionId, ?string $textContent = null, ?float $numericContent = null): DataResponse {
 		try {
 			$entry = $this->entryMapper->getEntry($entryId);
@@ -93,8 +124,15 @@ class AnswerController extends ApiController {
 		}
 	}
 
+	/**
+	 * Create a new answer version
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryAnswer, array{}>
+	 *
+	 * 200: Answer updated
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/answers/{id}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/answers/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function update(int $id, ?string $textContent = null, ?float $numericContent = null): DataResponse {
 		try {
 			/** @var Answer $answer */
@@ -110,8 +148,15 @@ class AnswerController extends ApiController {
 		}
 	}
 
+	/**
+	 * Delete an answer
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryAnswer, array{}>
+	 *
+	 * 200: Answer deleted
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'DELETE', url: '/api/{apiVersion}/answers/{id}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'DELETE', url: '/api/{apiVersion}/answers/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function delete(int $id): DataResponse {
 		try {
 			$answer = $this->answerMapper->getAnswer($id);

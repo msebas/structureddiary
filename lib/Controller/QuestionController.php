@@ -5,18 +5,22 @@ declare(strict_types=1);
 namespace OCA\StructuredDiary\Controller;
 
 use Throwable;
+use OCA\StructuredDiary\ResponseDefinitions;
 use OCA\StructuredDiary\Db\DiaryMapper;
 use OCA\StructuredDiary\Db\DiaryPermissions;
 use OCA\StructuredDiary\Db\QuestionMapper;
 use OCA\StructuredDiary\Db\QuestionTypes;
+use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
 
-class QuestionController extends ApiController {
-	public const REQUIREMENTS = ['apiVersion' => 'v1'];
-
+/**
+ * @psalm-import-type StructuredDiaryQuestion from ResponseDefinitions
+ * @psalm-import-type StructuredDiaryQuestionTypeDefinition from ResponseDefinitions
+ */
+class QuestionController extends ApiOCSController {
 	public function __construct(
 		string $appName,
 		IRequest $request,
@@ -27,8 +31,15 @@ class QuestionController extends ApiController {
 		parent::__construct($appName, $request);
 	}
 
+	/**
+	 * List current question versions for a diary
+	 *
+	 * @return DataResponse<Http::STATUS_OK, list<StructuredDiaryQuestion>, array{}>
+	 *
+	 * 200: Questions returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{diaryId}/questions', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{diaryId}/questions', requirements: ['apiVersion' => '(v1)'])]
 	public function index(int $diaryId): DataResponse {
 		try {
 			$this->diaryMapper->getDiaryForUser($diaryId, $this->requireUser($this->userId), DiaryPermissions::READ);
@@ -39,14 +50,28 @@ class QuestionController extends ApiController {
 		}
 	}
 
+	/**
+	 * List supported question types
+	 *
+	 * @return DataResponse<Http::STATUS_OK, list<StructuredDiaryQuestionTypeDefinition>, array{}>
+	 *
+	 * 200: Question types returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/question-types', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/question-types', requirements: ['apiVersion' => '(v1)'])]
 	public function types(): DataResponse {
 		return $this->respond(QuestionTypes::definitions());
 	}
 
+	/**
+	 * Show one question version
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryQuestion, array{}>
+	 *
+	 * 200: Question returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/questions/{id}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/questions/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function show(int $id): DataResponse {
 		try {
 			$question = $this->questionMapper->getQuestion($id);
@@ -58,8 +83,15 @@ class QuestionController extends ApiController {
 		}
 	}
 
+	/**
+	 * List all versions of a question chain
+	 *
+	 * @return DataResponse<Http::STATUS_OK, list<StructuredDiaryQuestion>, array{}>
+	 *
+	 * 200: Question versions returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/questions/{id}/versions', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/questions/{id}/versions', requirements: ['apiVersion' => '(v1)'])]
 	public function versions(int $id): DataResponse {
 		try {
 			$question = $this->questionMapper->getQuestion($id);
@@ -71,8 +103,15 @@ class QuestionController extends ApiController {
 		}
 	}
 
+	/**
+	 * List active questions for a diary at a timestamp
+	 *
+	 * @return DataResponse<Http::STATUS_OK, list<StructuredDiaryQuestion>, array{}>
+	 *
+	 * 200: Active questions returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{diaryId}/questions/active', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{diaryId}/questions/active', requirements: ['apiVersion' => '(v1)'])]
 	public function active(int $diaryId, int $timestamp): DataResponse {
 		try {
 			$this->diaryMapper->getDiaryForUser($diaryId, $this->requireUser($this->userId), DiaryPermissions::READ);
@@ -83,8 +122,16 @@ class QuestionController extends ApiController {
 		}
 	}
 
+	/**
+	 * Create a question
+	 *
+	 * @param list<string>|null $choices
+	 * @return DataResponse<Http::STATUS_CREATED, StructuredDiaryQuestion, array{}>
+	 *
+	 * 201: Question created
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/diaries/{diaryId}/questions', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/diaries/{diaryId}/questions', requirements: ['apiVersion' => '(v1)'])]
 	public function create(
 		int $diaryId,
 		?string $label = null,
@@ -124,8 +171,16 @@ class QuestionController extends ApiController {
 		}
 	}
 
+	/**
+	 * Create a new version of a question
+	 *
+	 * @param list<string>|null $choices
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryQuestion, array{}>
+	 *
+	 * 200: Question updated
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/questions/{id}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/questions/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function update(
 		int $id,
 		?string $label = null,
@@ -171,8 +226,15 @@ class QuestionController extends ApiController {
 		}
 	}
 
+	/**
+	 * Change the order of a question
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryQuestion, array{}>
+	 *
+	 * 200: Question reordered
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/questions/{id}/order', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/questions/{id}/order', requirements: ['apiVersion' => '(v1)'])]
 	public function reorder(int $id, int $diaryQuestionOrder): DataResponse {
 		try {
 			$userId = $this->requireUser($this->userId);
@@ -186,8 +248,15 @@ class QuestionController extends ApiController {
 		}
 	}
 
+	/**
+	 * Deactivate a question by creating a new inactive version
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryQuestion, array{}>
+	 *
+	 * 200: Question deleted
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'DELETE', url: '/api/{apiVersion}/questions/{id}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'DELETE', url: '/api/{apiVersion}/questions/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function delete(int $id): DataResponse {
 		try {
 			$userId = $this->requireUser($this->userId);

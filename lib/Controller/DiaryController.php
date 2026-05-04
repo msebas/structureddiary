@@ -5,17 +5,22 @@ declare(strict_types=1);
 namespace OCA\StructuredDiary\Controller;
 
 use Throwable;
+use OCA\StructuredDiary\ResponseDefinitions;
 use OCA\StructuredDiary\Db\DiaryMapper;
 use OCA\StructuredDiary\Db\DiaryPermissions;
 use OCA\StructuredDiary\Db\DiaryShareMapper;
+use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
 
-class DiaryController extends ApiController {
-	public const REQUIREMENTS = ['apiVersion' => 'v1'];
-
+/**
+ * @psalm-import-type StructuredDiaryDiary from ResponseDefinitions
+ * @psalm-import-type StructuredDiaryDiaryShare from ResponseDefinitions
+ * @psalm-import-type StructuredDiaryDiaryStats from ResponseDefinitions
+ */
+class DiaryController extends ApiOCSController {
 	public function __construct(
 		string $appName,
 		IRequest $request,
@@ -26,8 +31,15 @@ class DiaryController extends ApiController {
 		parent::__construct($appName, $request);
 	}
 
+	/**
+	 * List diaries readable by the current user
+	 *
+	 * @return DataResponse<Http::STATUS_OK, list<StructuredDiaryDiary>, array{}>
+	 *
+	 * 200: Diaries returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries', requirements: ['apiVersion' => '(v1)'])]
 	public function index(): DataResponse {
 		try {
 			return $this->respond($this->diaryMapper->getAccessibleDiaries($this->requireUser($this->userId)));
@@ -36,8 +48,15 @@ class DiaryController extends ApiController {
 		}
 	}
 
+	/**
+	 * List diary shares that affect the current user
+	 *
+	 * @return DataResponse<Http::STATUS_OK, list<StructuredDiaryDiaryShare>, array{}>
+	 *
+	 * 200: Diary shares returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diary-shares', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diary-shares', requirements: ['apiVersion' => '(v1)'])]
 	public function myShares(): DataResponse {
 		try {
 			return $this->respond($this->shareMapper->getSharesForUser($this->requireUser($this->userId)));
@@ -46,8 +65,15 @@ class DiaryController extends ApiController {
 		}
 	}
 
+	/**
+	 * Show one readable diary
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryDiary, array{}>
+	 *
+	 * 200: Diary returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{id}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function show(int $id): DataResponse {
 		try {
 			return $this->respond($this->diaryMapper->getDiaryForUser($id, $this->requireUser($this->userId)));
@@ -56,8 +82,15 @@ class DiaryController extends ApiController {
 		}
 	}
 
+	/**
+	 * Return analytics for one readable diary
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryDiaryStats, array{}>
+	 *
+	 * 200: Diary stats returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{id}/stats', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{id}/stats', requirements: ['apiVersion' => '(v1)'])]
 	public function stats(int $id): DataResponse {
 		try {
 			return $this->respond($this->diaryMapper->getDiaryStats($id, $this->requireUser($this->userId)));
@@ -66,8 +99,15 @@ class DiaryController extends ApiController {
 		}
 	}
 
+	/**
+	 * Create a diary
+	 *
+	 * @return DataResponse<Http::STATUS_CREATED, StructuredDiaryDiary, array{}>
+	 *
+	 * 201: Diary created
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/diaries', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/diaries', requirements: ['apiVersion' => '(v1)'])]
 	public function create(
 		string $title,
 		string $description = '',
@@ -105,8 +145,15 @@ class DiaryController extends ApiController {
 		}
 	}
 
+	/**
+	 * Update a diary
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryDiary, array{}>
+	 *
+	 * 200: Diary updated
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/diaries/{id}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/diaries/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function update(
 		int $id,
 		?string $title = null,
@@ -149,8 +196,15 @@ class DiaryController extends ApiController {
 		}
 	}
 
+	/**
+	 * Delete a diary
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryDiary, array{}>
+	 *
+	 * 200: Diary deleted
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'DELETE', url: '/api/{apiVersion}/diaries/{id}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'DELETE', url: '/api/{apiVersion}/diaries/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function delete(int $id): DataResponse {
 		try {
 			return $this->respond($this->diaryMapper->deleteDiary($id, $this->requireUser($this->userId)));
@@ -159,8 +213,15 @@ class DiaryController extends ApiController {
 		}
 	}
 
+	/**
+	 * List shares for a managed diary
+	 *
+	 * @return DataResponse<Http::STATUS_OK, list<StructuredDiaryDiaryShare>, array{}>
+	 *
+	 * 200: Diary shares returned
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{id}/shares', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{id}/shares', requirements: ['apiVersion' => '(v1)'])]
 	public function shares(int $id): DataResponse {
 		try {
 			$userId = $this->requireUser($this->userId);
@@ -173,8 +234,15 @@ class DiaryController extends ApiController {
 		}
 	}
 
+	/**
+	 * Create or update a diary share
+	 *
+	 * @return DataResponse<Http::STATUS_CREATED, StructuredDiaryDiaryShare, array{}>
+	 *
+	 * 201: Diary share created
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/diaries/{id}/shares', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/diaries/{id}/shares', requirements: ['apiVersion' => '(v1)'])]
 	public function createShare(int $id, string $sharedWith, int $permission): DataResponse {
 		try {
 			$userId = $this->requireUser($this->userId);
@@ -197,8 +265,15 @@ class DiaryController extends ApiController {
 		}
 	}
 
+	/**
+	 * Update a diary share
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryDiaryShare, array{}>
+	 *
+	 * 200: Diary share updated
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/diaries/{id}/shares/{shareId}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/diaries/{id}/shares/{shareId}', requirements: ['apiVersion' => '(v1)'])]
 	public function updateShare(int $id, int $shareId, int $permission): DataResponse {
 		try {
 			$userId = $this->requireUser($this->userId);
@@ -218,8 +293,15 @@ class DiaryController extends ApiController {
 		}
 	}
 
+	/**
+	 * Delete a diary share
+	 *
+	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryDiaryShare, array{}>
+	 *
+	 * 200: Diary share deleted
+	 */
 	#[NoAdminRequired]
-	#[ApiRoute(verb: 'DELETE', url: '/api/{apiVersion}/diaries/{id}/shares/{shareId}', requirements: self::REQUIREMENTS)]
+	#[ApiRoute(verb: 'DELETE', url: '/api/{apiVersion}/diaries/{id}/shares/{shareId}', requirements: ['apiVersion' => '(v1)'])]
 	public function deleteShare(int $id, int $shareId): DataResponse {
 		try {
 			$userId = $this->requireUser($this->userId);

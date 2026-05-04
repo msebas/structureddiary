@@ -6,6 +6,7 @@ namespace Controller;
 
 use OCA\StructuredDiary\AppInfo\Application;
 use OCA\StructuredDiary\Controller\EntryController;
+use OCA\StructuredDiary\Db\AnswerMapper;
 use OCA\StructuredDiary\Db\Diary;
 use OCA\StructuredDiary\Db\DiaryMapper;
 use OCA\StructuredDiary\Db\DiaryPermissions;
@@ -31,7 +32,7 @@ final class EntryControllerTest extends TestCase {
 			->with(42, null, null)
 			->willReturn([]);
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->index(42);
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
@@ -53,7 +54,7 @@ final class EntryControllerTest extends TestCase {
 			->with(42, 1000, 2000)
 			->willReturn($entries);
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->index(42, 1000, 2000);
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
@@ -71,7 +72,7 @@ final class EntryControllerTest extends TestCase {
 			->willThrowException(new DoesNotExistException('Diary not accessible'));
 		$entryMapper->expects($this->never())->method('getEntriesForDiary');
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->index(42);
 
 		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
@@ -93,7 +94,7 @@ final class EntryControllerTest extends TestCase {
 			->with(42, 1713254400, 'Note')
 			->willReturn($entry);
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->create(42, 1713254400, 'Note');
 
 		$this->assertSame(Http::STATUS_CREATED, $response->getStatus());
@@ -115,7 +116,7 @@ final class EntryControllerTest extends TestCase {
 			->with(42, 1713254400, null)
 			->willReturn($entry);
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->create(42, 1713254400);
 
 		$this->assertSame(Http::STATUS_CREATED, $response->getStatus());
@@ -133,7 +134,7 @@ final class EntryControllerTest extends TestCase {
 			->willThrowException(new DoesNotExistException('Diary not writable'));
 		$entryMapper->expects($this->never())->method('createEntry');
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->create(42, 1713254400, 'Note');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
@@ -154,7 +155,7 @@ final class EntryControllerTest extends TestCase {
 			->with(42, 'alice', DiaryPermissions::READ)
 			->willReturn($this->createStub(Diary::class));
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->show(5);
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
@@ -176,7 +177,7 @@ final class EntryControllerTest extends TestCase {
 			->willThrowException(new DoesNotExistException('Diary not writable'));
 		$entryMapper->expects($this->never())->method('updateEntry');
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->update(5, 1713254401, 'Changed');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
@@ -197,7 +198,7 @@ final class EntryControllerTest extends TestCase {
 			->with(42, 'alice', DiaryPermissions::READ)
 			->willThrowException(new DoesNotExistException('Diary not accessible'));
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->show(5);
 
 		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
@@ -227,7 +228,7 @@ final class EntryControllerTest extends TestCase {
 			->with($entry, 1713254401, 'Changed')
 			->willReturn($updated);
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->update(5, 1713254401, 'Changed');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
@@ -257,7 +258,7 @@ final class EntryControllerTest extends TestCase {
 			->with($entry, null, 'Changed')
 			->willReturn($updated);
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->update(5, null, 'Changed');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
@@ -287,7 +288,7 @@ final class EntryControllerTest extends TestCase {
 			->with($entry, 1713254500, null)
 			->willReturn($updated);
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->update(5, 1713254500);
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
@@ -309,7 +310,7 @@ final class EntryControllerTest extends TestCase {
 			->willReturn($this->createStub(Diary::class));
 		$entryMapper->expects($this->once())->method('deleteEntry')->with($entry)->willReturn($entry);
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->delete(5);
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
@@ -331,7 +332,7 @@ final class EntryControllerTest extends TestCase {
 			->willThrowException(new DoesNotExistException('Diary not writable'));
 		$entryMapper->expects($this->never())->method('deleteEntry');
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, 'alice');
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->delete(5);
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
@@ -346,7 +347,7 @@ final class EntryControllerTest extends TestCase {
 		$diaryMapper->expects($this->never())->method('getDiaryForUser');
 		$entryMapper->expects($this->never())->method('getEntriesForDiary');
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, null);
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), null);
 		$response = $controller->index(42);
 
 		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
@@ -361,7 +362,7 @@ final class EntryControllerTest extends TestCase {
 		$diaryMapper->expects($this->never())->method('getDiaryForUser');
 		$entryMapper->expects($this->never())->method('createEntry');
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, null);
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), null);
 		$response = $controller->create(42, 1713254400, 'Note');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
@@ -379,7 +380,7 @@ final class EntryControllerTest extends TestCase {
 		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
 		$diaryMapper->expects($this->never())->method('getDiaryForUser');
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, null);
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), null);
 		$response = $controller->show(5);
 
 		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
@@ -398,7 +399,7 @@ final class EntryControllerTest extends TestCase {
 		$diaryMapper->expects($this->never())->method('getDiaryForUser');
 		$entryMapper->expects($this->never())->method('updateEntry');
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, null);
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), null);
 		$response = $controller->update(5, 1713254401, 'Changed');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
@@ -417,7 +418,7 @@ final class EntryControllerTest extends TestCase {
 		$diaryMapper->expects($this->never())->method('getDiaryForUser');
 		$entryMapper->expects($this->never())->method('deleteEntry');
 
-		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, null);
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), null);
 		$response = $controller->delete(5);
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
