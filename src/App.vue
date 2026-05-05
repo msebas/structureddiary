@@ -23,13 +23,6 @@ const currentRouteName = computed<WorkspaceRouteName>(() => {
   const routeName = route.name
   return typeof routeName === 'string' ? routeName as WorkspaceRouteName : 'diaries'
 })
-const currentSidebar = computed<'entries' | 'questions'>(() =>
-    currentRouteName.value === 'entries'
-    || currentRouteName.value === 'entry'
-    || currentRouteName.value === 'entryCreate'
-    || currentRouteName.value === 'entryEdit'
-        ? 'entries'
-        : 'questions')
 const mobileOverlayTitle = computed(() => mobileOverlayTitleForRoute(currentRouteName.value))
 const latestError = computed(() => store.errors.at(-1) ?? null)
 
@@ -55,9 +48,9 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', updateCompactState)
 })
 
-watch(currentRouteName, (routeName) => {
+watch(() => route.fullPath, () => {
   if (isCompact.value) {
-    mobileCenterOpen.value = routeName !== 'entries' && routeName !== 'questions' && routeName !== 'diaries'
+    mobileCenterOpen.value = currentRouteName.value !== 'entries' && currentRouteName.value !== 'questions' && currentRouteName.value !== 'diaries'
   }
 }, {immediate: true})
 
@@ -97,9 +90,7 @@ watch(() => store.selectedEntryId, async (entryId) => {
           </section>
 
           <aside :class="$style.right">
-            <EntryListPanel v-if="currentSidebar === 'entries'"/>
-
-            <QuestionListPanel v-else/>
+            <router-view name="sidebar"/>
           </aside>
         </div>
 
