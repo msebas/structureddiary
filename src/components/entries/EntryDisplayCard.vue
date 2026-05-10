@@ -2,6 +2,7 @@
 import type { Answer, Entry, Question } from '@/types/types'
 import { entryQuestionProgress, formatDateTime, formatEntryTitle, hasExplicitEntryTitle } from '@/utils/format'
 import AnswerDisplay from '@/components/answers/AnswerDisplay.vue'
+import { t } from '@nextcloud/l10n'
 
 const props = defineProps<{
 	entry: Entry | null
@@ -70,14 +71,14 @@ function hasMultipleVersions(questionId: number): boolean {
 								type="button"
 								:class="$style.miniButton"
 								@click="currentAnswer(question.id) && emit('deleteAnswer', currentAnswer(question.id)!.id)">
-								Delete
+								{{ t('structureddiary', 'Delete') }}
 							</button>
 							<button
 								v-else
 								type="button"
 								:class="$style.miniButton"
 								@click="emit('loadHistory', question.id)">
-								Versions
+								{{ t('structureddiary', 'Versions') }}
 							</button>
 						</div>
 					</div>
@@ -90,7 +91,7 @@ function hasMultipleVersions(questionId: number): boolean {
 
 		<template v-else>
 			<div :class="['workspace-card-empty', $style.empty]">
-				Select an entry to inspect it here.
+				{{ t('structureddiary', 'Select an entry to inspect it here.') }}
 			</div>
       <div class="workspace-end-space"></div>
 		</template>

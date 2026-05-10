@@ -1,0 +1,873 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the Nextcloud package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Nextcloud 3.14159\n"
+"Report-Msgid-Bugs-To: translations\\@example.com\n"
+"POT-Creation-Date: 2026-05-10 18:35+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#. TRANSLATORS nts/layout/HeaderDiaries.vue:24
+#. TRANSLATORS nts/layout/HeaderEntries.vue:45
+#. TRANSLATORS nts/layout/HeaderQuestions.vue:35
+#: /app/specialAppInfoFakeDummyForL10nScript.php:2
+#: /app/specialVueFakeDummyForL10nScript.js:709
+#: /app/specialVueFakeDummyForL10nScript.js:758
+#: /app/specialVueFakeDummyForL10nScript.js:797
+msgid "Structured Diary"
+msgstr ""
+
+#: /app/specialAppInfoFakeDummyForL10nScript.php:3
+msgid "A schema-driven diary with analytics"
+msgstr ""
+
+#: /app/specialAppInfoFakeDummyForL10nScript.php:4
+msgid ""
+"This is a Nextcloud app for structured personal data collection.\n"
+"\n"
+"If you are looking for a simple diary please take a look at the NextDiary "
+"app or something similar. \n"
+"\n"
+"This app is made to collect a given set of values for later analysis on a "
+"regular schedule. It is structured beyond what one would expect from a diary "
+"and more like answering the same survey on a regular schedule.\n"
+"\n"
+"* Each diary consists of a given set of questions. \n"
+"* The answers to these questions are collected as entries. Supported are\n"
+"  * Text,\n"
+"  * Boolean,\n"
+"  * Rating (Stars 1-10) and\n"
+"  * Float values.\n"
+"* To allow back tracing of later changes the answers are editable, but keep "
+"a history."
+msgstr ""
+
+#. TRANSLATORS :89
+#: /app/specialVueFakeDummyForL10nScript.js:75
+#: /app/specialVueFakeDummyForL10nScript.js:79
+msgid "Dismiss error"
+msgstr ""
+
+#. TRANSLATORS :90
+#: /app/specialVueFakeDummyForL10nScript.js:77
+#: /app/specialVueFakeDummyForL10nScript.js:81
+msgid "Dismiss"
+msgstr ""
+
+#. TRANSLATORS :131
+#: /app/specialVueFakeDummyForL10nScript.js:83
+msgid "Diary overview"
+msgstr ""
+
+#. TRANSLATORS nts/answers/AnswerDisplay.vue:18
+#: /app/specialVueFakeDummyForL10nScript.js:96 /app/src/utils/format.ts:69
+msgid "Yes"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:96 /app/src/utils/format.ts:69
+msgid "No"
+msgstr ""
+
+#. TRANSLATORS nts/answers/AnswerEditorField.vue:184
+#: /app/specialVueFakeDummyForL10nScript.js:207
+msgid "Yes / No"
+msgstr ""
+
+#. TRANSLATORS nts/answers/AnswerHistoryList.vue:21
+#. TRANSLATORS ntryDetailView.vue:51
+#: /app/specialVueFakeDummyForL10nScript.js:224
+#: /app/specialVueFakeDummyForL10nScript.js:1547
+msgid "Answer versions"
+msgstr ""
+
+#. TRANSLATORS nts/answers/AnswerHistoryList.vue:33
+#. TRANSLATORS nts/entries/EntryDisplayCard.vue:74
+#: /app/specialVueFakeDummyForL10nScript.js:226
+#: /app/specialVueFakeDummyForL10nScript.js:501
+msgid "Delete"
+msgstr ""
+
+#. TRANSLATORS nts/answers/AnswerHistoryList.vue:41
+#: /app/specialVueFakeDummyForL10nScript.js:228
+msgid "No answer versions loaded."
+msgstr ""
+
+#. TRANSLATORS nts/answers/AnswerHistoryList.vue:24
+#: /app/specialVueFakeDummyForL10nScript.js:230
+msgid "%n version"
+msgid_plural "%n versions"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS nts/common/OverlayPanel.vue:24
+#: /app/specialVueFakeDummyForL10nScript.js:244
+msgid "Close"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:21
+#: /app/specialVueFakeDummyForL10nScript.js:259
+msgid "Owner: {owner}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:27
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:69
+#. TRANSLATORS iaryEditView.vue:323
+#: /app/specialVueFakeDummyForL10nScript.js:261
+#: /app/specialVueFakeDummyForL10nScript.js:372
+#: /app/specialVueFakeDummyForL10nScript.js:1475
+msgid "Description"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:28
+#: /app/specialVueFakeDummyForL10nScript.js:263
+msgid "No description."
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:32
+#: /app/specialVueFakeDummyForL10nScript.js:265
+msgid "Schedule"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:34
+#: /app/specialVueFakeDummyForL10nScript.js:267
+#: /app/specialVueFakeDummyForL10nScript.js:309
+#: /app/specialVueFakeDummyForL10nScript.js:1254
+#: /app/specialVueFakeDummyForL10nScript.js:1255
+#: /app/specialVueFakeDummyForL10nScript.js:1256
+#: /app/specialVueFakeDummyForL10nScript.js:1257
+msgid "%n day"
+msgid_plural "%n days"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:35
+#. TRANSLATORS nts/questions/QuestionDetailView.vue:29
+#. TRANSLATORS nts/questions/QuestionEditView.vue:233
+#: /app/specialVueFakeDummyForL10nScript.js:269
+#: /app/specialVueFakeDummyForL10nScript.js:931
+#: /app/specialVueFakeDummyForL10nScript.js:1160
+msgid "Active"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:269
+#: /app/specialVueFakeDummyForL10nScript.js:1491
+msgid "Disabled"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:36
+#: /app/specialVueFakeDummyForL10nScript.js:271
+msgid "Reminder time: {time}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:37
+#: /app/specialVueFakeDummyForL10nScript.js:273
+msgid "Repeat count: {count}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:38
+#: /app/specialVueFakeDummyForL10nScript.js:275
+msgid "Repeat delay: {delay}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:39
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:40
+#: /app/specialVueFakeDummyForL10nScript.js:277
+#: /app/specialVueFakeDummyForL10nScript.js:279 /app/src/utils/format.ts:6
+#: /app/src/utils/format.ts:17 /app/src/utils/format.ts:35
+#: /app/src/utils/format.ts:45 /app/src/utils/format.ts:115
+msgid "n/a"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:45
+#: /app/specialVueFakeDummyForL10nScript.js:281
+msgid "Shares"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:47
+#: /app/specialVueFakeDummyForL10nScript.js:283
+msgid "No shares configured."
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:49
+#: /app/specialVueFakeDummyForL10nScript.js:285
+msgid "{user} · permission {permission}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:55
+#: /app/specialVueFakeDummyForL10nScript.js:287
+msgid "Statistics"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:57
+#: /app/specialVueFakeDummyForL10nScript.js:289
+msgid "Questions: {count}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:58
+#: /app/specialVueFakeDummyForL10nScript.js:291
+msgid "Entries: {count}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:59
+#: /app/specialVueFakeDummyForL10nScript.js:293
+msgid "Answers: {count}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:60
+#: /app/specialVueFakeDummyForL10nScript.js:295
+msgid "Avg answers: {count}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:61
+#: /app/specialVueFakeDummyForL10nScript.js:297
+msgid "Frequency: {frequency}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:62
+#: /app/specialVueFakeDummyForL10nScript.js:299
+msgid "Last month: {frequency}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:63
+#: /app/specialVueFakeDummyForL10nScript.js:301
+msgid "Avg duration: {duration}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:64
+#: /app/specialVueFakeDummyForL10nScript.js:303
+msgid "Avg duration last month: {duration}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:67
+#: /app/specialVueFakeDummyForL10nScript.js:305
+msgid "Statistics not loaded yet."
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:75
+#: /app/specialVueFakeDummyForL10nScript.js:307
+msgid "Select a diary to inspect it here."
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:61
+#. TRANSLATORS nts/layout/HeaderDiaries.vue:42
+#: /app/specialVueFakeDummyForL10nScript.js:368
+#: /app/specialVueFakeDummyForL10nScript.js:715
+#: /app/specialVueFakeDummyForL10nScript.js:1471
+#: /app/src/services/workspaceRoute.ts:44
+msgid "Edit diary"
+msgstr ""
+
+#. TRANSLATORS iaryEditView.vue:311
+#. TRANSLATORS iaryEditView.vue:436
+#: /app/specialVueFakeDummyForL10nScript.js:368
+#: /app/specialVueFakeDummyForL10nScript.js:1471
+#: /app/specialVueFakeDummyForL10nScript.js:1507
+msgid "Create diary"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:64
+#. TRANSLATORS iaryEditView.vue:316
+#: /app/specialVueFakeDummyForL10nScript.js:370
+#: /app/specialVueFakeDummyForL10nScript.js:1473
+msgid "Title"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:74
+#. TRANSLATORS iaryEditView.vue:334
+#. TRANSLATORS iaryEditView.vue:339
+#: /app/specialVueFakeDummyForL10nScript.js:374
+#: /app/specialVueFakeDummyForL10nScript.js:1481
+#: /app/specialVueFakeDummyForL10nScript.js:1483
+msgid "Owner"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:80
+#: /app/specialVueFakeDummyForL10nScript.js:376
+msgid "Cadence in days"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:85
+#. TRANSLATORS iaryEditView.vue:358
+#: /app/specialVueFakeDummyForL10nScript.js:378
+#: /app/specialVueFakeDummyForL10nScript.js:1489
+msgid "Reminder active"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:92
+#. TRANSLATORS iaryEditView.vue:370
+#: /app/specialVueFakeDummyForL10nScript.js:380
+#: /app/specialVueFakeDummyForL10nScript.js:1493
+msgid "Reminder time"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:96
+#. TRANSLATORS iaryEditView.vue:380
+#: /app/specialVueFakeDummyForL10nScript.js:382
+#: /app/specialVueFakeDummyForL10nScript.js:1495
+msgid "Repeat count"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:100
+#. TRANSLATORS iaryEditView.vue:386
+#: /app/specialVueFakeDummyForL10nScript.js:384
+#: /app/specialVueFakeDummyForL10nScript.js:1497
+msgid "Repeat delay (seconds)"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:104
+#. TRANSLATORS iaryEditView.vue:391
+#: /app/specialVueFakeDummyForL10nScript.js:386
+#: /app/specialVueFakeDummyForL10nScript.js:1499
+msgid "First signal"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:108
+#. TRANSLATORS iaryEditView.vue:400
+#: /app/specialVueFakeDummyForL10nScript.js:388
+#: /app/specialVueFakeDummyForL10nScript.js:1501
+msgid "Repeat signal"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:115
+#. TRANSLATORS nts/diaries/DiaryShareEditor.vue:71
+#. TRANSLATORS nts/entries/EntryEditorForm.vue:60
+#. TRANSLATORS nts/questions/QuestionEditView.vue:263
+#. TRANSLATORS iaryEditView.vue:433
+#: /app/specialVueFakeDummyForL10nScript.js:390
+#: /app/specialVueFakeDummyForL10nScript.js:460
+#: /app/specialVueFakeDummyForL10nScript.js:554
+#: /app/specialVueFakeDummyForL10nScript.js:558
+#: /app/specialVueFakeDummyForL10nScript.js:1172
+#: /app/specialVueFakeDummyForL10nScript.js:1505
+msgid "Cancel"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryEditorForm.vue:118
+#: /app/specialVueFakeDummyForL10nScript.js:392
+#: /app/specialVueFakeDummyForL10nScript.js:1507
+msgid "Save diary"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryShareEditor.vue:56
+#. TRANSLATORS iaryEditView.vue:261
+#: /app/specialVueFakeDummyForL10nScript.js:446
+#: /app/specialVueFakeDummyForL10nScript.js:1451
+msgid "Share diary"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryShareEditor.vue:58
+#. TRANSLATORS iaryEditView.vue:268
+#. TRANSLATORS iaryEditView.vue:273
+#: /app/specialVueFakeDummyForL10nScript.js:448
+#: /app/specialVueFakeDummyForL10nScript.js:1453
+#: /app/specialVueFakeDummyForL10nScript.js:1455
+msgid "Readers"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryShareEditor.vue:59
+#: /app/specialVueFakeDummyForL10nScript.js:450
+#: /app/specialVueFakeDummyForL10nScript.js:454
+#: /app/specialVueFakeDummyForL10nScript.js:458
+msgid "alice, bob"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryShareEditor.vue:62
+#. TRANSLATORS iaryEditView.vue:282
+#. TRANSLATORS iaryEditView.vue:287
+#: /app/specialVueFakeDummyForL10nScript.js:452
+#: /app/specialVueFakeDummyForL10nScript.js:1459
+#: /app/specialVueFakeDummyForL10nScript.js:1461
+msgid "Writers"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryShareEditor.vue:66
+#. TRANSLATORS iaryEditView.vue:296
+#. TRANSLATORS iaryEditView.vue:301
+#: /app/specialVueFakeDummyForL10nScript.js:456
+#: /app/specialVueFakeDummyForL10nScript.js:1465
+#: /app/specialVueFakeDummyForL10nScript.js:1467
+msgid "Managers"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryShareEditor.vue:74
+#: /app/specialVueFakeDummyForL10nScript.js:462
+msgid "Save shares"
+msgstr ""
+
+#. TRANSLATORS nts/entries/EntryDisplayCard.vue:81
+#. TRANSLATORS nts/layout/QuestionListPanel.vue:66
+#. TRANSLATORS nts/questions/QuestionDetailView.vue:41
+#: /app/specialVueFakeDummyForL10nScript.js:503
+#: /app/specialVueFakeDummyForL10nScript.js:844
+#: /app/specialVueFakeDummyForL10nScript.js:945
+msgid "Versions"
+msgstr ""
+
+#. TRANSLATORS nts/entries/EntryDisplayCard.vue:94
+#: /app/specialVueFakeDummyForL10nScript.js:505
+msgid "Select an entry to inspect it here."
+msgstr ""
+
+#. TRANSLATORS nts/entries/EntryEditorForm.vue:55
+#: /app/specialVueFakeDummyForL10nScript.js:552
+msgid "Entry title"
+msgstr ""
+
+#. TRANSLATORS nts/entries/EntryEditorForm.vue:63
+#: /app/specialVueFakeDummyForL10nScript.js:556
+#: /app/specialVueFakeDummyForL10nScript.js:560
+msgid "Save"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:579
+#: /app/specialVueFakeDummyForL10nScript.js:858
+msgid "Owned diaries"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:580
+#: /app/specialVueFakeDummyForL10nScript.js:859
+msgid "Shared with full access"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:581
+#: /app/specialVueFakeDummyForL10nScript.js:860
+msgid "Shared with write access"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:582
+#: /app/specialVueFakeDummyForL10nScript.js:861
+msgid "Shared with read access"
+msgstr ""
+
+#. TRANSLATORS nts/layout/DiarySidebar.vue:32
+#. TRANSLATORS nts/layout/StructuredDiaryNavigation.vue:67
+#: /app/specialVueFakeDummyForL10nScript.js:586
+#: /app/specialVueFakeDummyForL10nScript.js:909
+msgid "Search diaries"
+msgstr ""
+
+#. TRANSLATORS nts/layout/DiarySidebar.vue:53
+#: /app/specialVueFakeDummyForL10nScript.js:588
+msgid "Shared"
+msgstr ""
+
+#. TRANSLATORS nts/layout/DiarySidebar.vue:63
+#: /app/specialVueFakeDummyForL10nScript.js:590
+msgid "New diary"
+msgstr ""
+
+#. TRANSLATORS nts/layout/DiarySidebar.vue:66
+#: /app/specialVueFakeDummyForL10nScript.js:592
+msgid "Open management"
+msgstr ""
+
+#. TRANSLATORS nts/layout/EntryListPanel.vue:95
+#: /app/specialVueFakeDummyForL10nScript.js:683
+msgid "New entry"
+msgstr ""
+
+#. TRANSLATORS nts/layout/EntryListPanel.vue:100
+#: /app/specialVueFakeDummyForL10nScript.js:685
+msgid "From"
+msgstr ""
+
+#. TRANSLATORS nts/layout/EntryListPanel.vue:108
+#: /app/specialVueFakeDummyForL10nScript.js:687
+msgid "Until"
+msgstr ""
+
+#. TRANSLATORS nts/layout/EntryListPanel.vue:117
+#: /app/specialVueFakeDummyForL10nScript.js:689
+msgid "Apply filter"
+msgstr ""
+
+#. TRANSLATORS nts/layout/HeaderDiaries.vue:29
+#: /app/specialVueFakeDummyForL10nScript.js:711
+msgid "Create new diary"
+msgstr ""
+
+#. TRANSLATORS nts/layout/HeaderDiaries.vue:33
+#: /app/specialVueFakeDummyForL10nScript.js:713
+msgid "Add diary"
+msgstr ""
+
+#. TRANSLATORS nts/layout/HeaderDiaries.vue:51
+#: /app/specialVueFakeDummyForL10nScript.js:717
+msgid "Edit diary share"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:749
+msgid "%n answer"
+msgid_plural "%n answers"
+msgstr[0] ""
+msgstr[1] ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:750
+msgid ""
+"Delete this entry? This will delete {answerLabel}, including all answer "
+"history."
+msgstr ""
+
+#. TRANSLATORS nts/layout/HeaderEntries.vue:50
+#: /app/specialVueFakeDummyForL10nScript.js:760
+msgid "Create new entry"
+msgstr ""
+
+#. TRANSLATORS nts/layout/HeaderEntries.vue:54
+#: /app/specialVueFakeDummyForL10nScript.js:762
+msgid "Add entry"
+msgstr ""
+
+#. TRANSLATORS nts/layout/HeaderEntries.vue:63
+#: /app/specialVueFakeDummyForL10nScript.js:764
+#: /app/src/services/workspaceRoute.ts:37
+msgid "Edit entry"
+msgstr ""
+
+#. TRANSLATORS nts/layout/HeaderEntries.vue:72
+#: /app/specialVueFakeDummyForL10nScript.js:766
+msgid "Delete entry"
+msgstr ""
+
+#. TRANSLATORS nts/layout/HeaderQuestions.vue:40
+#: /app/specialVueFakeDummyForL10nScript.js:799
+msgid "Create new question"
+msgstr ""
+
+#. TRANSLATORS nts/layout/HeaderQuestions.vue:49
+#. TRANSLATORS nts/questions/QuestionEditView.vue:207
+#: /app/specialVueFakeDummyForL10nScript.js:801
+#: /app/specialVueFakeDummyForL10nScript.js:1152
+#: /app/src/services/workspaceRoute.ts:50
+msgid "Edit question"
+msgstr ""
+
+#. TRANSLATORS nts/layout/QuestionListPanel.vue:42
+#: /app/specialVueFakeDummyForL10nScript.js:838
+msgid "New question"
+msgstr ""
+
+#. TRANSLATORS nts/layout/QuestionListPanel.vue:49
+#: /app/specialVueFakeDummyForL10nScript.js:840
+#: /app/specialVueFakeDummyForL10nScript.js:842
+msgid "Search questions"
+msgstr ""
+
+#. TRANSLATORS nts/layout/StructuredDiaryNavigation.vue:64
+#: /app/specialVueFakeDummyForL10nScript.js:907
+msgid "Structured Diary navigation"
+msgstr ""
+
+#. TRANSLATORS nts/layout/StructuredDiaryNavigation.vue:97
+#: /app/specialVueFakeDummyForL10nScript.js:911
+msgid "Entries"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:911
+msgid "Management"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:931
+msgid "Inactive"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionDetailView.vue:33
+#: /app/specialVueFakeDummyForL10nScript.js:933
+msgid "Display text:"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionDetailView.vue:34
+#: /app/specialVueFakeDummyForL10nScript.js:935
+msgid "Type:"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionDetailView.vue:35
+#: /app/specialVueFakeDummyForL10nScript.js:937
+msgid "Template text:"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionDetailView.vue:36
+#: /app/specialVueFakeDummyForL10nScript.js:939
+msgid "Minimum:"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionDetailView.vue:37
+#: /app/specialVueFakeDummyForL10nScript.js:941
+msgid "Maximum:"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionDetailView.vue:38
+#: /app/specialVueFakeDummyForL10nScript.js:943
+msgid "Choices:"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionDetailView.vue:50
+#: /app/specialVueFakeDummyForL10nScript.js:947
+msgid "Select a question to inspect it here."
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1053
+msgid "Whole numbers only."
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1054
+msgid "Use numbers in 0.01 increments."
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1139
+#: /app/specialVueFakeDummyForL10nScript.js:1145
+msgid "Invalid value. {helperText}"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1140
+msgid "Minimum must be smaller than or equal to maximum."
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1146
+msgid "Maximum must be greater than or equal to minimum."
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1152
+msgid "Create question"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionEditView.vue:210
+#: /app/specialVueFakeDummyForL10nScript.js:1154
+msgid "Label"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionEditView.vue:213
+#: /app/specialVueFakeDummyForL10nScript.js:1156
+msgid "Display text"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionEditView.vue:225
+#: /app/specialVueFakeDummyForL10nScript.js:1158
+msgid "Type"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionEditView.vue:241
+#: /app/specialVueFakeDummyForL10nScript.js:1162
+msgid "Minimum"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionEditView.vue:248
+#: /app/specialVueFakeDummyForL10nScript.js:1164
+msgid "Maximum"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionEditView.vue:254
+#: /app/specialVueFakeDummyForL10nScript.js:1166
+msgid "Comma-separated values, for example: a, b, c"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionEditView.vue:255
+#: /app/specialVueFakeDummyForL10nScript.js:1168
+msgid "Choices"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionEditView.vue:259
+#: /app/specialVueFakeDummyForL10nScript.js:1170
+msgid "Template text"
+msgstr ""
+
+#. TRANSLATORS nts/questions/QuestionEditView.vue:266
+#: /app/specialVueFakeDummyForL10nScript.js:1174
+msgid "Save question"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1253
+msgid "1/2 day"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1320
+msgid ""
+"Write and manage access imply read access. Missing readers were added again."
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1356
+msgid "Delete diary"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1358
+#: /app/specialVueFakeDummyForL10nScript.js:1427
+msgid "%n entry"
+msgid_plural "%n entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1358
+msgid "Delete diary ({count})"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1427
+msgid "an unknown number of entries"
+msgstr ""
+
+#: /app/specialVueFakeDummyForL10nScript.js:1428
+msgid "Delete this diary with {countLabel}?"
+msgstr ""
+
+#. TRANSLATORS iaryEditView.vue:274
+#: /app/specialVueFakeDummyForL10nScript.js:1457
+msgid "Select readers"
+msgstr ""
+
+#. TRANSLATORS iaryEditView.vue:288
+#: /app/specialVueFakeDummyForL10nScript.js:1463
+msgid "Select writers"
+msgstr ""
+
+#. TRANSLATORS iaryEditView.vue:302
+#: /app/specialVueFakeDummyForL10nScript.js:1469
+msgid "Select managers"
+msgstr ""
+
+#. TRANSLATORS iaryEditView.vue:324
+#: /app/specialVueFakeDummyForL10nScript.js:1477
+msgid "Markdown is supported."
+msgstr ""
+
+#. TRANSLATORS iaryEditView.vue:328
+#: /app/specialVueFakeDummyForL10nScript.js:1479
+msgid "Preview"
+msgstr ""
+
+#. TRANSLATORS iaryEditView.vue:340
+#: /app/specialVueFakeDummyForL10nScript.js:1485
+msgid "Select owner"
+msgstr ""
+
+#. TRANSLATORS iaryEditView.vue:349
+#: /app/specialVueFakeDummyForL10nScript.js:1487
+msgid "Entry cadence in days"
+msgstr ""
+
+#. TRANSLATORS iaryEditView.vue:363
+#: /app/specialVueFakeDummyForL10nScript.js:1491
+msgid "Enabled"
+msgstr ""
+
+#. TRANSLATORS iaryEditView.vue:428
+#: /app/specialVueFakeDummyForL10nScript.js:1503
+msgid "Copy diary"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:40
+#: /app/specialVueFakeDummyForL10nScript.js:279
+msgid "Repeat signal: {signal}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:39
+#: /app/specialVueFakeDummyForL10nScript.js:277
+msgid "First signal: {signal}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:35
+#: /app/specialVueFakeDummyForL10nScript.js:269
+msgid "Reminder: {state}"
+msgstr ""
+
+#. TRANSLATORS nts/diaries/DiaryDisplayCard.vue:34
+#: /app/specialVueFakeDummyForL10nScript.js:267
+msgid "Target cadence: {cadence}"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:69
+msgid "Bold"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:75
+msgid "Italic"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:81
+msgid "Strikethrough"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:87
+msgid "Heading"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:94
+msgid "Quote"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:100
+msgid "Generic List"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:106
+msgid "Numbered List"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:112
+msgid "Insert Checkbox List"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:119
+msgid "Create Link"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:126
+msgid "Toggle Preview"
+msgstr ""
+
+#: /app/src/components/questions/easymdeToolbar.ts:133
+msgid "Markdown Guide"
+msgstr ""
+
+#: /app/src/services/workspaceRoute.ts:34
+msgid "Entry"
+msgstr ""
+
+#: /app/src/services/workspaceRoute.ts:41
+msgid "Diary"
+msgstr ""
+
+#: /app/src/services/workspaceRoute.ts:47
+msgid "Question"
+msgstr ""
+
+#: /app/src/stores/structuredDiary.ts:511
+msgid "Unknown error"
+msgstr ""
+
+#: /app/src/stores/structuredDiary.ts:698
+msgid "Diary with ID {diaryId} not found"
+msgstr ""
+
+#: /app/src/stores/structuredDiary.ts:821
+msgid "No diary selected."
+msgstr ""
+
+#: /app/src/stores/structuredDiary.ts:848
+msgid "Unable to determine saved entry id."
+msgstr ""
+
+#: /app/src/utils/format.ts:48
+msgid "{seconds}s"
+msgstr ""
+
+#: /app/src/utils/format.ts:51
+msgid "{minutes}m"
+msgstr ""
+
+#: /app/src/utils/format.ts:54
+msgid "{hours}h"
+msgstr ""
+
+#: /app/src/utils/format.ts:56
+msgid "{days}d"
+msgstr ""

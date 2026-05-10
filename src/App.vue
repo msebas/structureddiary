@@ -12,6 +12,7 @@ import DiaryDetailView from '@/views/DiaryDetailView.vue'
 import {useStructuredDiaryStore} from '@/stores/structuredDiary'
 import type {WorkspaceRouteName} from '@/services/workspaceRoute'
 import {mobileOverlayTitleForRoute} from '@/services/workspaceRoute'
+import { t } from '@nextcloud/l10n'
 
 const store = useStructuredDiaryStore()
 const route = useRoute()
@@ -85,8 +86,8 @@ watch(() => store.selectedEntryId, async (entryId) => {
                 <div v-for="error in store.errors" :key="error.id" :class="$style.errorItem">
                   <span>{{ error.message }}</span>
                   <NcButton
-                      aria-label="Dismiss error"
-                      text="Dismiss"
+                      :aria-label="t('structureddiary', 'Dismiss error')"
+                      :text="t('structureddiary', 'Dismiss')"
                       variant="tertiary"
                       @click="store.removeError(error.id)"/>
                 </div>
@@ -116,8 +117,8 @@ watch(() => store.selectedEntryId, async (entryId) => {
                 <div v-if="latestError !== null" :class="$style.errorItem">
                   <span>{{ latestError.message }}</span>
                   <NcButton
-                      aria-label="Dismiss error"
-                      text="Dismiss"
+                      :aria-label="t('structureddiary', 'Dismiss error')"
+                      :text="t('structureddiary', 'Dismiss')"
                       variant="tertiary"
                       @click="store.removeError(latestError.id)"/>
                 </div>
@@ -127,7 +128,7 @@ watch(() => store.selectedEntryId, async (entryId) => {
           </div>
         </OverlayPanel>
 
-        <OverlayPanel :open="diaryOverlayOpen" title="Diary overview" @close="diaryOverlayOpen = false">
+        <OverlayPanel :open="diaryOverlayOpen" :title="t('structureddiary', 'Diary overview')" @close="diaryOverlayOpen = false">
           <DiaryDetailView :hide-stats="true"/>
         </OverlayPanel>
 

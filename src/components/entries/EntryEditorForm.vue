@@ -3,6 +3,7 @@ import { computed, reactive, watch } from 'vue'
 import type { Answer, Entry, Question } from '@/types/types'
 import { formatDateTime, isAnswerEmptyForQuestion } from '@/utils/format'
 import AnswerEditorField from '@/components/answers/AnswerEditorField.vue'
+import { t } from '@nextcloud/l10n'
 
 const props = defineProps<{
 	entry: Entry | null
@@ -51,15 +52,15 @@ function submit(): void {
 				<input
 					v-model="form.title"
 					type="text"
-					placeholder="Entry title"
+					:placeholder="t('structureddiary', 'Entry title')"
 					:class="$style.titleInput">
 			</div>
 			<div :class="$style.actions">
 				<button type="button" :class="$style.secondaryButton" @click="emit('cancel')">
-					Cancel
+					{{ t('structureddiary', 'Cancel') }}
 				</button>
 				<button type="button" :class="$style.primaryButton" @click="submit()">
-					Save
+					{{ t('structureddiary', 'Save') }}
 				</button>
 			</div>
 		</header>
@@ -76,10 +77,10 @@ function submit(): void {
 
 		<footer :class="$style.footer">
 			<button type="button" :class="$style.secondaryButton" @click="emit('cancel')">
-				Cancel
+				{{ t('structureddiary', 'Cancel') }}
 			</button>
 			<button type="button" :class="$style.primaryButton" @click="submit()">
-				Save
+				{{ t('structureddiary', 'Save') }}
 			</button>
 		</footer>
 	</section>
@@ -156,4 +157,3 @@ function submit(): void {
 	}
 }
 </style>
-

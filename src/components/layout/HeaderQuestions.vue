@@ -5,6 +5,7 @@ import { mdiPlus } from '@mdi/js'
 import { computed } from 'vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import '@/components/layout/workspaceHeader.css'
+import { t } from '@nextcloud/l10n'
 
 const store = useStructuredDiaryStore()
 const diary = computed(() => store.selectedDiary)
@@ -31,12 +32,12 @@ async function editQuestion(): Promise<void> {
 	<header class="workspace-header">
 		<div class="workspace-header-leading">
 			<h1 class="workspace-header-title">
-				{{ diary?.title ?? 'Structured Diary' }}
+				{{ diary?.title ?? t('structureddiary', 'Structured Diary') }}
 			</h1>
 		</div>
 
 		<div class="workspace-header-actions">
-			<NcButton aria-label="Create new question" @click="createQuestion()">
+			<NcButton :aria-label="t('structureddiary', 'Create new question')" @click="createQuestion()">
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiPlus" />
 				</template>
@@ -45,7 +46,7 @@ async function editQuestion(): Promise<void> {
 				v-if="question !== null"
 				variant="secondary"
 				@click="editQuestion()">
-				Edit question
+				{{ t('structureddiary', 'Edit question') }}
 			</NcButton>
 		</div>
 	</header>

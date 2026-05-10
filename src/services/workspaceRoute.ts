@@ -1,3 +1,5 @@
+import { t } from '@nextcloud/l10n'
+
 export type WorkspaceRouteName =
 	| 'entries'
 	| 'entry'
@@ -29,22 +31,22 @@ export function mobileOverlayTitleForRoute(routeName: WorkspaceRouteName): strin
 	switch (routeName) {
 		case 'entries':
 		case 'entry':
-			return 'Entry'
+			return t('structureddiary', 'Entry')
 		case 'entryCreate':
 		case 'entryEdit':
-			return 'Edit entry'
+			return t('structureddiary', 'Edit entry')
 		case 'diaries':
 		case 'diary':
 		case 'diaryCreate':
-			return 'Diary'
+			return t('structureddiary', 'Diary')
 		case 'diaryEdit':
 		case 'diaryEditShare':
-			return 'Edit diary'
+			return t('structureddiary', 'Edit diary')
 		case 'questions':
 		case 'question':
-			return 'Question'
+			return t('structureddiary', 'Question')
 		case 'questionCreate':
 		case 'questionEdit':
-			return 'Edit question'
+			return t('structureddiary', 'Edit question')
 	}
 }

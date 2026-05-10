@@ -5,6 +5,7 @@ import { mdiCheck } from '@mdi/js'
 import { computed } from 'vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import { formatDate, formatDateTime, formatEntryTitle, hasExplicitEntryTitle } from '@/utils/format'
+import { t } from '@nextcloud/l10n'
 
 const store = useStructuredDiaryStore()
 const emit = defineEmits<{
@@ -91,12 +92,12 @@ function selectEntry(entryId: number): void {
 	<aside :class="$style.panel">
 		<div :class="[$style.actions, $style.mobileActions]">
 			<NcButton @click="createEntry()">
-				New entry
+				{{ t('structureddiary', 'New entry') }}
 			</NcButton>
 		</div>
 		<div :class="$style.filters">
 			<label :class="$style.field">
-				<span :class="$style.fieldLabel">From</span>
+				<span :class="$style.fieldLabel">{{ t('structureddiary', 'From') }}</span>
 				<input
 					:value="fromValue"
 					type="date"
@@ -104,7 +105,7 @@ function selectEntry(entryId: number): void {
 					@input="fromValue = ($event.target as HTMLInputElement).value">
 			</label>
 			<label :class="$style.field">
-				<span :class="$style.fieldLabel">Until</span>
+				<span :class="$style.fieldLabel">{{ t('structureddiary', 'Until') }}</span>
 				<input
 					:value="untilValue"
 					type="date"
@@ -113,7 +114,7 @@ function selectEntry(entryId: number): void {
 			</label>
 			<NcButton
 				variant="secondary"
-				aria-label="Apply filter"
+				:aria-label="t('structureddiary', 'Apply filter')"
 				:class="$style.applyButton"
 				@click="applyFilter()">
 				<template #icon>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@nextcloud/l10n'
+
 const props = defineProps<{
 	title: string
 	open: boolean
@@ -19,7 +21,7 @@ const emit = defineEmits<{
 							{{ props.title }}
 						</h3>
 						<button type="button" :class="$style.close" @click="emit('close')">
-							Close
+							{{ t('structureddiary', 'Close') }}
 						</button>
 					</header>
 					<div :class="$style.body">

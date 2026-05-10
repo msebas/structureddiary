@@ -2,6 +2,7 @@
 import type { Answer, Question } from '@/types/types'
 import { formatDateTime } from '@/utils/format'
 import AnswerDisplay from '@/components/answers/AnswerDisplay.vue'
+import { n, t } from '@nextcloud/l10n'
 
 const props = defineProps<{
 	question: Question | null
@@ -17,10 +18,10 @@ const emit = defineEmits<{
 	<section :class="$style.list">
 		<header :class="$style.header">
 			<h3 :class="$style.title">
-				{{ props.question?.label ?? 'Answer versions' }}
+				{{ props.question?.label ?? t('structureddiary', 'Answer versions') }}
 			</h3>
 			<div :class="$style.meta">
-				{{ props.answers.length }} version(s)
+				{{ n('structureddiary', '%n version', '%n versions', props.answers.length) }}
 			</div>
 		</header>
 
@@ -29,7 +30,7 @@ const emit = defineEmits<{
 				<div :class="$style.itemHeader">
 					<div>{{ formatDateTime(answer.created_at) }}</div>
 					<button type="button" :class="$style.deleteButton" @click="emit('delete', answer.id)">
-						Delete
+						{{ t('structureddiary', 'Delete') }}
 					</button>
 				</div>
 				<AnswerDisplay :question="props.question" :answer="answer" />
@@ -37,7 +38,7 @@ const emit = defineEmits<{
 		</div>
 
 		<div v-else :class="$style.empty">
-			No answer versions loaded.
+			{{ t('structureddiary', 'No answer versions loaded.') }}
 		</div>
 	</section>
 </template>

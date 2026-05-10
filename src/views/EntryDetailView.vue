@@ -5,6 +5,7 @@ import {useStructuredDiaryStore} from '@/stores/structuredDiary'
 import type {Answer} from '@/types/types'
 import OverlayPanel from "@/components/common/OverlayPanel.vue";
 import AnswerHistoryList from "@/components/answers/AnswerHistoryList.vue";
+import { t } from '@nextcloud/l10n'
 
 const store = useStructuredDiaryStore()
 
@@ -47,7 +48,7 @@ async function deleteCurrentAnswer(answerId: number): Promise<void> {
 
   <OverlayPanel
       :open="showAnswerHistory !=null"
-      title="Answer versions"
+      :title="t('structureddiary', 'Answer versions')"
       @close="showAnswerHistory = null">
     <AnswerHistoryList
         :question="store.currentEntryQuestions.find((question) => question?.id === showAnswerHistory) ?? null"

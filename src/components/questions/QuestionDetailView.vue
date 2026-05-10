@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue'
 import { formatDateTime } from '@/utils/format'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
+import { t } from '@nextcloud/l10n'
 
 const store = useStructuredDiaryStore()
 
@@ -25,19 +26,19 @@ watch(() => store.selectedQuestionId, async (questionId) => {
 					<div :class="['workspace-card-muted', $style.meta]">{{ formatDateTime(question.created_at) }}</div>
 				</div>
 				<div :class="['workspace-card-pill', $style.state]">
-					{{ question.active ? 'Active' : 'Inactive' }}
+					{{ question.active ? t('structureddiary', 'Active') : t('structureddiary', 'Inactive') }}
 				</div>
 			</header>
 			<div :class="$style.body">
-				<p><strong>Display text:</strong> {{ question.display_text }}</p>
-				<p><strong>Type:</strong> {{ question.type }}</p>
-				<p><strong>Template text:</strong> {{ question.template_text || 'n/a' }}</p>
-				<p><strong>Minimum:</strong> {{ question.minimum ?? 'n/a' }}</p>
-				<p><strong>Maximum:</strong> {{ question.maximum ?? 'n/a' }}</p>
-				<p><strong>Choices:</strong> {{ question.choices?.join(', ') || 'n/a' }}</p>
+				<p><strong>{{ t('structureddiary', 'Display text:') }}</strong> {{ question.display_text }}</p>
+				<p><strong>{{ t('structureddiary', 'Type:') }}</strong> {{ question.type }}</p>
+				<p><strong>{{ t('structureddiary', 'Template text:') }}</strong> {{ question.template_text || t('structureddiary', 'n/a') }}</p>
+				<p><strong>{{ t('structureddiary', 'Minimum:') }}</strong> {{ question.minimum ?? t('structureddiary', 'n/a') }}</p>
+				<p><strong>{{ t('structureddiary', 'Maximum:') }}</strong> {{ question.maximum ?? t('structureddiary', 'n/a') }}</p>
+				<p><strong>{{ t('structureddiary', 'Choices:') }}</strong> {{ question.choices?.join(', ') || t('structureddiary', 'n/a') }}</p>
 			</div>
 			<section v-if="versionChain.length > 0" :class="$style.versions">
-				<h3>Versions</h3>
+				<h3>{{ t('structureddiary', 'Versions') }}</h3>
 				<ul>
 					<li v-for="version in versionChain" :key="version.id">
 						{{ formatDateTime(version.created_at) }} · {{ version.label }}
@@ -46,7 +47,7 @@ watch(() => store.selectedQuestionId, async (questionId) => {
 			</section>
 		</template>
 		<template v-else>
-			<div :class="['workspace-card-empty', $style.empty]">Select a question to inspect it here.</div>
+			<div :class="['workspace-card-empty', $style.empty]">{{ t('structureddiary', 'Select a question to inspect it here.') }}</div>
 		</template>
 	</section>
 </template>

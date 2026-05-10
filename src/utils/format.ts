@@ -1,8 +1,9 @@
 import type { Answer, DiaryStats, Entry, Question, QuestionType } from '@/types/types'
+import { t } from '@nextcloud/l10n'
 
 export function formatDateTime(timestamp: number | null | undefined): string {
 	if (timestamp === null || timestamp === undefined) {
-		return 'n/a'
+		return t('structureddiary', 'n/a')
 	}
 
 	return new Intl.DateTimeFormat(undefined, {
@@ -13,7 +14,7 @@ export function formatDateTime(timestamp: number | null | undefined): string {
 
 export function formatDate(timestamp: number | null | undefined): string {
 	if (timestamp === null || timestamp === undefined) {
-		return 'n/a'
+		return t('structureddiary', 'n/a')
 	}
 
 	return new Intl.DateTimeFormat(undefined, {
@@ -31,7 +32,7 @@ export function formatEntryTitle(entry: Pick<Entry, 'title' | 'timestamp'>): str
 
 export function formatTimeOnly(secondsOrTimestamp: number | null | undefined): string {
 	if (secondsOrTimestamp === null || secondsOrTimestamp === undefined) {
-		return 'n/a'
+		return t('structureddiary', 'n/a')
 	}
 
 	const hours = Math.floor(secondsOrTimestamp / 3600) % 24
@@ -41,18 +42,18 @@ export function formatTimeOnly(secondsOrTimestamp: number | null | undefined): s
 
 export function formatDurationSeconds(seconds: number | null | undefined): string {
 	if (seconds === null || seconds === undefined) {
-		return 'n/a'
+		return t('structureddiary', 'n/a')
 	}
 	if (seconds < 60) {
-		return `${seconds}s`
+		return t('structureddiary', '{seconds}s', {seconds})
 	}
 	if (seconds < 3600) {
-		return `${Math.round(seconds / 60)}m`
+		return t('structureddiary', '{minutes}m', {minutes: Math.round(seconds / 60)})
 	}
 	if (seconds < 86400) {
-		return `${(seconds / 3600).toFixed(1)}h`
+		return t('structureddiary', '{hours}h', {hours: (seconds / 3600).toFixed(1)})
 	}
-	return `${(seconds / 86400).toFixed(1)}d`
+	return t('structureddiary', '{days}d', {days: (seconds / 86400).toFixed(1)})
 }
 
 export function formatQuestionValue(answer: Answer | undefined, question: Question | undefined): string {
@@ -65,7 +66,7 @@ export function formatQuestionValue(answer: Answer | undefined, question: Questi
 
 	switch (question.type) {
 		case 'boolean':
-			return numeric === 1 ? 'Yes' : 'No'
+			return numeric === 1 ? t('structureddiary', 'Yes') : t('structureddiary', 'No')
 		case 'rating':
 			return numeric === null ? '' : `${numeric.toFixed(1)} / 10`
 		case 'number':
@@ -111,7 +112,7 @@ export function entryQuestionProgress(entry: Entry | undefined, questions: Quest
 
 export function frequencyLabel(stats: DiaryStats['entry_frequency']): string {
 	if (stats.mean === null || stats.stddev === null) {
-		return 'n/a'
+		return t('structureddiary', 'n/a')
 	}
 
 	return `${formatDurationSeconds(Math.round(stats.mean))} ± ${formatDurationSeconds(Math.round(stats.stddev))}`

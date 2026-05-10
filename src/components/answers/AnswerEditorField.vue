@@ -9,6 +9,7 @@ import Select from 'primevue/select'
 import {VueEasyMDE} from 'vue3-easymde'
 import type { Answer, Question } from '@/types/types'
 import {ensureQuestionEditorToolbarStyles, questionEditorToolbar} from '@/components/questions/easymdeToolbar'
+import { t } from '@nextcloud/l10n'
 
 const props = defineProps<{
 	question: Question
@@ -180,7 +181,7 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 			:model-value="props.modelValue?.numeric_content === 1"
 			type="switch"
 			@update:model-value="nextValue({numeric_content: $event ? 1 : 0})">
-			Yes / No
+			{{ t('structureddiary', 'Yes / No') }}
 		</NcCheckboxRadioSwitch>
 
 		<p v-if="props.question.template_text && !['integer', 'number', 'text'].includes(props.question.type)" :class="$style.template">

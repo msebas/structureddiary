@@ -2,6 +2,7 @@
 import type { Diary, DiaryShare, DiaryStats } from '@/types/types'
 import { formatDurationSeconds, frequencyLabel, formatTimeOnly } from '@/utils/format'
 import { scheduleSecondsToDays } from '@/utils/diary'
+import { n, t } from '@nextcloud/l10n'
 
 const props = defineProps<{
 	diary: Diary | null
@@ -17,53 +18,53 @@ const props = defineProps<{
 			<header :class="['workspace-card-header', $style.header]">
 				<div>
 					<h2 :class="$style.title">{{ props.diary.title }}</h2>
-					<div :class="['workspace-card-muted', $style.owner]">Owner: {{ props.diary.user_id }}</div>
+					<div :class="['workspace-card-muted', $style.owner]">{{ t('structureddiary', 'Owner: {owner}', {owner: props.diary.user_id}) }}</div>
 				</div>
 			</header>
 
 			<div :class="$style.grid">
 				<article :class="['workspace-card-subcard', $style.block]">
-					<h3>Description</h3>
-					<p :class="$style.copy">{{ props.diary.description || 'No description.' }}</p>
+					<h3>{{ t('structureddiary', 'Description') }}</h3>
+					<p :class="$style.copy">{{ props.diary.description || t('structureddiary', 'No description.') }}</p>
 				</article>
 
 				<article :class="['workspace-card-subcard', $style.block]">
-					<h3>Schedule</h3>
+					<h3>{{ t('structureddiary', 'Schedule') }}</h3>
 					<ul :class="$style.definitionList">
-						<li>Target cadence: {{ scheduleSecondsToDays(props.diary.entry_schedule) }} day(s)</li>
-						<li>Reminder: {{ props.diary.reminder_active ? 'Active' : 'Disabled' }}</li>
-						<li>Reminder time: {{ formatTimeOnly(props.diary.reminder_time) }}</li>
-						<li>Repeat count: {{ props.diary.reminder_count }}</li>
-						<li>Repeat delay: {{ formatDurationSeconds(props.diary.reminder_delay) }}</li>
-						<li>First signal: {{ props.diary.reminder_signal_first || 'n/a' }}</li>
-						<li>Repeat signal: {{ props.diary.reminder_signal_repeat || 'n/a' }}</li>
+						<li>{{ t('structureddiary', 'Target cadence: {cadence}', {cadence: n('structureddiary', '%n day', '%n days', scheduleSecondsToDays(props.diary.entry_schedule))}) }}</li>
+						<li>{{ t('structureddiary', 'Reminder: {state}', {state: props.diary.reminder_active ? t('structureddiary', 'Active') : t('structureddiary', 'Disabled')}) }}</li>
+						<li>{{ t('structureddiary', 'Reminder time: {time}', {time: formatTimeOnly(props.diary.reminder_time)}) }}</li>
+						<li>{{ t('structureddiary', 'Repeat count: {count}', {count: props.diary.reminder_count}) }}</li>
+						<li>{{ t('structureddiary', 'Repeat delay: {delay}', {delay: formatDurationSeconds(props.diary.reminder_delay)}) }}</li>
+						<li>{{ t('structureddiary', 'First signal: {signal}', {signal: props.diary.reminder_signal_first || t('structureddiary', 'n/a')}) }}</li>
+						<li>{{ t('structureddiary', 'Repeat signal: {signal}', {signal: props.diary.reminder_signal_repeat || t('structureddiary', 'n/a')}) }}</li>
 					</ul>
 				</article>
 
 				<article :class="['workspace-card-subcard', $style.block]">
-					<h3>Shares</h3>
+					<h3>{{ t('structureddiary', 'Shares') }}</h3>
 					<ul :class="$style.definitionList">
-						<li v-if="props.shares.length === 0">No shares configured.</li>
+						<li v-if="props.shares.length === 0">{{ t('structureddiary', 'No shares configured.') }}</li>
 						<li v-for="share in props.shares" :key="share.id">
-							{{ share.shared_with }} · permission {{ share.permission }}
+							{{ t('structureddiary', '{user} · permission {permission}', {user: share.shared_with, permission: share.permission}) }}
 						</li>
 					</ul>
 				</article>
 
 				<article v-if="!props.hideStats" :class="['workspace-card-subcard', $style.block]">
-					<h3>Statistics</h3>
+					<h3>{{ t('structureddiary', 'Statistics') }}</h3>
 					<div v-if="props.stats" :class="$style.statsGrid">
-						<div>Questions: {{ props.stats.question_count }}</div>
-						<div>Entries: {{ props.stats.entry_count }}</div>
-						<div>Answers: {{ props.stats.answer_count }}</div>
-						<div>Avg answers: {{ props.stats.average_answer_count.toFixed(2) }}</div>
-						<div>Frequency: {{ frequencyLabel(props.stats.entry_frequency) }}</div>
-						<div>Last month: {{ frequencyLabel(props.stats.entry_frequency_last_month) }}</div>
-						<div>Avg duration: {{ formatDurationSeconds(props.stats.average_entry_duration ?? undefined) }}</div>
-						<div>Avg duration last month: {{ formatDurationSeconds(props.stats.average_entry_duration_last_month ?? undefined) }}</div>
+						<div>{{ t('structureddiary', 'Questions: {count}', {count: props.stats.question_count}) }}</div>
+						<div>{{ t('structureddiary', 'Entries: {count}', {count: props.stats.entry_count}) }}</div>
+						<div>{{ t('structureddiary', 'Answers: {count}', {count: props.stats.answer_count}) }}</div>
+						<div>{{ t('structureddiary', 'Avg answers: {count}', {count: props.stats.average_answer_count.toFixed(2)}) }}</div>
+						<div>{{ t('structureddiary', 'Frequency: {frequency}', {frequency: frequencyLabel(props.stats.entry_frequency)}) }}</div>
+						<div>{{ t('structureddiary', 'Last month: {frequency}', {frequency: frequencyLabel(props.stats.entry_frequency_last_month)}) }}</div>
+						<div>{{ t('structureddiary', 'Avg duration: {duration}', {duration: formatDurationSeconds(props.stats.average_entry_duration ?? undefined)}) }}</div>
+						<div>{{ t('structureddiary', 'Avg duration last month: {duration}', {duration: formatDurationSeconds(props.stats.average_entry_duration_last_month ?? undefined)}) }}</div>
 					</div>
 					<div v-else class="workspace-card-muted">
-						Statistics not loaded yet.
+						{{ t('structureddiary', 'Statistics not loaded yet.') }}
 					</div>
 				</article>
         <div class="workspace-end-space"></div>
@@ -71,7 +72,7 @@ const props = defineProps<{
 		</template>
 
 		<template v-else>
-			<div :class="['workspace-card-empty', $style.empty]">Select a diary to inspect it here.</div>
+			<div :class="['workspace-card-empty', $style.empty]">{{ t('structureddiary', 'Select a diary to inspect it here.') }}</div>
       <div class="workspace-end-space"></div>
     </template>
 	</section>

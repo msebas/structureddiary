@@ -13,6 +13,7 @@ import { userService } from '@/services'
 import { type DiaryEditSubmitPayload, type DiaryShareInput, useStructuredDiaryStore } from '@/stores/structuredDiary'
 import type { DiaryUpdatePayload, SelectOption } from '@/types/types'
 import { dayTimeToSeconds, daysToScheduleSeconds, scheduleSecondsToDays, secondsToDayTime } from '@/utils/diary'
+import { n, t } from '@nextcloud/l10n'
 
 const signalSuggestions = [
 	'Default',
@@ -55,13 +56,13 @@ const userOptions = ref<NcSelectUsersModel[]>([])
 const shareWarning = ref<string | null>(null)
 const loadingUsers = ref(false)
 
-const cadenceOptions = [
-	{ label: '1/2 day', value: 0.5 },
-	{ label: '1 day', value: 1 },
-	{ label: '2 days', value: 2 },
-	{ label: '3 days', value: 3 },
-	{ label: '7 days', value: 7 },
-]
+const cadenceOptions = computed(() => [
+	{ label: t('structureddiary', '1/2 day'), value: 0.5 },
+	{ label: n('structureddiary', '%n day', '%n days', 1), value: 1 },
+	{ label: n('structureddiary', '%n day', '%n days', 2), value: 2 },
+	{ label: n('structureddiary', '%n day', '%n days', 3), value: 3 },
+	{ label: n('structureddiary', '%n day', '%n days', 7), value: 7 },
+])
 
 function toUserModel(option: SelectOption<string>): NcSelectUsersModel {
 	return {
@@ -123,7 +124,7 @@ function ensureReadersIncludeElevated(): void {
 	}
 
 	readers.value = normalizeSelection([...readers.value, ...missingReaders])
-	shareWarning.value = 'Write and manage access imply read access. Missing readers were added again.'
+	shareWarning.value = t('structureddiary', 'Write and manage access imply read access. Missing readers were added again.')
 }
 
 function currentDraft(): DiaryUpdatePayload {
@@ -159,9 +160,9 @@ const sharePayload = computed<DiaryShareInput[]>(() => {
 const reminderMax = computed(() => form.entryScheduleDays === 0.5 ? '12:00' : '23:59')
 const deleteLabel = computed(() => {
 	if (entryCount.value === null) {
-		return 'Delete diary'
+		return t('structureddiary', 'Delete diary')
 	}
-	return `Delete diary (${entryCount.value} entries)`
+	return t('structureddiary', 'Delete diary ({count})', {count: n('structureddiary', '%n entry', '%n entries', entryCount.value)})
 })
 
 watch(() => [diary.value, initialDraft.value, isCreating.value, shares.value] as const, ([currentDiary, draft, creating]) => {
@@ -230,8 +231,8 @@ async function duplicate(): Promise<void> {
 }
 
 function confirmDelete(): void {
-	const countLabel = entryCount.value === null ? 'an unknown number of entries' : `${entryCount.value} entries`
-	if (window.confirm(`Delete this diary with ${countLabel}?`)) {
+	const countLabel = entryCount.value === null ? t('structureddiary', 'an unknown number of entries') : n('structureddiary', '%n entry', '%n entries', entryCount.value)
+	if (window.confirm(t('structureddiary', 'Delete this diary with {countLabel}?', {countLabel}))) {
 		void deleteDiary()
 	}
 }
@@ -257,20 +258,20 @@ async function deleteDiary(): Promise<void> {
 <template>
 	<section :class="$style.view">
 		<section class="workspace-card">
-			<h2 :class="$style.heading">Share diary</h2>
+			<h2 :class="$style.heading">{{ t('structureddiary', 'Share diary') }}</h2>
 
 			<NcNoteCard v-if="shareWarning" type="warning">
 				{{ shareWarning }}
 			</NcNoteCard>
 
 			<div :class="$style.field">
-				<label :class="$style.label">Readers</label>
+				<label :class="$style.label">{{ t('structureddiary', 'Readers') }}</label>
 				<NcSelectUsers
 					:model-value="readers"
 					:options="userOptions"
 					:loading="loadingUsers"
-					input-label="Readers"
-					placeholder="Select readers"
+					:input-label="t('structureddiary', 'Readers')"
+					:placeholder="t('structureddiary', 'Select readers')"
 					:multiple="true"
 					:label-outside="true"
 					@search="searchUsers"
@@ -278,13 +279,13 @@ async function deleteDiary(): Promise<void> {
 			</div>
 
 			<div :class="$style.field">
-				<label :class="$style.label">Writers</label>
+				<label :class="$style.label">{{ t('structureddiary', 'Writers') }}</label>
 				<NcSelectUsers
 					:model-value="writers"
 					:options="userOptions"
 					:loading="loadingUsers"
-					input-label="Writers"
-					placeholder="Select writers"
+					:input-label="t('structureddiary', 'Writers')"
+					:placeholder="t('structureddiary', 'Select writers')"
 					:multiple="true"
 					:label-outside="true"
 					@search="searchUsers"
@@ -292,13 +293,13 @@ async function deleteDiary(): Promise<void> {
 			</div>
 
 			<div :class="$style.field">
-				<label :class="$style.label">Managers</label>
+				<label :class="$style.label">{{ t('structureddiary', 'Managers') }}</label>
 				<NcSelectUsers
 					:model-value="managers"
 					:options="userOptions"
 					:loading="loadingUsers"
-					input-label="Managers"
-					placeholder="Select managers"
+					:input-label="t('structureddiary', 'Managers')"
+					:placeholder="t('structureddiary', 'Select managers')"
 					:multiple="true"
 					:label-outside="true"
 					@search="searchUsers"
@@ -307,36 +308,36 @@ async function deleteDiary(): Promise<void> {
 		</section>
 
 		<section class="workspace-card">
-			<h2 :class="$style.heading">{{ isCreating ? 'Create diary' : 'Edit diary' }}</h2>
+			<h2 :class="$style.heading">{{ isCreating ? t('structureddiary', 'Create diary') : t('structureddiary', 'Edit diary') }}</h2>
 
 			<div :class="$style.field">
 				<NcTextField
 					:model-value="form.title"
-					label="Title"
+					:label="t('structureddiary', 'Title')"
 					@update:model-value="form.title = String($event)" />
 			</div>
 
 			<div :class="$style.field">
 				<NcTextArea
 					:model-value="form.description"
-					label="Description"
-					helper-text="Markdown is supported."
+					:label="t('structureddiary', 'Description')"
+					:helper-text="t('structureddiary', 'Markdown is supported.')"
 					resize="vertical"
 					@update:model-value="form.description = $event" />
 				<div v-if="form.description.trim() !== ''" :class="$style.preview">
-					<div :class="$style.previewLabel">Preview</div>
+					<div :class="$style.previewLabel">{{ t('structureddiary', 'Preview') }}</div>
 					<NcRichText :text="form.description" :use-markdown="true" :use-extended-markdown="true" />
 				</div>
 			</div>
 
 			<div :class="$style.field">
-				<label :class="$style.label">Owner</label>
+				<label :class="$style.label">{{ t('structureddiary', 'Owner') }}</label>
 				<NcSelectUsers
 					:model-value="owner"
 					:options="userOptions"
 					:loading="loadingUsers"
-					input-label="Owner"
-					placeholder="Select owner"
+					:input-label="t('structureddiary', 'Owner')"
+					:placeholder="t('structureddiary', 'Select owner')"
 					:disabled="!canChangeOwner"
 					:label-outside="true"
 					@search="searchUsers"
@@ -345,7 +346,7 @@ async function deleteDiary(): Promise<void> {
 
 			<div :class="$style.grid">
 				<label :class="$style.field">
-					<span :class="$style.label">Entry cadence in days</span>
+					<span :class="$style.label">{{ t('structureddiary', 'Entry cadence in days') }}</span>
 					<select v-model.number="form.entryScheduleDays" :class="['nc-input-field__input', $style.nativeInput]">
 						<option v-for="option in cadenceOptions" :key="option.value" :value="option.value">
 							{{ option.label }}
@@ -354,19 +355,19 @@ async function deleteDiary(): Promise<void> {
 				</label>
 
 				<div :class="$style.switchField">
-					<span :class="$style.label">Reminder active</span>
+					<span :class="$style.label">{{ t('structureddiary', 'Reminder active') }}</span>
 					<NcCheckboxRadioSwitch
 						type="switch"
 						:model-value="form.reminderActive"
 						@update:model-value="form.reminderActive = Boolean($event)">
-						{{ form.reminderActive ? 'Enabled' : 'Disabled' }}
+						{{ form.reminderActive ? t('structureddiary', 'Enabled') : t('structureddiary', 'Disabled') }}
 					</NcCheckboxRadioSwitch>
 				</div>
 			</div>
 
 			<div v-if="form.reminderActive" :class="$style.gridWide">
 				<label :class="$style.field">
-					<span :class="$style.label">Reminder time</span>
+					<span :class="$style.label">{{ t('structureddiary', 'Reminder time') }}</span>
 					<input
 						v-model="form.reminderTime"
 						type="time"
@@ -376,18 +377,18 @@ async function deleteDiary(): Promise<void> {
 
 				<NcTextField
 					:model-value="String(form.reminderCount)"
-					label="Repeat count"
+					:label="t('structureddiary', 'Repeat count')"
 					type="number"
 					@update:model-value="form.reminderCount = Number($event)" />
 
 				<NcTextField
 					:model-value="String(form.reminderDelay)"
-					label="Repeat delay (seconds)"
+					:label="t('structureddiary', 'Repeat delay (seconds)')"
 					type="number"
 					@update:model-value="form.reminderDelay = Number($event)" />
 
 				<label :class="$style.field">
-					<span :class="$style.label">First signal</span>
+					<span :class="$style.label">{{ t('structureddiary', 'First signal') }}</span>
 					<input
 						v-model="form.reminderSignalFirst"
 						list="structured-diary-signal-list"
@@ -396,7 +397,7 @@ async function deleteDiary(): Promise<void> {
 				</label>
 
 				<label :class="$style.field">
-					<span :class="$style.label">Repeat signal</span>
+					<span :class="$style.label">{{ t('structureddiary', 'Repeat signal') }}</span>
 					<input
 						v-model="form.reminderSignalRepeat"
 						list="structured-diary-signal-list"
@@ -424,15 +425,15 @@ async function deleteDiary(): Promise<void> {
 						v-if="!isCreating && diary"
 						variant="secondary"
 						@click="duplicate()">
-						Copy diary
+						{{ t('structureddiary', 'Copy diary') }}
 					</NcButton>
 					<NcButton
 						variant="secondary"
 						@click="cancelEdit()">
-						Cancel
+						{{ t('structureddiary', 'Cancel') }}
 					</NcButton>
 					<NcButton @click="submit()">
-						{{ isCreating ? 'Create diary' : 'Save diary' }}
+						{{ isCreating ? t('structureddiary', 'Create diary') : t('structureddiary', 'Save diary') }}
 					</NcButton>
 				</div>
 			</div>

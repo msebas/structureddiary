@@ -5,6 +5,7 @@ import {mdiDeleteOutline, mdiPencil, mdiPlus} from '@mdi/js'
 import {computed} from 'vue'
 import {useStructuredDiaryStore} from '@/stores/structuredDiary'
 import '@/components/layout/workspaceHeader.css'
+import { n, t } from '@nextcloud/l10n'
 
 const store = useStructuredDiaryStore()
 const diary = computed(() => store.selectedDiary)
@@ -28,8 +29,8 @@ async function deleteEntry(): Promise<void> {
 	}
 
 	const answerCount = await store.countEntryAnswers(store.selectedEntryId)
-	const answerLabel = answerCount === 1 ? '1 answer' : `${answerCount} answers`
-	if (!window.confirm(`Delete this entry? This will delete ${answerLabel}, including all answer history.`)) {
+	const answerLabel = n('structureddiary', '%n answer', '%n answers', answerCount)
+	if (!window.confirm(t('structureddiary', 'Delete this entry? This will delete {answerLabel}, including all answer history.', {answerLabel}))) {
 		return
 	}
 
@@ -41,16 +42,16 @@ async function deleteEntry(): Promise<void> {
 	<header class="workspace-header">
 		<div class="workspace-header-leading">
 			<h1 class="workspace-header-title">
-				{{ diary?.title ?? 'Structured Diary' }}
+				{{ diary?.title ?? t('structureddiary', 'Structured Diary') }}
 			</h1>
 		</div>
 
 		<div class="workspace-header-actions">
-			<NcButton aria-label="Create new entry" @click="createEntry()">
+			<NcButton :aria-label="t('structureddiary', 'Create new entry')" @click="createEntry()">
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiPlus" />
 				</template>
-				Add entry
+				{{ t('structureddiary', 'Add entry') }}
 			</NcButton>
 			<NcButton
 				v-if="entry !== null"
@@ -59,7 +60,7 @@ async function deleteEntry(): Promise<void> {
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiPencil" />
 				</template>
-				Edit entry
+				{{ t('structureddiary', 'Edit entry') }}
 			</NcButton>
 			<NcButton
 				v-if="entry !== null"
@@ -68,7 +69,7 @@ async function deleteEntry(): Promise<void> {
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiDeleteOutline" />
 				</template>
-				Delete entry
+				{{ t('structureddiary', 'Delete entry') }}
 			</NcButton>
 		</div>
 	</header>

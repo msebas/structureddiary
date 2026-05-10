@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 import type { DiaryShare } from '@/types/types'
+import { t } from '@nextcloud/l10n'
 
 const props = defineProps<{
 	shares: DiaryShare[]
@@ -52,25 +53,25 @@ const payload = computed(() => {
 
 <template>
 	<section :class="$style.editor">
-		<h3>Share diary</h3>
+		<h3>{{ t('structureddiary', 'Share diary') }}</h3>
 		<label :class="$style.field">
-			<span>Readers</span>
-			<input v-model="state.readers" type="text" placeholder="alice, bob">
+			<span>{{ t('structureddiary', 'Readers') }}</span>
+			<input v-model="state.readers" type="text" :placeholder="t('structureddiary', 'alice, bob')">
 		</label>
 		<label :class="$style.field">
-			<span>Writers</span>
-			<input v-model="state.writers" type="text" placeholder="alice, bob">
+			<span>{{ t('structureddiary', 'Writers') }}</span>
+			<input v-model="state.writers" type="text" :placeholder="t('structureddiary', 'alice, bob')">
 		</label>
 		<label :class="$style.field">
-			<span>Managers</span>
-			<input v-model="state.managers" type="text" placeholder="alice, bob">
+			<span>{{ t('structureddiary', 'Managers') }}</span>
+			<input v-model="state.managers" type="text" :placeholder="t('structureddiary', 'alice, bob')">
 		</label>
 		<div :class="$style.actions">
 			<button type="button" :class="$style.secondaryButton" @click="emit('cancel')">
-				Cancel
+				{{ t('structureddiary', 'Cancel') }}
 			</button>
 			<button type="button" :class="$style.primaryButton" @click="emit('save', payload)">
-				Save shares
+				{{ t('structureddiary', 'Save shares') }}
 			</button>
 		</div>
 	</section>

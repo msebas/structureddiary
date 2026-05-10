@@ -14,6 +14,7 @@ import NcTextArea from '@nextcloud/vue/components/NcTextArea'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import {VueEasyMDE} from 'vue3-easymde'
 import {ensureQuestionEditorToolbarStyles, questionEditorToolbar} from '@/components/questions/easymdeToolbar'
+import { t } from '@nextcloud/l10n'
 
 const store = useStructuredDiaryStore()
 const route = useRoute()
@@ -102,8 +103,8 @@ const rangeStep = computed<'1' | '0.01' | null>(() => {
 const showsRangeFields = computed(() => rangeStep.value !== null)
 const rangeHelperText = computed(() =>
     rangeStep.value === '1'
-        ? 'Whole numbers only.'
-        : 'Use numbers in 0.01 increments.',
+        ? t('structureddiary', 'Whole numbers only.')
+        : t('structureddiary', 'Use numbers in 0.01 increments.'),
 )
 
 function isValidRangeValue(value: string): boolean {
@@ -188,14 +189,14 @@ async function saveQuestion(): Promise<void> {
 
 const minimumHelperText = computed<string | undefined>(() => {
   if (form.minimum === '') return undefined
-  if (minimumHasError.value) return `Invalid value. ${rangeHelperText.value}`
-  if (rangeOrderError.value) return 'Minimum must be smaller than or equal to maximum.'
+  if (minimumHasError.value) return t('structureddiary', 'Invalid value. {helperText}', {helperText: rangeHelperText.value})
+  if (rangeOrderError.value) return t('structureddiary', 'Minimum must be smaller than or equal to maximum.')
   return rangeHelperText.value
 })
 const maximumHelperText = computed<string | undefined>(() => {
   if (form.maximum === '') return undefined
-  if (maximumHasError.value) return `Invalid value. ${rangeHelperText.value}`
-  if (rangeOrderError.value) return 'Maximum must be greater than or equal to minimum.'
+  if (maximumHasError.value) return t('structureddiary', 'Invalid value. {helperText}', {helperText: rangeHelperText.value})
+  if (rangeOrderError.value) return t('structureddiary', 'Maximum must be greater than or equal to minimum.')
   return rangeHelperText.value
 })
 
@@ -203,13 +204,13 @@ const maximumHelperText = computed<string | undefined>(() => {
 
 <template>
   <section :class="$style.form">
-    <h2 :class="$style.heading">{{ store.selectedQuestionId != null ? 'Edit question' : 'Create question' }}</h2>
+    <h2 :class="$style.heading">{{ store.selectedQuestionId != null ? t('structureddiary', 'Edit question') : t('structureddiary', 'Create question') }}</h2>
     <NcTextField
         v-model="form.label"
-        label="Label"
+        :label="t('structureddiary', 'Label')"
         type="text"/>
     <div :class="$style.field">
-      <label :class="$style.editorLabel" for="question-display-text">Display text</label>
+      <label :class="$style.editorLabel" for="question-display-text">{{ t('structureddiary', 'Display text') }}</label>
       <div :class="$style.editorWrap">
         <VueEasyMDE
             id="question-display-text"
@@ -221,7 +222,7 @@ const maximumHelperText = computed<string | undefined>(() => {
     <div :class="$style.grid">
       <NcSelect
           v-model="form.type"
-          input-label="Type"
+          :input-label="t('structureddiary', 'Type')"
           label="id"
           :clearable="false"
           :options="typeOptions"
@@ -229,7 +230,7 @@ const maximumHelperText = computed<string | undefined>(() => {
       <NcCheckboxRadioSwitch
           v-model="form.active"
           type="switch">
-        Active
+        {{ t('structureddiary', 'Active') }}
       </NcCheckboxRadioSwitch>
     </div>
     <div v-if="showsRangeFields" :class="$style.grid">
@@ -237,32 +238,32 @@ const maximumHelperText = computed<string | undefined>(() => {
           v-model="form.minimum"
           :error="minimumHasError || rangeOrderError"
           :helper-text="minimumHelperText"
-          label="Minimum"
+          :label="t('structureddiary', 'Minimum')"
           inputmode="decimal"
           type="number"/>
       <NcTextField
           v-model="form.maximum"
           :error="maximumHasError || rangeOrderError"
           :helper-text="maximumHelperText"
-          label="Maximum"
+          :label="t('structureddiary', 'Maximum')"
           inputmode="decimal"
           type="number"/>
     </div>
     <NcTextArea
         v-model="form.choices"
-        helper-text="Comma-separated values, for example: a, b, c"
-        label="Choices"
+        :helper-text="t('structureddiary', 'Comma-separated values, for example: a, b, c')"
+        :label="t('structureddiary', 'Choices')"
         resize="vertical"/>
     <NcTextArea
         v-model="form.templateText"
-        label="Template text"
+        :label="t('structureddiary', 'Template text')"
         resize="vertical"/>
     <div :class="$style.actions">
       <NcButton variant="secondary" @click="cancelQuestionEdit">
-        Cancel
+        {{ t('structureddiary', 'Cancel') }}
       </NcButton>
       <NcButton variant="primary" @click="saveQuestion">
-        Save question
+        {{ t('structureddiary', 'Save question') }}
       </NcButton>
     </div>
   </section>

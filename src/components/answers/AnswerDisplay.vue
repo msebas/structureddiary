@@ -2,6 +2,7 @@
 import NcRichText from '@nextcloud/vue/components/NcRichText'
 import type { Answer, Question } from '@/types/types'
 import { formatQuestionValue } from '@/utils/format'
+import { t } from '@nextcloud/l10n'
 
 const props = defineProps<{
 	answer?: Answer
@@ -14,7 +15,7 @@ const props = defineProps<{
 		<template v-if="props.question.type === 'boolean'">
 			<div :class="$style.toggleRow">
 				<div :class="[$style.toggle, props.answer?.numeric_content === 1 && $style.toggleOn]" />
-				<span>{{ props.answer?.numeric_content === 1 ? 'Yes' : 'No' }}</span>
+				<span>{{ props.answer?.numeric_content === 1 ? t('structureddiary', 'Yes') : t('structureddiary', 'No') }}</span>
 			</div>
 		</template>
 		<template v-else-if="props.question.type === 'rating'">

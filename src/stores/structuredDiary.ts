@@ -20,6 +20,7 @@ import type {
 import {getCurrentUser} from '@nextcloud/auth'
 import {useRoute, useRouter} from "vue-router";
 import {Permissions} from '@/types/types'
+import { t } from '@nextcloud/l10n'
 
 export interface DiaryShareInput {
     sharedWith: string
@@ -507,7 +508,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         } catch (taskError) {
             const  msg = (taskError as ApiError)?.result?.ocs?.data?.error
             addError({
-                message: msg ?? (taskError instanceof Error ? (taskError as Error).message : 'Unknown error'),
+                message: msg ?? (taskError instanceof Error ? (taskError as Error).message : t('structureddiary', 'Unknown error')),
                 type: 'error',
                 cause: taskError
             })
@@ -694,7 +695,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     async function copyDiary(diaryId: number): Promise<DiaryEditSubmitPayload> {
         const diary = diaries.value[diaryId]
         if (!diary) {
-            throw new Error(`Diary with ID ${diaryId} not found`)
+            throw new Error(t('structureddiary', 'Diary with ID {diaryId} not found', {diaryId}))
         }
         const questionsToDuplicate = (questionIdsByDiary.value[diaryId] ?? [])
             .map((id) => questionById.value[id])
@@ -817,7 +818,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
     async function saveEntry(payload: EntryEditSubmitPayload, setEntry: boolean = true): Promise<Entry> {
         if (!payload.diaryId) {
-            const msg = 'No diary selected.'
+            const msg = t('structureddiary', 'No diary selected.')
             addError({message: msg, type: 'error'})
             throw new Error()
         }
@@ -844,7 +845,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         const promises: Promise<any>[] = []
         const entryId = saved_entry.id || payload.entryId
         if (entryId == null) {
-            throw new Error('Unable to determine saved entry id.')
+            throw new Error(t('structureddiary', 'Unable to determine saved entry id.'))
         }
         // This assumes that answers for this entry are loaded now.
         for (const answer of payload.answers) {

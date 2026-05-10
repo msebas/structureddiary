@@ -12,6 +12,7 @@ import {
   mdiHelpCircleOutline,
   mdiLinkVariant,
 } from '@mdi/js'
+import { t } from '@nextcloud/l10n'
 
 type ToolbarItem = {
   name: string
@@ -65,71 +66,71 @@ export const questionEditorToolbar: Array<ToolbarItem | '|'> = [
     name: 'bold',
     action: EasyMDE.toggleBold,
     className: 'mde-mdi mde-mdi-bold',
-    title: 'Bold',
+    title: t('structureddiary', 'Bold'),
   },
   {
     name: 'italic',
     action: EasyMDE.toggleItalic,
     className: 'mde-mdi mde-mdi-italic',
-    title: 'Italic',
+    title: t('structureddiary', 'Italic'),
   },
   {
     name: 'strikethrough',
     action: EasyMDE.toggleStrikethrough,
     className: 'mde-mdi mde-mdi-strike',
-    title: 'Strikethrough',
+    title: t('structureddiary', 'Strikethrough'),
   },
   {
     name: 'heading',
     action: EasyMDE.toggleHeadingSmaller,
     className: 'mde-mdi mde-mdi-heading',
-    title: 'Heading',
+    title: t('structureddiary', 'Heading'),
   },
   '|',
   {
     name: 'quote',
     action: EasyMDE.toggleBlockquote,
     className: 'mde-mdi mde-mdi-quote',
-    title: 'Quote',
+    title: t('structureddiary', 'Quote'),
   },
   {
     name: 'unordered-list',
     action: EasyMDE.toggleUnorderedList,
     className: 'mde-mdi mde-mdi-unordered-list',
-    title: 'Generic List',
+    title: t('structureddiary', 'Generic List'),
   },
   {
     name: 'ordered-list',
     action: EasyMDE.toggleOrderedList,
     className: 'mde-mdi mde-mdi-ordered-list',
-    title: 'Numbered List',
+    title: t('structureddiary', 'Numbered List'),
   },
   {
     name: 'checkbox-list',
     action: insertCheckboxList,
     className: 'mde-mdi mde-mdi-checkbox-list',
-    title: 'Insert Checkbox List',
+    title: t('structureddiary', 'Insert Checkbox List'),
   },
   '|',
   {
     name: 'link',
     action: EasyMDE.drawLink,
     className: 'mde-mdi mde-mdi-link',
-    title: 'Create Link',
+    title: t('structureddiary', 'Create Link'),
   },
   {
     name: 'preview',
     action: EasyMDE.togglePreview,
     className: 'mde-mdi mde-mdi-preview',
     noDisable: true,
-    title: 'Toggle Preview',
+    title: t('structureddiary', 'Toggle Preview'),
   },
   {
     name: 'guide',
     action: 'https://www.markdownguide.org/basic-syntax/',
     className: 'mde-mdi mde-mdi-guide',
     noDisable: true,
-    title: 'Markdown Guide',
+    title: t('structureddiary', 'Markdown Guide'),
   },
 ]
 

@@ -5,6 +5,7 @@ import { ref } from 'vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import type { Question } from '@/types/types'
 import { formatDateTime } from '@/utils/format'
+import { t } from '@nextcloud/l10n'
 
 const store = useStructuredDiaryStore()
 const emit = defineEmits<{
@@ -38,15 +39,15 @@ function selectQuestion(questionId: number): void {
 		<div :class="$style.actions">
 			<NcButton @click="createQuestion()"
                 :disabled="store.selectedDiaryId === null">
-				New question
+				{{ t('structureddiary', 'New question') }}
 			</NcButton>
 		</div>
 
 		<NcTextField
 			:model-value="store.questionSearch"
 			type="search"
-			label="Search questions"
-			placeholder="Search questions"
+			:label="t('structureddiary', 'Search questions')"
+			:placeholder="t('structureddiary', 'Search questions')"
 			@update:model-value="store.questionSearch = String($event)" />
 
 		<div :class="$style.list">
@@ -62,7 +63,7 @@ function selectQuestion(questionId: number): void {
 						variant="tertiary"
 						size="small"
 						@click.stop="toggleVersions(question)">
-						Versions
+						{{ t('structureddiary', 'Versions') }}
 					</NcButton>
 				</div>
 				<div

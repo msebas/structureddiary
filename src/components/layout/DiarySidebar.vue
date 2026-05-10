@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Diary, DiaryGroupSet } from '@/types/types'
+import { t } from '@nextcloud/l10n'
 
 const props = defineProps<{
 	groups: DiaryGroupSet
@@ -15,10 +16,10 @@ const emit = defineEmits<{
 }>()
 
 const labels: Record<keyof DiaryGroupSet, string> = {
-	owned: 'Owned diaries',
-	managed: 'Shared with full access',
-	writable: 'Shared with write access',
-	readable: 'Shared with read access',
+	owned: t('structureddiary', 'Owned diaries'),
+	managed: t('structureddiary', 'Shared with full access'),
+	writable: t('structureddiary', 'Shared with write access'),
+	readable: t('structureddiary', 'Shared with read access'),
 }
 </script>
 
@@ -28,7 +29,7 @@ const labels: Record<keyof DiaryGroupSet, string> = {
 			<input
 				:value="props.search"
 				type="search"
-				placeholder="Search diaries"
+				:placeholder="t('structureddiary', 'Search diaries')"
 				:class="$style.search"
 				@input="emit('update:search', ($event.target as HTMLInputElement).value)">
 		</div>
@@ -49,7 +50,7 @@ const labels: Record<keyof DiaryGroupSet, string> = {
 				@click="emit('select', diary)">
 				<div :class="$style.diaryItemMain">
 					<span :class="$style.diaryTitle">{{ diary.title }}</span>
-					<span v-if="!diary.is_owner" :class="$style.sharedBadge">Shared</span>
+					<span v-if="!diary.is_owner" :class="$style.sharedBadge">{{ t('structureddiary', 'Shared') }}</span>
 				</div>
 				<div v-if="!diary.is_owner" :class="$style.diaryMeta">
 					{{ diary.user_id }}
@@ -59,10 +60,10 @@ const labels: Record<keyof DiaryGroupSet, string> = {
 
 		<div :class="$style.footer">
 			<button type="button" :class="$style.createButton" @click="emit('create')">
-				New diary
+				{{ t('structureddiary', 'New diary') }}
 			</button>
 			<button type="button" :class="$style.manageButton" @click="emit('manage')">
-				Open management
+				{{ t('structureddiary', 'Open management') }}
 			</button>
 		</div>
 	</aside>

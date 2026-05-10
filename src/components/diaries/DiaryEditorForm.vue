@@ -2,6 +2,7 @@
 import { reactive, watch } from 'vue'
 import type { Diary, DiaryUpdatePayload } from '@/types/types'
 import { dayTimeToSeconds, daysToScheduleSeconds, scheduleSecondsToDays, secondsToDayTime } from '@/utils/diary'
+import { t } from '@nextcloud/l10n'
 
 const props = defineProps<{
 	diary: Diary | null
@@ -57,64 +58,64 @@ function submit(): void {
 
 <template>
 	<section :class="$style.form">
-		<h2>{{ props.diary ? 'Edit diary' : 'Create diary' }}</h2>
+		<h2>{{ props.diary ? t('structureddiary', 'Edit diary') : t('structureddiary', 'Create diary') }}</h2>
 
 		<label :class="$style.field">
-			<span>Title</span>
+			<span>{{ t('structureddiary', 'Title') }}</span>
 			<input v-model="form.title" type="text">
 		</label>
 
 		<label :class="$style.field">
-			<span>Description</span>
+			<span>{{ t('structureddiary', 'Description') }}</span>
 			<textarea v-model="form.description" rows="5" />
 		</label>
 
 		<label :class="$style.field">
-			<span>Owner</span>
+			<span>{{ t('structureddiary', 'Owner') }}</span>
 			<input v-model="form.ownerUserId" type="text" :disabled="!props.canChangeOwner">
 		</label>
 
 		<div :class="$style.grid">
 			<label :class="$style.field">
-				<span>Cadence in days</span>
+				<span>{{ t('structureddiary', 'Cadence in days') }}</span>
 				<input v-model.number="form.entryScheduleDays" type="number" min="0.5" step="0.5">
 			</label>
 
 			<label :class="$style.field">
-				<span>Reminder active</span>
+				<span>{{ t('structureddiary', 'Reminder active') }}</span>
 				<input v-model="form.reminderActive" type="checkbox">
 			</label>
 		</div>
 
 		<div v-if="form.reminderActive" :class="$style.gridWide">
 			<label :class="$style.field">
-				<span>Reminder time</span>
+				<span>{{ t('structureddiary', 'Reminder time') }}</span>
 				<input v-model="form.reminderTime" type="time">
 			</label>
 			<label :class="$style.field">
-				<span>Repeat count</span>
+				<span>{{ t('structureddiary', 'Repeat count') }}</span>
 				<input v-model.number="form.reminderCount" type="number" min="0" step="1">
 			</label>
 			<label :class="$style.field">
-				<span>Repeat delay (seconds)</span>
+				<span>{{ t('structureddiary', 'Repeat delay (seconds)') }}</span>
 				<input v-model.number="form.reminderDelay" type="number" min="0" step="60">
 			</label>
 			<label :class="$style.field">
-				<span>First signal</span>
+				<span>{{ t('structureddiary', 'First signal') }}</span>
 				<input v-model="form.reminderSignalFirst" type="text">
 			</label>
 			<label :class="$style.field">
-				<span>Repeat signal</span>
+				<span>{{ t('structureddiary', 'Repeat signal') }}</span>
 				<input v-model="form.reminderSignalRepeat" type="text">
 			</label>
 		</div>
 
 		<div :class="$style.actions">
 			<button type="button" :class="$style.secondaryButton" @click="emit('cancel')">
-				Cancel
+				{{ t('structureddiary', 'Cancel') }}
 			</button>
 			<button type="button" :class="$style.primaryButton" @click="submit()">
-				Save diary
+				{{ t('structureddiary', 'Save diary') }}
 			</button>
 		</div>
 	</section>

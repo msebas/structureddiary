@@ -8,12 +8,13 @@ import {computed} from 'vue'
 import {useRoute} from 'vue-router'
 import {useStructuredDiaryStore} from '@/stores/structuredDiary'
 import type {Diary, DiaryGroupSet} from '@/types/types'
+import { t } from '@nextcloud/l10n'
 
 const labels: Record<keyof DiaryGroupSet, string> = {
-  owned: 'Owned diaries',
-  managed: 'Shared with full access',
-  writable: 'Shared with write access',
-  readable: 'Shared with read access',
+  owned: t('structureddiary', 'Owned diaries'),
+  managed: t('structureddiary', 'Shared with full access'),
+  writable: t('structureddiary', 'Shared with write access'),
+  readable: t('structureddiary', 'Shared with read access'),
 }
 
 const store = useStructuredDiaryStore()
@@ -60,10 +61,10 @@ function openManagement(): void {
 </script>
 
 <template>
-  <NcAppNavigation aria-label="Structured Diary navigation">
+  <NcAppNavigation :aria-label="t('structureddiary', 'Structured Diary navigation')">
     <template #search>
       <div :class="$style.search">
-        <NcAppNavigationSearch v-model="store.diarySearch" label="Search diaries"/>
+        <NcAppNavigationSearch v-model="store.diarySearch" :label="t('structureddiary', 'Search diaries')"/>
       </div>
     </template>
 
@@ -93,7 +94,7 @@ function openManagement(): void {
     <template #footer>
       <div :class="$style.footer">
         <NcAppNavigationItem
-            :name="inManagement ? 'Entries' : 'Management'"
+            :name="inManagement ? t('structureddiary', 'Entries') : t('structureddiary', 'Management')"
             @click="openManagement()">
           <template #icon>
             <NcIconSvgWrapper :path="mdiCogOutline"/>
