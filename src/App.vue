@@ -37,6 +37,12 @@ function closeMobileCenter(): void {
   mobileCenterOpen.value = false
 }
 
+function openMobileCenter(): void {
+  if (isCompact.value) {
+    mobileCenterOpen.value = true
+  }
+}
+
 
 onMounted(async () => {
   await store.initialize()
@@ -90,7 +96,11 @@ watch(() => store.selectedEntryId, async (entryId) => {
           </section>
 
           <aside :class="$style.right">
-            <router-view name="sidebar"/>
+            <router-view name="sidebar" v-slot="{ Component }">
+              <component
+                  :is="Component"
+                  @open-center="openMobileCenter()"/>
+            </router-view>
           </aside>
         </div>
 

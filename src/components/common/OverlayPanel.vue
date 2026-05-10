@@ -10,23 +10,25 @@ const emit = defineEmits<{
 </script>
 
 <template>
-	<transition name="overlay-fade">
-		<div v-if="props.open" :class="$style.overlay">
-			<div :class="$style.panel">
-				<header :class="$style.header">
-					<h3 :class="$style.title">
-						{{ props.title }}
-					</h3>
-					<button type="button" :class="$style.close" @click="emit('close')">
-						Close
-					</button>
-				</header>
-				<div :class="$style.body">
-					<slot />
+	<Teleport to="body">
+		<transition name="overlay-fade">
+			<div v-if="props.open" :class="$style.overlay">
+				<div :class="$style.panel">
+					<header :class="$style.header">
+						<h3 :class="$style.title">
+							{{ props.title }}
+						</h3>
+						<button type="button" :class="$style.close" @click="emit('close')">
+							Close
+						</button>
+					</header>
+					<div :class="$style.body">
+						<slot />
+					</div>
 				</div>
 			</div>
-		</div>
-	</transition>
+		</transition>
+	</Teleport>
 </template>
 
 <style module>
@@ -55,6 +57,7 @@ const emit = defineEmits<{
 .header {
 	position: sticky;
 	top: 0;
+	z-index: 40;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -83,4 +86,3 @@ const emit = defineEmits<{
 	padding: 22px;
 }
 </style>
-

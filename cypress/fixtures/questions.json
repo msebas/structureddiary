@@ -1,7 +1,9 @@
 [
 	{
 		"id": 17,
+		"chain_id": 17,
 		"diary_id": 5,
+		"diary_question_order": 17,
 		"created_at": 1713500000,
 		"label": "Mood",
 		"display_text": "How do you feel today?",

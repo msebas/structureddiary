@@ -7,6 +7,9 @@ import type { Question } from '@/types/types'
 import { formatDateTime } from '@/utils/format'
 
 const store = useStructuredDiaryStore()
+const emit = defineEmits<{
+	(event: 'open-center'): void
+}>()
 const expandedQuestionId = ref<number | null>(null)
 
 function hasMultipleVersions(question: Question): boolean {
@@ -18,12 +21,22 @@ async function toggleVersions(question: Question): Promise<void> {
 	expandedQuestionId.value = expandedQuestionId.value === question.id ? null : question.id
 	await store.loadQuestionVersions(question.id)
 }
+
+async function createQuestion(): Promise<void> {
+	await store.startCreatingQuestion(null, store.selectedDiaryId)
+	emit('open-center')
+}
+
+function selectQuestion(questionId: number): void {
+	store.selectedQuestionId = questionId
+	emit('open-center')
+}
 </script>
 
 <template>
 	<aside :class="$style.panel">
 		<div :class="$style.actions">
-			<NcButton @click="store.startCreatingQuestion(null, store.selectedDiaryId)"
+			<NcButton @click="createQuestion()"
                 :disabled="store.selectedDiaryId === null">
 				New question
 			</NcButton>
@@ -42,7 +55,7 @@ async function toggleVersions(question: Question): Promise<void> {
 				:key="question.id"
 				:class="$style.questionWrap">
 				<div :class="[$style.item, question.id === store.selectedQuestionId && $style.itemActive]"
-             @click="store.selectedQuestionId = question.id">
+             @click="selectQuestion(question.id)">
 					<span >{{ question.label }}</span>
 					<NcButton
 						v-if="hasMultipleVersions(question)"
@@ -60,7 +73,7 @@ async function toggleVersions(question: Question): Promise<void> {
 						:key="version.id"
 						type="button"
 						:class="$style.versionItem"
-						@click="store.selectedQuestionId = version.id">
+						@click="selectQuestion(version.id)">
 						<div>{{ formatDateTime(version.created_at) }}</div>
 						<div v-if="version.label !== question.label" :class="$style.versionLabel">
 							{{ version.label }}

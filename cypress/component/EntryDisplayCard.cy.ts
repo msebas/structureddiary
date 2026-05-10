@@ -14,7 +14,9 @@ describe('EntryDisplayCard', () => {
 		const questions: Question[] = [
 			{
 				id: 10,
+				chain_id: 10,
 				diary_id: 2,
+				diary_question_order: 10,
 				created_at: 1713400000,
 				label: 'Mood',
 				display_text: 'Mood question',
@@ -29,7 +31,9 @@ describe('EntryDisplayCard', () => {
 			},
 			{
 				id: 11,
+				chain_id: 11,
 				diary_id: 2,
+				diary_question_order: 11,
 				created_at: 1713400000,
 				label: 'Sleep',
 				display_text: 'Sleep question',

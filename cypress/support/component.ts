@@ -1,5 +1,7 @@
 import { mount } from 'cypress/vue'
 import { createPinia } from 'pinia'
+import PrimeVue from 'primevue/config'
+import Aura from '@primeuix/themes/aura'
 import type { ComponentMountingOptions, MountingOptions } from 'cypress/vue'
 import type { ComponentPublicInstance, DefineComponent } from 'vue'
 
@@ -16,6 +18,16 @@ declare global {
 Cypress.Commands.add('mount', (component, options: ComponentMountingOptions<any> = {}) => {
 	options.global ??= {}
 	options.global.plugins ??= []
+	options.global.plugins.push([PrimeVue, {
+		theme: {
+			preset: Aura,
+			options: {
+				prefix: 'p',
+				darkModeSelector: 'system',
+				cssLayer: false,
+			},
+		},
+	}])
 	options.global.plugins.push(createPinia())
 
 	return mount(component, options)

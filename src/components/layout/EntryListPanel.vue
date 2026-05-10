@@ -7,6 +7,9 @@ import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import { formatDate, formatDateTime, formatEntryTitle, hasExplicitEntryTitle } from '@/utils/format'
 
 const store = useStructuredDiaryStore()
+const emit = defineEmits<{
+	(event: 'open-center'): void
+}>()
 
 function formatDateInputValue(date: Date): string {
 	const year = date.getFullYear()
@@ -72,12 +75,22 @@ async function applyFilter(): Promise<void> {
 	await store.loadEntries(store.selectedDiaryId, store.entryFromTimestamp, store.entryUntilTimestamp)
 }
 
+async function createEntry(): Promise<void> {
+	await store.startCreatingEntry(store.selectedDiaryId)
+	emit('open-center')
+}
+
+function selectEntry(entryId: number): void {
+	store.selectedEntryId = entryId
+	emit('open-center')
+}
+
 </script>
 
 <template>
 	<aside :class="$style.panel">
 		<div :class="[$style.actions, $style.mobileActions]">
-			<NcButton @click="store.startCreatingEntry(store.selectedDiaryId)">
+			<NcButton @click="createEntry()">
 				New entry
 			</NcButton>
 		</div>
@@ -114,7 +127,7 @@ async function applyFilter(): Promise<void> {
 				:key="entry.id"
 				type="button"
 				:class="[$style.item, entry.id === store.selectedEntryId && $style.itemActive]"
-				@click="store.selectedEntryId = entry.id">
+				@click="selectEntry(entry.id)">
 				<strong>{{ formatEntryTitle(entry) }}</strong>
 				<span v-if="hasExplicitEntryTitle(entry)">
 					{{ duplicateDays.get(formatDate(entry.timestamp))! > 1 ? formatDateTime(entry.timestamp) : formatDate(entry.timestamp) }}

@@ -786,6 +786,10 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
         const answers = await runTask(() => answerService.list(res.entry_id))
         setAnswersForEntry(res.entry_id, answers)
+        if (answerHistoryByEntryQuestion.value[res.entry_id]?.[res.question_id] != null) {
+            answerHistoryByEntryQuestion.value[res.entry_id][res.question_id] = await runTask(() =>
+                answerService.history(res.entry_id, res.question_id))
+        }
     }
 
     async function deleteDiary(diaryId: number | null = null): Promise<void> {
