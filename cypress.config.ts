@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url'
 
 const configDir = fileURLToPath(new URL('.', import.meta.url))
 
-const baseUrl = process.env.CYPRESS_BASE_URL ?? 'http://nextcloud.local/index.php/apps/structureddiary/'
+const baseUrl = process.env.CYPRESS_BASE_URL ?? 'http://nextcloud.dev.mcservice.eu/index.php/apps/structureddiary/'
 
 export default defineConfig({
 	video: false,

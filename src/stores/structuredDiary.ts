@@ -490,6 +490,21 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         reconcileErrorTimeouts()
     }
 
+    function addErrorOnce(error: Omit<DiaryError, 'id' | 'timestamp'> & { timestamp?: number }): void {
+        if (errors.value.some((item) => item.message === error.message && item.type === error.type)) {
+            return
+        }
+
+        addError(error)
+    }
+
+    function warnQuestionReorderRequiresDiaryMode(): void {
+        addErrorOnce({
+            message: t('structureddiary', 'Questions can only be reordered in diary mode.'),
+            type: 'warning',
+        })
+    }
+
     function removeError(errorId: number): void {
         const timeout = errorTimeouts.get(errorId)
         if (timeout !== undefined) {
@@ -766,6 +781,43 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         return saved
     }
 
+    async function reorderQuestions(questionIds: number[]): Promise<void> {
+        if (selectedDiaryId.value === null) {
+            return
+        }
+
+        const currentIds = currentDiaryQuestions.value.map((question) => question.id)
+        const targetIds = questionIds.filter((questionId) => currentIds.includes(questionId))
+        const simulatedIds = [...currentIds]
+        const moves: Array<{ questionId: number, diaryQuestionOrder: number }> = []
+
+        for (let targetIndex = 0; targetIndex < targetIds.length; targetIndex++) {
+            if (simulatedIds[targetIndex] === targetIds[targetIndex]) {
+                continue
+            }
+
+            const sourceIndex = simulatedIds.indexOf(targetIds[targetIndex])
+            if (sourceIndex === -1) {
+                continue
+            }
+
+            const [questionId] = simulatedIds.splice(sourceIndex, 1)
+            simulatedIds.splice(targetIndex, 0, questionId)
+            moves.push({questionId, diaryQuestionOrder: targetIndex + 1})
+        }
+
+        if (moves.length === 0) {
+            return
+        }
+
+        await runTask(async () => {
+            for (const move of moves) {
+                await questionService.reorder(move.questionId, move.diaryQuestionOrder)
+            }
+        })
+        await loadQuestions(selectedDiaryId.value)
+    }
+
     async function saveAnswer(entryId: number, payload: AnswerCreatePayload | AnswerUpdatePayload, currentAnswerId?: number | null): Promise<Answer> {
         const saved = await runTask(async () => {
             if (currentAnswerId) {
@@ -998,6 +1050,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         loading,
         errors,
         removeError,
+        warnQuestionReorderRequiresDiaryMode,
         creatingDiary,
         creatingEntry,
         creatingQuestion,
@@ -1044,6 +1097,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         deleteEntry,
         saveQuestion,
         saveQuestionAndReloadVersions,
+        reorderQuestions,
         saveAnswer,
         deleteAnswer,
         deleteDiary,

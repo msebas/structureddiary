@@ -867,6 +867,10 @@ msgstr "Frage"
 msgid "Unknown error"
 msgstr "Unbekannter Fehler"
 
+#: /app/src/stores/structuredDiary.ts:503
+msgid "Questions can only be reordered in diary mode."
+msgstr "Fragen können nur im Tagebuchmodus neu sortiert werden."
+
 #: /app/src/stores/structuredDiary.ts:698
 msgid "Diary with ID {diaryId} not found"
 msgstr "Tagebuch mit ID {diaryId} wurde nicht gefunden"
@@ -894,3 +898,39 @@ msgstr "{hours} h"
 #: /app/src/utils/format.ts:56
 msgid "{days}d"
 msgstr "{days} T"
+
+#: /app/src/components/layout/QuestionListPanel.vue:139
+msgid "Question order changed."
+msgstr "Die Reihenfolge der Fragen wurde geändert."
+
+#: /app/src/components/layout/QuestionListPanel.vue
+msgid "Question reorder mode is active."
+msgstr "Der Sortiermodus für Fragen ist aktiv."
+
+#: /app/src/components/layout/QuestionListPanel.vue
+msgid "Reorder questions"
+msgstr "Fragen sortieren"
+
+#: /app/src/components/layout/QuestionListPanel.vue:142
+msgid "Discard question order"
+msgstr "Fragenreihenfolge verwerfen"
+
+#: /app/src/components/layout/QuestionListPanel.vue:145
+msgid "Save question order"
+msgstr "Fragenreihenfolge speichern"
+
+#: /app/src/components/layout/QuestionListPanel.vue:179
+msgid "Reorder question"
+msgstr "Frage neu sortieren"
+
+#: /app/src/components/layout/QuestionListPanel.vue:187
+msgid "Moved"
+msgstr "Verschoben"
+
+#: /app/src/components/layout/QuestionListPanel.vue
+msgid "Move question up"
+msgstr "Frage nach oben verschieben"
+
+#: /app/src/components/layout/QuestionListPanel.vue
+msgid "Move question down"
+msgstr "Frage nach unten verschieben"

@@ -14,7 +14,7 @@ let structuredDiaryMockState: {
 } | null = null
 
 Cypress.Commands.add('loginToNextcloud', () => {
-	const configuredBaseUrl = String(Cypress.config('baseUrl') ?? 'http://nextcloud.local/index.php/apps/structureddiary/')
+	const configuredBaseUrl = String(Cypress.config('baseUrl') ?? 'http://nextcloud.dev.mcservice.eu/index.php/apps/structureddiary/')
 	const url = new URL(configuredBaseUrl)
 	const origin = `${url.protocol}//${url.host}`
 	const username = String(Cypress.env('ncUsername') ?? 'admin')
@@ -42,7 +42,7 @@ Cypress.Commands.add('loginToNextcloud', () => {
 })
 
 Cypress.Commands.add('visitStructuredDiary', (path = '') => {
-	const configuredBaseUrl = String(Cypress.config('baseUrl') ?? 'http://nextcloud.local/index.php/apps/structureddiary/')
+	const configuredBaseUrl = String(Cypress.config('baseUrl') ?? 'http://nextcloud.dev.mcservice.eu/index.php/apps/structureddiary/')
 	const targetUrl = new URL(path.replace(/^\//, ''), configuredBaseUrl).toString()
 	cy.viewport(1440, 1000)
 	cy.visit(targetUrl, {

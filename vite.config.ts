@@ -46,7 +46,7 @@ export default createAppConfig({
 						manualChunks: {
 							vendor: ['vue', 'vue-router'],
 						},
-						sourcemapBaseUrl: 'http://nextcloud.local/apps-extra/structureddiary/js/'
+						sourcemapBaseUrl: 'http://nextcloud.dev.mcservice.eu/apps-extra/structureddiary/js/'
 					},
 				},
 			},
@@ -61,7 +61,7 @@ export default createAppConfig({
 				allowedHosts: ['localhost', '127.0.0.1', 'nextcloud', 'vite'],
 				cors: {
 					// the origin you will be accessing via browser
-					origin: 'http://nextcloud.local',
+					origin: 'http://nextcloud.dev.mcservice.eu',
 				},
 			},
 		},

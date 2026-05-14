@@ -278,6 +278,12 @@ export const questionService = {
 			body: JSON.stringify(payload),
 		})
 	},
+	reorder(id: number, diaryQuestionOrder: number): Promise<Question> {
+		return request(`questions/${id}/order`, {
+			method: 'POST',
+			body: JSON.stringify({diaryQuestionOrder}),
+		})
+	},
 	remove(id: number): Promise<Question> {
 		return request(`questions/${id}`, { method: 'DELETE' })
 	},
