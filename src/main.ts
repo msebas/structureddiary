@@ -7,6 +7,7 @@ import VueEasymde from 'vue3-easymde'
 import 'codemirror/lib/codemirror.css'
 import "easymde/dist/easymde.min.css"
 import '@/css/workspace-card.css'
+import '@/css/responsive-actions.css'
 
 import App from './App.vue'
 

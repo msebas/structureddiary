@@ -2,6 +2,7 @@
 import NcAppContent from '@nextcloud/vue/components/NcAppContent'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcContent from '@nextcloud/vue/components/NcContent'
+import {emit as emitNextcloudEvent} from '@nextcloud/event-bus'
 import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {useRoute} from 'vue-router'
 import StructuredDiaryNavigation from '@/components/layout/StructuredDiaryNavigation.vue'
@@ -16,8 +17,10 @@ import { t } from '@nextcloud/l10n'
 
 const store = useStructuredDiaryStore()
 const route = useRoute()
+const appNavigationMobileQuery = '(max-width: 1024px)'
 const diaryOverlayOpen = ref(false)
 const isCompact = ref(false)
+const isAppNavigationMobile = ref(false)
 const mobileCenterOpen = ref(false)
 
 const currentRouteName = computed<WorkspaceRouteName>(() => {
@@ -29,6 +32,7 @@ const latestError = computed(() => store.errors.at(-1) ?? null)
 
 function updateCompactState(): void {
   isCompact.value = window.matchMedia('(max-width: 1080px)').matches
+  isAppNavigationMobile.value = window.matchMedia(appNavigationMobileQuery).matches
   if (!isCompact.value) {
     mobileCenterOpen.value = false
   }
@@ -41,6 +45,12 @@ function closeMobileCenter(): void {
 function openMobileCenter(): void {
   if (isCompact.value) {
     mobileCenterOpen.value = true
+  }
+}
+
+function closeDiarySelectionAfterSelection(): void {
+  if (isAppNavigationMobile.value) {
+    emitNextcloudEvent('toggle-navigation', {open: false})
   }
 }
 
@@ -74,14 +84,14 @@ watch(() => store.selectedEntryId, async (entryId) => {
 
 <template>
   <NcContent app-name="structureddiary">
-    <StructuredDiaryNavigation/>
+    <StructuredDiaryNavigation @diary-selected="closeDiarySelectionAfterSelection()"/>
     <NcAppContent :class="$style.content">
       <div :class="$style.workspace">
         <div :class="$style.columns">
           <section v-if="!isCompact" :class="$style.centerColumn">
             <router-view name="nav"/>
 
-            <main :class="$style.center">
+            <main :class="[$style.center, $style.centerPadded]">
               <div v-if="store.errors.length > 0" :class="$style.error">
                 <div v-for="error in store.errors" :key="error.id" :class="$style.errorItem">
                   <span>{{ error.message }}</span>
@@ -161,6 +171,9 @@ watch(() => store.selectedEntryId, async (entryId) => {
 
 .center {
   min-width: 0;
+}
+
+.centerPadded {
   padding: 20px;
 }
 

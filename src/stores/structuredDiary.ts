@@ -117,6 +117,19 @@ function toRouteTimestamp(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null
 }
 
+function defaultEntryFromTimestamp(): number {
+    const date = new Date()
+    date.setHours(0, 0, 0, 0)
+    date.setDate(date.getDate() - 7)
+    return Math.floor(date.getTime() / 1000)
+}
+
+function defaultEntryUntilTimestamp(): number {
+    const date = new Date()
+    date.setHours(23, 59, 59, 999)
+    return Math.floor(date.getTime() / 1000)
+}
+
 
 export type DiaryError = {
     id: number
@@ -265,6 +278,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             await setRouteParam('until', cachedEntryUntilTimestamp.value)
         }
     })
+    const effectiveEntryFromTimestamp = computed(() => entryFromTimestamp.value ?? defaultEntryFromTimestamp())
+    const effectiveEntryUntilTimestamp = computed(() => entryUntilTimestamp.value ?? defaultEntryUntilTimestamp())
 
     function isEntryRoute(routeName: unknown): boolean {
         return typeof routeName === 'string' && routeName.startsWith('entr')
@@ -359,8 +374,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const currentEntries = computed(() => {
         if (selectedDiaryId.value == null || entriesByDiary.value[selectedDiaryId.value] == null) return []
         return Object.values(entriesByDiary.value[selectedDiaryId.value]).filter(
-            (i: Entry) => i.timestamp >= (entryFromTimestamp.value ?? 0) &&
-                i.timestamp <= (entryUntilTimestamp.value ?? Infinity)).sort(
+            (i: Entry) => i.timestamp >= effectiveEntryFromTimestamp.value &&
+                i.timestamp <= effectiveEntryUntilTimestamp.value).sort(
             (a, b) => a.timestamp - b.timestamp)
     })
     const currentAnswers = computed<Record<number, Answer>>(() =>
@@ -563,7 +578,11 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     }
 
     async function loadEntries(diaryId: number, fromTimestamp?: number | null, untilTimestamp?: number | null): Promise<void> {
-        const entries = await runTask(() => entryService.list(diaryId, fromTimestamp, untilTimestamp))
+        const entries = await runTask(() => entryService.list(
+            diaryId,
+            fromTimestamp ?? effectiveEntryFromTimestamp.value,
+            untilTimestamp ?? effectiveEntryUntilTimestamp.value,
+        ))
         entriesByDiary.value[diaryId] = {
             ...(entriesByDiary.value[diaryId] ?? {}), ...Object.fromEntries(entries.map(i => [i.id, i]))
         }
@@ -1061,6 +1080,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         questionSearch,
         entryFromTimestamp,
         entryUntilTimestamp,
+        effectiveEntryFromTimestamp,
+        effectiveEntryUntilTimestamp,
         selectedDiary,
         selectedEntry,
         selectedQuestion,

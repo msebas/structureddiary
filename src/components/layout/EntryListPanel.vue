@@ -27,16 +27,6 @@ function formatDateInputFromTimestamp(timestamp: number | null): string {
 	return formatDateInputValue(new Date(timestamp * 1000))
 }
 
-function defaultFromDateInputValue(): string {
-	const date = new Date()
-	date.setDate(date.getDate() - 7)
-	return formatDateInputValue(date)
-}
-
-function defaultUntilDateInputValue(): string {
-	return formatDateInputValue(new Date())
-}
-
 function timestampFromDateInput(value: string, endOfDay: boolean): number | null {
 	if (value === '') {
 		return null
@@ -46,14 +36,14 @@ function timestampFromDateInput(value: string, endOfDay: boolean): number | null
 }
 
 const fromValue = computed({
-	get: () => formatDateInputFromTimestamp(store.entryFromTimestamp) || defaultFromDateInputValue(),
+	get: () => formatDateInputFromTimestamp(store.effectiveEntryFromTimestamp),
 	set: (value: string) => {
 		store.entryFromTimestamp = timestampFromDateInput(value, false)
 	},
 })
 
 const untilValue = computed({
-	get: () => formatDateInputFromTimestamp(store.entryUntilTimestamp) || defaultUntilDateInputValue(),
+	get: () => formatDateInputFromTimestamp(store.effectiveEntryUntilTimestamp),
 	set: (value: string) => {
 		store.entryUntilTimestamp = timestampFromDateInput(value, true)
 	},
@@ -73,7 +63,7 @@ async function applyFilter(): Promise<void> {
 		return
 	}
 
-	await store.loadEntries(store.selectedDiaryId, store.entryFromTimestamp, store.entryUntilTimestamp)
+	await store.loadEntries(store.selectedDiaryId, store.effectiveEntryFromTimestamp, store.effectiveEntryUntilTimestamp)
 }
 
 async function createEntry(): Promise<void> {

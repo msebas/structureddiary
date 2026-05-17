@@ -62,6 +62,9 @@ watch(() => store.selectedQuestionId, async (questionId) => {
 
 .title {
 	margin: 0;
+	font-size: clamp(1.2rem, 2vw, 1.6rem);
+	line-height: 1.25;
+	overflow-wrap: anywhere;
 }
 
 .meta {
@@ -83,5 +86,35 @@ watch(() => store.selectedQuestionId, async (questionId) => {
 
 .empty {
 	min-height: 240px;
+}
+
+@media (max-width: 640px) {
+	.header {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 10px;
+	}
+
+	.title {
+		font-size: clamp(1.1rem, 5vw, 1.35rem);
+	}
+
+	.state {
+		padding: 6px 10px;
+	}
+}
+
+@media (max-width: 430px) {
+	.header {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.state {
+		justify-self: start;
+	}
+
+	.body p {
+		margin-bottom: 8px;
+	}
 }
 </style>

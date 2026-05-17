@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import NcButton from '@nextcloud/vue/components/NcButton'
+import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
+import {mdiDeleteOutline, mdiHistory} from '@mdi/js'
 import type { Answer, Entry, Question } from '@/types/types'
 import { entryQuestionProgress, formatDateTime, formatEntryTitle, hasExplicitEntryTitle } from '@/utils/format'
 import AnswerDisplay from '@/components/answers/AnswerDisplay.vue'
@@ -66,20 +69,30 @@ function hasMultipleVersions(questionId: number): boolean {
 							</div>
 						</div>
 						<div :class="$style.answerActions">
-							<button
+							<NcButton
 								v-if="!hasMultipleVersions(question.id)"
-								type="button"
-								:class="$style.miniButton"
+								class="sd-mobile-icon-button"
+								variant="error"
+								size="small"
+								:aria-label="t('structureddiary', 'Delete')"
 								@click="currentAnswer(question.id) && emit('deleteAnswer', currentAnswer(question.id)!.id)">
-								{{ t('structureddiary', 'Delete') }}
-							</button>
-							<button
+								<template #icon>
+									<NcIconSvgWrapper :path="mdiDeleteOutline" />
+								</template>
+								<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Delete') }}</span>
+							</NcButton>
+							<NcButton
 								v-else
-								type="button"
-								:class="$style.miniButton"
+								class="sd-mobile-icon-button"
+								variant="secondary"
+								size="small"
+								:aria-label="t('structureddiary', 'Versions')"
 								@click="emit('loadHistory', question.id)">
-								{{ t('structureddiary', 'Versions') }}
-							</button>
+								<template #icon>
+									<NcIconSvgWrapper :path="mdiHistory" />
+								</template>
+								<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Versions') }}</span>
+							</NcButton>
 						</div>
 					</div>
 					<AnswerDisplay :question="question" :answer="currentAnswer(question.id)" />
@@ -152,15 +165,6 @@ function hasMultipleVersions(questionId: number): boolean {
 .answerActions {
 	display: flex;
 	gap: 8px;
-}
-
-.miniButton {
-	border: 0;
-	border-radius: var(--border-radius-pill);
-	padding: 8px 10px;
-	background: var(--color-background-dark);
-	color: var(--color-main-text);
-	cursor: pointer;
 }
 
 .empty {

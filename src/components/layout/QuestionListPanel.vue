@@ -2,7 +2,7 @@
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
-import {mdiArrowDown, mdiArrowUp, mdiDragVariant} from '@mdi/js'
+import {mdiArrowDown, mdiArrowUp, mdiDragVariant, mdiHistory} from '@mdi/js'
 import {computed, ref, watch} from 'vue'
 import {useRoute} from 'vue-router'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
@@ -272,10 +272,15 @@ async function saveQuestionOrder(): Promise<void> {
 						</NcButton>
 						<NcButton
 							v-if="!reorderMode && hasMultipleVersions(question)"
-							variant="tertiary"
+							class="sd-mobile-icon-button"
+							variant="secondary"
 							size="small"
+							:aria-label="t('structureddiary', 'Versions')"
 							@click.stop="toggleVersions(question)">
-							{{ t('structureddiary', 'Versions') }}
+							<template #icon>
+								<NcIconSvgWrapper :path="mdiHistory" />
+							</template>
+							<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Versions') }}</span>
 						</NcButton>
 					</div>
 				</div>

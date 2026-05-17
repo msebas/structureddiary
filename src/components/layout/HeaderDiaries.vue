@@ -26,29 +26,36 @@ const managePermissionsOnDiary = computed(() => ((store.user_permissions & Permi
 		</div>
 
 		<div class="workspace-header-actions">
-			<NcButton :aria-label="t('structureddiary', 'Create new diary')" @click="store.startCreatingDiary()">
+			<NcButton
+				class="sd-mobile-icon-button"
+				:aria-label="t('structureddiary', 'Create new diary')"
+				@click="store.startCreatingDiary()">
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiPlus" />
 				</template>
-				{{ t('structureddiary', 'Add diary') }}
+				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Add diary') }}</span>
 			</NcButton>
 			<NcButton
 				v-if="diary !== null && managePermissionsOnDiary"
+				class="sd-mobile-icon-button"
 				variant="secondary"
+				:aria-label="t('structureddiary', 'Edit diary')"
 				@click="store.editDiary(diary.id)">
         <template #icon>
           <NcIconSvgWrapper :path="mdiPencil" />
         </template>
-				{{ t('structureddiary', 'Edit diary') }}
+				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Edit diary') }}</span>
 			</NcButton>
 			<NcButton
 				v-if="diary !== null && managePermissionsOnDiary"
+				class="sd-mobile-icon-button"
 				variant="secondary"
+				:aria-label="t('structureddiary', 'Edit diary share')"
 				@click="store.editDiaryShares(diary.id)">
         <template #icon>
           <NcIconSvgWrapper :path="mdiShareVariant" />
         </template>
-				{{ t('structureddiary', 'Edit diary share') }}
+				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Edit diary share') }}</span>
 			</NcButton>
 		</div>
 	</header>

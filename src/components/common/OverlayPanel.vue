@@ -87,4 +87,38 @@ const emit = defineEmits<{
 .body {
 	padding: 22px;
 }
+
+@media (max-width: 640px) {
+	.overlay {
+		padding: 10px;
+	}
+
+	.panel {
+		max-height: min(94vh, 100%);
+		border-radius: var(--border-radius-container-large);
+	}
+
+	.header {
+		gap: 10px;
+		padding: 12px 14px;
+	}
+
+	.close {
+		padding: 8px 12px;
+	}
+
+	.body {
+		padding: 10px;
+	}
+}
+
+@media (max-width: 430px) {
+	.overlay {
+		padding: 6px;
+	}
+
+	.body {
+		padding: 0;
+	}
+}
 </style>

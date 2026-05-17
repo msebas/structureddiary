@@ -1,0 +1,23 @@
+.sd-mobile-icon-button-label {
+	display: inline;
+}
+
+@media (max-width: 430px) {
+	.sd-mobile-icon-button.button-vue {
+		min-width: var(--clickable-area-large);
+		padding-inline: 0;
+	}
+
+	.sd-mobile-icon-button-label {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		clip-path: inset(50%);
+		border: 0;
+		white-space: nowrap;
+	}
+}

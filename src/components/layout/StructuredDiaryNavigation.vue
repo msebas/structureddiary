@@ -19,6 +19,9 @@ const labels: Record<keyof DiaryGroupSet, string> = {
 
 const store = useStructuredDiaryStore()
 const route = useRoute()
+const emit = defineEmits<{
+  (event: 'diary-selected'): void
+}>()
 const inManagement = computed(() => route.name?.toString()?.startsWith("diar") || route.name?.toString()?.startsWith("question"))
 const selectedQuestionRoute = computed(() => route.name === 'question' || route.name === 'questionEdit')
 
@@ -36,9 +39,11 @@ function diaryIcon(): string {
 function selectDiary(diary: Diary): void {
   if (selectedQuestionRoute.value) {
     store.pushWorkspaceRoute({name: 'diary', params: {diaryId: diary.id}})
+    emit('diary-selected')
     return
   }
   store.selectedDiaryId = diary.id
+  emit('diary-selected')
 }
 
 function openManagement(): void {

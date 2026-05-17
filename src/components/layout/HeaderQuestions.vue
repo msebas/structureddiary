@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
-import { mdiPlus } from '@mdi/js'
+import { mdiPencil, mdiPlus } from '@mdi/js'
 import { computed } from 'vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import '@/components/layout/workspaceHeader.css'
@@ -37,16 +37,25 @@ async function editQuestion(): Promise<void> {
 		</div>
 
 		<div class="workspace-header-actions">
-			<NcButton :aria-label="t('structureddiary', 'Create new question')" @click="createQuestion()">
+			<NcButton
+				class="sd-mobile-icon-button"
+				:aria-label="t('structureddiary', 'Create new question')"
+				@click="createQuestion()">
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiPlus" />
 				</template>
+				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'New question') }}</span>
 			</NcButton>
 			<NcButton
 				v-if="question !== null"
+				class="sd-mobile-icon-button"
 				variant="secondary"
+				:aria-label="t('structureddiary', 'Edit question')"
 				@click="editQuestion()">
-				{{ t('structureddiary', 'Edit question') }}
+				<template #icon>
+					<NcIconSvgWrapper :path="mdiPencil" />
+				</template>
+				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Edit question') }}</span>
 			</NcButton>
 		</div>
 	</header>

@@ -47,29 +47,36 @@ async function deleteEntry(): Promise<void> {
 		</div>
 
 		<div class="workspace-header-actions">
-			<NcButton :aria-label="t('structureddiary', 'Create new entry')" @click="createEntry()">
+			<NcButton
+				class="sd-mobile-icon-button"
+				:aria-label="t('structureddiary', 'Create new entry')"
+				@click="createEntry()">
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiPlus" />
 				</template>
-				{{ t('structureddiary', 'Add entry') }}
+				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Add entry') }}</span>
 			</NcButton>
 			<NcButton
 				v-if="entry !== null"
+				class="sd-mobile-icon-button"
 				variant="secondary"
+				:aria-label="t('structureddiary', 'Edit entry')"
 				@click="editEntry()">
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiPencil" />
 				</template>
-				{{ t('structureddiary', 'Edit entry') }}
+				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Edit entry') }}</span>
 			</NcButton>
 			<NcButton
 				v-if="entry !== null"
+				class="sd-mobile-icon-button"
 				variant="error"
+				:aria-label="t('structureddiary', 'Delete entry')"
 				@click="deleteEntry()">
 				<template #icon>
 					<NcIconSvgWrapper :path="mdiDeleteOutline" />
 				</template>
-				{{ t('structureddiary', 'Delete entry') }}
+				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Delete entry') }}</span>
 			</NcButton>
 		</div>
 	</header>

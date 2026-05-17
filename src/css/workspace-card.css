@@ -44,6 +44,31 @@
 	place-items: center;
 	color: var(--color-text-maxcontrast);
 }
+
 .workspace-end-space {
 	min-height: 10vh;
+}
+
+@media (max-width: 640px) {
+	.workspace-card {
+		gap: calc(var(--default-grid-baseline) * 3);
+		padding: calc(var(--default-grid-baseline) * 4);
+		border-radius: var(--border-radius-container);
+	}
+
+	.workspace-card-header {
+		padding-bottom: calc(var(--default-grid-baseline) * 3);
+	}
+}
+
+@media (max-width: 430px) {
+	.workspace-card {
+		gap: calc(var(--default-grid-baseline) * 2.5);
+		padding: calc(var(--default-grid-baseline) * 3);
+		border-radius: var(--border-radius-element);
+	}
+
+	.workspace-card-subcard {
+		border-radius: var(--border-radius-element);
+	}
 }

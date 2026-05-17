@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import NcButton from '@nextcloud/vue/components/NcButton'
+import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
+import {mdiDeleteOutline} from '@mdi/js'
 import type { Answer, Question } from '@/types/types'
 import { formatDateTime } from '@/utils/format'
 import AnswerDisplay from '@/components/answers/AnswerDisplay.vue'
@@ -29,9 +32,17 @@ const emit = defineEmits<{
 			<article v-for="answer in props.answers" :key="answer.id" :class="$style.item">
 				<div :class="$style.itemHeader">
 					<div>{{ formatDateTime(answer.created_at) }}</div>
-					<button type="button" :class="$style.deleteButton" @click="emit('delete', answer.id)">
-						{{ t('structureddiary', 'Delete') }}
-					</button>
+					<NcButton
+						class="sd-mobile-icon-button"
+						variant="error"
+						size="small"
+						:aria-label="t('structureddiary', 'Delete')"
+						@click="emit('delete', answer.id)">
+						<template #icon>
+							<NcIconSvgWrapper :path="mdiDeleteOutline" />
+						</template>
+						<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Delete') }}</span>
+					</NcButton>
 				</div>
 				<AnswerDisplay :question="props.question" :answer="answer" />
 			</article>
@@ -84,16 +95,6 @@ const emit = defineEmits<{
 	gap: 12px;
 	font-size: 0.9rem;
 	color: #516175;
-}
-
-.deleteButton {
-	border: 0;
-	border-radius: 999px;
-	padding: 7px 10px;
-	background: rgba(217, 105, 65, 0.12);
-	color: #973f22;
-	font-weight: 700;
-	cursor: pointer;
 }
 
 .empty {
