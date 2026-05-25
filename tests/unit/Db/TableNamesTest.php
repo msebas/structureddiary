@@ -36,6 +36,7 @@ final class TableNamesTest extends TestCase {
 			TableNames::ENTRIES,
 			TableNames::QUESTIONS,
 			TableNames::ANSWERS,
+			TableNames::ALARM_SOUNDS,
 		];
 	}
 }

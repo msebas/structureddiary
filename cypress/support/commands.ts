@@ -79,6 +79,17 @@ Cypress.Commands.add('visitStructuredDiary', (path = '') => {
 Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 	let createdQuestion: Record<string, unknown> | null = null
 	let createdEntryAnswers: Record<string, unknown>[] = []
+	const today = new Date()
+	const entryTimestamp = Math.floor(new Date(
+		today.getFullYear(),
+		today.getMonth(),
+		today.getDate(),
+		9,
+		0,
+	).getTime() / 1000)
+	const questionCreatedAt = entryTimestamp - 3600
+	const answerCreatedAt = entryTimestamp + 600
+	const answerVersionCreatedAt = entryTimestamp + 700
 	const diary = {
 		id: 5,
 		user_id: 'alice',
@@ -94,13 +105,13 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 		access_level: 15,
 		is_owner: true,
 	}
-	const entries = [{ id: 7, diary_id: 5, timestamp: 1713517200, title: 'Morning check-in' }]
+	const entries = [{ id: 7, diary_id: 5, timestamp: entryTimestamp, title: 'Morning check-in' }]
 	const questions = [{
 		id: 17,
 		chain_id: 17,
 		diary_id: 5,
 		diary_question_order: 17,
-		created_at: 1713500000,
+		created_at: questionCreatedAt,
 		label: 'Mood',
 		display_text: 'How do you feel today?',
 		type: 'text',
@@ -117,7 +128,7 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 		diary_id: 5,
 		entry_id: 7,
 		question_id: 17,
-		created_at: 1713517800,
+		created_at: answerCreatedAt,
 		text_content: 'Feeling stable today.',
 		numeric_content: null,
 		previous_version_id: null,
@@ -130,7 +141,7 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 			diary_id: 5,
 			entry_id: 7,
 			question_id: 17,
-			created_at: 1713517900,
+			created_at: answerVersionCreatedAt,
 			text_content: 'Feeling better now.',
 			numeric_content: null,
 			previous_version_id: 11,
@@ -142,8 +153,8 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 		entry_count: 1,
 		answer_count: 1,
 		average_answer_count: 1,
-		first_entry_at: 1713517200,
-		latest_entry_at: 1713517200,
+		first_entry_at: entryTimestamp,
+		latest_entry_at: entryTimestamp,
 		entry_frequency: { mean: 86400, stddev: 0 },
 		entry_frequency_last_month: { mean: 86400, stddev: 0 },
 		gap_count_above_ten_target_intervals: 0,
@@ -151,7 +162,7 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 		longest_gap: null,
 		average_entry_duration: 600,
 		average_entry_duration_last_month: 600,
-		latest_answer_at: 1713517800,
+		latest_answer_at: answerCreatedAt,
 	}
 	structuredDiaryMockState = {
 		questions,
@@ -168,18 +179,65 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 		{ id: 'SELECT', value: 'select' },
 		{ id: 'EDITABLE_SELECT', value: 'editable_select' },
 	]).as('questionTypes')
+	cy.intercept('GET', '**/structureddiary/api/v1/alarm-sounds*', [
+		{ id: 1, name: 'Bell', path: 'bell', created_at: 1713500000, last_seen_at: 1713500000, is_default: true, os_affinity: ['ios:17', 'android:15'] },
+		{ id: 2, name: 'Soft Bell', path: 'soft-bell', created_at: 1713500000, last_seen_at: 1713500000, is_default: false, os_affinity: ['android:15'] },
+	]).as('alarmSounds')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries', [diary]).as('diaries')
 	cy.intercept('GET', '**/structureddiary/api/v1/diary-shares*', []).as('allShares')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5', diary).as('diaryDetail')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/entries*', entries).as('entries')
 	cy.intercept('GET', '**/structureddiary/api/v1/entries/7', entries[0]).as('entryDetail')
 	cy.intercept('GET', '**/structureddiary/api/v1/entries/7/answers*', answers).as('answers')
+	cy.intercept('GET', '**/structureddiary/api/v1/entries/7/answer-count', { count: answers.length }).as('answerCount')
+	cy.intercept('GET', '**/structureddiary/api/v1/questions/*/answer-count', { count: answers.length }).as('questionAnswerCount')
+	cy.intercept('DELETE', '**/structureddiary/api/v1/entries/7', entries[0]).as('deleteEntry')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions/active*', questions).as('activeQuestions')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions*', (request) => {
 		request.reply(createdQuestion === null ? questions : [...questions, createdQuestion])
 	}).as('questions')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/shares*', []).as('shares')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/stats*', stats).as('stats')
+	cy.intercept('PUT', '**/structureddiary/api/v1/diaries/5', (request) => {
+		request.reply({
+			...diary,
+			user_id: request.body.ownerUserId ?? diary.user_id,
+			title: request.body.title,
+			description: request.body.description,
+			reminder_active: request.body.reminderActive,
+			reminder_time: request.body.reminderTime,
+			reminder_count: request.body.reminderCount,
+			reminder_delay: request.body.reminderDelay,
+			reminder_signal_first: request.body.reminderSignalFirst,
+			reminder_signal_repeat: request.body.reminderSignalRepeat,
+			entry_schedule: request.body.entrySchedule,
+		})
+	}).as('updateDiary')
+	cy.intercept('DELETE', '**/structureddiary/api/v1/diaries/5', diary).as('deleteDiary')
+	cy.intercept('POST', '**/structureddiary/api/v1/diaries/5/shares', (request) => {
+		request.reply({
+			id: 300,
+			diary_id: 5,
+			shared_with: request.body.sharedWith,
+			permission: request.body.permission,
+		})
+	}).as('createShare')
+	cy.intercept('PUT', '**/structureddiary/api/v1/diaries/5/shares/*', (request) => {
+		request.reply({
+			id: Number(request.url.split('/').pop()),
+			diary_id: 5,
+			shared_with: 'admin',
+			permission: request.body.permission,
+		})
+	}).as('updateShare')
+	cy.intercept('DELETE', '**/structureddiary/api/v1/diaries/5/shares/*', (request) => {
+		request.reply({
+			id: Number(request.url.split('/').pop()),
+			diary_id: 5,
+			shared_with: 'deleted',
+			permission: 0,
+		})
+	}).as('deleteShare')
 
 	cy.intercept('POST', '**/structureddiary/api/v1/diaries', (request) => {
 		request.reply({

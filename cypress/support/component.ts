@@ -7,6 +7,17 @@ import type { ComponentPublicInstance, DefineComponent } from 'vue'
 
 import '../../src/settings'
 
+function isPiniaPlugin(plugin: unknown): boolean {
+	if (Array.isArray(plugin)) {
+		return isPiniaPlugin(plugin[0])
+	}
+
+	return typeof plugin === 'object'
+		&& plugin !== null
+		&& 'install' in plugin
+		&& 'state' in plugin
+}
+
 declare global {
 	namespace Cypress {
 		interface Chainable {
@@ -28,7 +39,9 @@ Cypress.Commands.add('mount', (component, options: ComponentMountingOptions<any>
 			},
 		},
 	}])
-	options.global.plugins.push(createPinia())
+	if (!options.global.plugins.some(isPiniaPlugin)) {
+		options.global.plugins.push(createPinia())
+	}
 
 	return mount(component, options)
 })

@@ -41,13 +41,14 @@ const textValue = computed({
 })
 
 const selectValue = computed({
-	get: () => props.modelValue?.text_content ?? '',
+	get: () => props.modelValue?.text_content ?? (props.question.type === 'editable_select' ? props.question.template_text : ''),
 	set: (value: string | null) => nextValue({text_content: value}),
 })
 
 const selectOptions = computed(() => props.question.choices ?? [])
 const selectInputId = computed(() => `answer-select-${props.question.id}`)
 const useOutsideLabel = computed(() => props.question.display_text.length > FLOATING_LABEL_MAX_LENGTH)
+const showsInlineTemplate = computed(() => props.question.template_text.trim() !== '' && (props.question.type === 'integer' || props.question.type === 'number'))
 
 const timeValue = computed(() => parseTimeValue(props.modelValue?.text_content ?? ''))
 
@@ -165,7 +166,7 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 				:label="props.question.display_text"
 				:label-outside="useOutsideLabel"
 				type="number" />
-			<span v-if="props.question.template_text" :class="$style.inlineTemplate">
+			<span v-if="showsInlineTemplate" :class="$style.inlineTemplate">
 				{{ props.question.template_text }}
 			</span>
 		</div>
@@ -184,9 +185,6 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 			{{ t('structureddiary', 'Yes / No') }}
 		</NcCheckboxRadioSwitch>
 
-		<p v-if="props.question.template_text && !['integer', 'number', 'text'].includes(props.question.type)" :class="$style.template">
-			{{ props.question.template_text }}
-		</p>
 	</div>
 </template>
 
@@ -212,6 +210,27 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 
 .markdownEditor {
 	min-width: 0;
+}
+
+.markdownEditor :global(.CodeMirror textarea) {
+	width: 1px !important;
+	min-width: 1px !important;
+	max-width: 1px !important;
+	height: 1em !important;
+	min-height: 1em !important;
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	color: transparent !important;
+	resize: none !important;
+	appearance: none !important;
+}
+
+.markdownEditor :global(.CodeMirror textarea:focus) {
+	outline: 0 !important;
+	box-shadow: none !important;
 }
 
 .selectField,
@@ -284,10 +303,4 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 	white-space: pre-wrap;
 }
 
-.template {
-	margin: 0;
-	font-size: 0.88rem;
-	color: var(--color-text-maxcontrast);
-	white-space: pre-wrap;
-}
 </style>

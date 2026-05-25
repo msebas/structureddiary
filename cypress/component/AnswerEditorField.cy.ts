@@ -78,9 +78,9 @@ describe('AnswerEditorField', () => {
 			setup() {
 				const items = [
 					{ question: question('text', { id: 20, display_text: 'Mood note', template_text: 'Write a note' }), value: answer({ question_id: 20 }) },
-					{ question: question('rating', { id: 21, display_text: 'Energy rating' }), value: answer({ question_id: 21 }) },
-					{ question: question('select', { id: 22, display_text: 'Color choice', choices: ['Blue', 'Green'] }), value: answer({ question_id: 22 }) },
-					{ question: question('editable_select', { id: 23, display_text: 'Custom choice', choices: ['Apple', 'Pear'] }), value: answer({ question_id: 23 }) },
+					{ question: question('rating', { id: 21, display_text: 'Energy rating', template_text: 'Hidden rating template' }), value: answer({ question_id: 21 }) },
+					{ question: question('select', { id: 22, display_text: 'Color choice', choices: ['Blue', 'Green'], template_text: 'Hidden select template' }), value: answer({ question_id: 22 }) },
+					{ question: question('editable_select', { id: 23, display_text: 'Custom choice', choices: ['Apple', 'Pear'], template_text: 'Kiwi' }), value: answer({ question_id: 23 }) },
 				]
 				return () => h('div', items.map((item) => h(AnswerEditorField, {
 					question: item.question,
@@ -100,11 +100,14 @@ describe('AnswerEditorField', () => {
 		cy.get('.p-rating-option').eq(6).click()
 		cy.get('#answer-select-22').parents('.p-select').click()
 		cy.get('.p-select-option').contains('Green').click()
-		cy.get('#answer-select-23').clear().type('Kiwi{enter}')
+		cy.contains('Hidden rating template').should('not.exist')
+		cy.contains('Hidden select template').should('not.exist')
+		cy.get('#answer-select-23').should('have.value', 'Kiwi')
+		cy.get('#answer-select-23').clear().type('Mango{enter}')
 
 		cy.get('@updateSpy').should('have.been.calledWithMatch', { question_id: 20, text_content: 'Markdown **note**' })
 		cy.get('@updateSpy').should('have.been.calledWithMatch', { question_id: 21, numeric_content: 7 })
 		cy.get('@updateSpy').should('have.been.calledWithMatch', { question_id: 22, text_content: 'Green' })
-		cy.get('@updateSpy').should('have.been.calledWithMatch', { question_id: 23, text_content: 'Kiwi' })
+		cy.get('@updateSpy').should('have.been.calledWithMatch', { question_id: 23, text_content: 'Mango' })
 	})
 })

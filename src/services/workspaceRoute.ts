@@ -32,21 +32,24 @@ export function mobileOverlayTitleForRoute(routeName: WorkspaceRouteName): strin
 		case 'entries':
 		case 'entry':
 			return t('structureddiary', 'Entry')
-		case 'entryCreate':
 		case 'entryEdit':
 			return t('structureddiary', 'Edit entry')
+		case 'entryCreate':
+			return t('structureddiary', 'Create entry')
 		case 'diaries':
 		case 'diary':
-		case 'diaryCreate':
 			return t('structureddiary', 'Diary')
+		case 'diaryCreate':
+			return t('structureddiary', 'Create diary')
 		case 'diaryEdit':
 		case 'diaryEditShare':
 			return t('structureddiary', 'Edit diary')
 		case 'questions':
 		case 'question':
 			return t('structureddiary', 'Question')
-		case 'questionCreate':
 		case 'questionEdit':
 			return t('structureddiary', 'Edit question')
+		case 'questionCreate':
+			return t('structureddiary', 'Create question')
 	}
 }

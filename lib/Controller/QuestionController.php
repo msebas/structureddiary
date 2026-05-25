@@ -104,6 +104,26 @@ class QuestionController extends ApiOCSController {
 	}
 
 	/**
+	 * Count all answers for one question version
+	 *
+	 * @return DataResponse<Http::STATUS_OK, array{count: int}, array{}>
+	 *
+	 * 200: Answer count returned
+	 */
+	#[NoAdminRequired]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/questions/{id}/answer-count', requirements: ['apiVersion' => '(v1)'])]
+	public function answerCount(int $id): DataResponse {
+		try {
+			$question = $this->questionMapper->getQuestion($id);
+			$this->diaryMapper->getDiaryForUser($question->getDiaryId(), $this->requireUser($this->userId), DiaryPermissions::READ);
+
+			return $this->respond(['count' => $this->questionMapper->countAnswersForQuestion($question->getId())]);
+		} catch (Throwable $e) {
+			return $this->respondError($e->getMessage(), 404);
+		}
+	}
+
+	/**
 	 * List active questions for a diary at a timestamp
 	 *
 	 * @return DataResponse<Http::STATUS_OK, list<StructuredDiaryQuestion>, array{}>
@@ -147,16 +167,19 @@ class QuestionController extends ApiOCSController {
 			$userId = $this->requireUser($this->userId);
 			$diary = $this->diaryMapper->getDiaryForUser($diaryId, $userId, DiaryPermissions::MANAGE);
 			$this->diaryMapper->assertManageAccess($diary, $userId);
-			$synced = trim($displayText ?? $label ?? '');
-			if ($synced === '') {
+			$normalizedLabel = $label === null ? null : trim($label);
+			$normalizedDisplayText = $displayText === null ? null : trim($displayText);
+			if (($normalizedLabel ?? $normalizedDisplayText ?? '') === '') {
 				throw new \InvalidArgumentException('A question label/display text is required.');
 			}
+			$targetLabel = $normalizedLabel ?? $normalizedDisplayText;
+			$targetDisplayText = $normalizedDisplayText ?? $normalizedLabel;
 
 			return $this->respond(
 				$this->questionMapper->createQuestion(
 					$diaryId,
-					$synced,
-					$synced,
+					$targetLabel,
+					$targetDisplayText,
 					$type,
 					$minimum,
 					$maximum,
@@ -197,22 +220,19 @@ class QuestionController extends ApiOCSController {
 			$question = $this->questionMapper->getQuestion($id);
 			$diary = $this->diaryMapper->getDiaryForUser($question->getDiaryId(), $userId, DiaryPermissions::MANAGE);
 			$this->diaryMapper->assertManageAccess($diary, $userId);
-			$syncedLabel = $label;
-			$syncedDisplayText = $displayText;
-			if ($label !== null || $displayText !== null) {
-				$synced = trim($displayText ?? $label ?? '');
-				if ($synced === '') {
+			$targetLabel = $label === null ? null : trim($label);
+			$targetDisplayText = $displayText === null ? null : trim($displayText);
+			if ($targetLabel !== null || $targetDisplayText !== null) {
+				if ($targetLabel === '' || $targetDisplayText === '') {
 					throw new \InvalidArgumentException('Question label/display text cannot be empty.');
 				}
-				$syncedLabel = $synced;
-				$syncedDisplayText = $synced;
 			}
 
 			return $this->respond(
 				$this->questionMapper->updateQuestion(
 					$question,
-					$syncedLabel,
-					$syncedDisplayText,
+					$targetLabel,
+					$targetDisplayText,
 					$type,
 					$minimum,
 					$maximum,

@@ -28,6 +28,16 @@ namespace OCA\StructuredDiary;
  *   permission: int
  * }
  *
+ * @psalm-type StructuredDiaryAlarmSound = array{
+ *   id: int,
+ *   path: string|null,
+ *   name: string,
+ *   last_seen_at: int,
+ *   created_at: int,
+ *   is_default: bool,
+ *   os_affinity: list<string>
+ * }
+ *
  * @psalm-type StructuredDiaryFrequencyStats = array{
  *   mean: float|null,
  *   stddev: float|null

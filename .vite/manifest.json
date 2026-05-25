@@ -1,7 +1,7 @@
 {
-  "_index-8HwdV7wJ.chunk.mjs.license": {
-    "file": "js/index-8HwdV7wJ.chunk.mjs.license",
-    "src": "_index-8HwdV7wJ.chunk.mjs.license"
+  "_index-uw2jWuKT.chunk.mjs.license": {
+    "file": "js/index-uw2jWuKT.chunk.mjs.license",
+    "src": "_index-uw2jWuKT.chunk.mjs.license"
   },
   "_structureddiary-main.css": {
     "file": "css/structureddiary-main.css",
@@ -11,22 +11,22 @@
     "file": "js/structureddiary-main.mjs.license",
     "src": "_structureddiary-main.mjs.license"
   },
-  "_vendor-Db3SSv0h.chunk.mjs": {
-    "file": "js/vendor-Db3SSv0h.chunk.mjs",
+  "_vendor-CSMyGlbn.chunk.mjs": {
+    "file": "js/vendor-CSMyGlbn.chunk.mjs",
     "name": "vendor"
   },
-  "_vendor-Db3SSv0h.chunk.mjs.license": {
-    "file": "js/vendor-Db3SSv0h.chunk.mjs.license",
-    "src": "_vendor-Db3SSv0h.chunk.mjs.license"
+  "_vendor-CSMyGlbn.chunk.mjs.license": {
+    "file": "js/vendor-CSMyGlbn.chunk.mjs.license",
+    "src": "_vendor-CSMyGlbn.chunk.mjs.license"
   },
   "node_modules/rehype-highlight/index.js": {
-    "file": "js/index-8HwdV7wJ.chunk.mjs",
+    "file": "js/index-uw2jWuKT.chunk.mjs",
     "name": "index",
     "src": "node_modules/rehype-highlight/index.js",
     "isDynamicEntry": true,
     "imports": [
       "src/main.ts",
-      "_vendor-Db3SSv0h.chunk.mjs"
+      "_vendor-CSMyGlbn.chunk.mjs"
     ]
   },
   "src/main.ts": {
@@ -35,13 +35,13 @@
     "src": "src/main.ts",
     "isEntry": true,
     "imports": [
-      "_vendor-Db3SSv0h.chunk.mjs"
+      "_vendor-CSMyGlbn.chunk.mjs"
     ],
     "dynamicImports": [
       "node_modules/rehype-highlight/index.js"
     ],
     "css": [
-      "css/main-Dv94A47k.chunk.css"
+      "css/main-CX3J6ZMV.chunk.css"
     ]
   }
 }

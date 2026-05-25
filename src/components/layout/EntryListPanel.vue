@@ -4,8 +4,9 @@ import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import { mdiCheck } from '@mdi/js'
 import { computed } from 'vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
-import { formatDate, formatDateTime, formatEntryTitle, hasExplicitEntryTitle } from '@/utils/format'
+import { formatDate, formatDateTime, hasExplicitEntryTitle } from '@/utils/format'
 import { t } from '@nextcloud/l10n'
+import type { Entry } from '@/types/types'
 
 const store = useStructuredDiaryStore()
 const emit = defineEmits<{
@@ -58,6 +59,16 @@ const duplicateDays = computed(() => {
 	return counts
 })
 
+function formatEntryListTimestamp(entry: Entry): string {
+	return (duplicateDays.value.get(formatDate(entry.timestamp)) ?? 0) > 1
+		? formatDateTime(entry.timestamp)
+		: formatDate(entry.timestamp)
+}
+
+function formatEntryListTitle(entry: Entry): string {
+	return hasExplicitEntryTitle(entry) ? entry.title!.trim() : formatEntryListTimestamp(entry)
+}
+
 async function applyFilter(): Promise<void> {
 	if (store.selectedDiaryId === null) {
 		return
@@ -71,8 +82,16 @@ async function createEntry(): Promise<void> {
 	emit('open-center')
 }
 
-function selectEntry(entryId: number): void {
-	store.selectedEntryId = entryId
+async function selectEntry(entryId: number): Promise<void> {
+	if (store.selectedDiaryId === null) {
+		return
+	}
+
+	await store.pushWorkspaceRoute({
+		name: 'entry',
+		params: { diaryId: store.selectedDiaryId, entryId },
+	})
+	await store.loadEntry(entryId)
 	emit('open-center')
 }
 
@@ -119,9 +138,9 @@ function selectEntry(entryId: number): void {
 				type="button"
 				:class="[$style.item, entry.id === store.selectedEntryId && $style.itemActive]"
 				@click="selectEntry(entry.id)">
-				<strong>{{ formatEntryTitle(entry) }}</strong>
+				<strong>{{ formatEntryListTitle(entry) }}</strong>
 				<span v-if="hasExplicitEntryTitle(entry)">
-					{{ duplicateDays.get(formatDate(entry.timestamp))! > 1 ? formatDateTime(entry.timestamp) : formatDate(entry.timestamp) }}
+					{{ formatEntryListTimestamp(entry) }}
 				</span>
 			</button>
 		</div>

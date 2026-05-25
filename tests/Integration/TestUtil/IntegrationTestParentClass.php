@@ -45,10 +45,11 @@ class IntegrationTestParentClass extends TestCase {
 
         foreach ([
                      TableNames::ANSWERS,
-                     TableNames::QUESTIONS,
-                     TableNames::ENTRIES,
-                     TableNames::DIARY_SHARES,
-                     TableNames::DIARIES,
+                 TableNames::QUESTIONS,
+                 TableNames::ENTRIES,
+                 TableNames::DIARY_SHARES,
+                 TableNames::DIARIES,
+                 TableNames::ALARM_SOUNDS,
                  ] as $tableName) {
             if (in_array('oc_' . $tableName, $tables, true)) {
                 $schemaManager->dropTable('oc_' . $tableName);
@@ -77,5 +78,37 @@ class IntegrationTestParentClass extends TestCase {
             'Refusing to reset Structured Diary tables without INTEGRATION_TEST_DB=1. ' .
             'Run integration tests only against a disposable integration-test database.'
         );
+    }
+
+    protected function writeGeneratedFixture(string $relativePath, mixed $data): string {
+        if (str_contains($relativePath, '..')) {
+            throw new \InvalidArgumentException('Generated fixture path must not contain parent directory segments.');
+        }
+
+        $target = dirname(__DIR__, 2) . '/generated-fixtures/' . ltrim($relativePath, '/');
+        $directory = dirname($target);
+        if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+            throw new \RuntimeException('Unable to create generated fixture directory: ' . $directory);
+        }
+
+        $json = json_encode(
+            $this->normalizeGeneratedFixtureData($data),
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+        );
+        file_put_contents($target, $json . "\n");
+
+        return $target;
+    }
+
+    private function normalizeGeneratedFixtureData(mixed $data): mixed {
+        if ($data instanceof \JsonSerializable) {
+            return $this->normalizeGeneratedFixtureData($data->jsonSerialize());
+        }
+
+        if (is_array($data)) {
+            return array_map(fn (mixed $value): mixed => $this->normalizeGeneratedFixtureData($value), $data);
+        }
+
+        return $data;
     }
 }

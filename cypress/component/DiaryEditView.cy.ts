@@ -1,4 +1,5 @@
 import { defineComponent, h } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import DiaryEditView from '@/views/DiaryEditView.vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
@@ -38,6 +39,9 @@ const stats: DiaryStats = {
 }
 
 function mountDiaryEditView() {
+	const pinia = createPinia()
+	setActivePinia(pinia)
+
 	cy.intercept('PUT', '**/structureddiary/api/v1/diaries/5', (request) => {
 		request.reply({
 			...diary,
@@ -53,8 +57,14 @@ function mountDiaryEditView() {
 		})
 	}).as('updateDiary')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5', diary).as('diaryDetail')
+	cy.intercept('GET', '**/structureddiary/api/v1/diaries', [diary]).as('diaries')
+	cy.intercept('GET', '**/structureddiary/api/v1/diary-shares*', []).as('allShares')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions*', []).as('questions')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/stats*', stats).as('stats')
+	cy.intercept('GET', '**/structureddiary/api/v1/alarm-sounds*', [
+		{ id: 1, name: 'Bell', path: 'bell', created_at: 1713500000, last_seen_at: 1713500000, is_default: true, os_affinity: ['ios:17', 'android:15'] },
+		{ id: 2, name: 'Soft Bell', path: 'soft-bell', created_at: 1713500000, last_seen_at: 1713500000, is_default: false, os_affinity: ['android:15'] },
+	]).as('alarmSounds')
 	cy.intercept('GET', '**/apps/files_sharing/api/v1/sharees*', {
 		ocs: { data: { exact: { users: [] }, users: [] } },
 	}).as('sharees')
@@ -80,7 +90,7 @@ function mountDiaryEditView() {
 
 	cy.mount(Wrapper, {
 		global: {
-			plugins: [router],
+			plugins: [pinia, router],
 		},
 	})
 }
@@ -92,12 +102,15 @@ describe('DiaryEditView', () => {
 		cy.contains('Edit diary').should('be.visible')
 		cy.get('input[placeholder="Select readers"]').should('exist')
 		cy.get('input[placeholder="Select writers"]').should('exist')
+		cy.get('input[placeholder="Select users allowed to analyze"]').should('exist')
 		cy.get('input[placeholder="Select managers"]').should('exist')
 		cy.contains('Owner').scrollIntoView().parent().find('.vs--disabled').should('exist')
 		cy.contains('Title').parent().find('input').clear().type('Wellness updated')
 		cy.contains('Description').parent().find('textarea').clear().type('Updated **markdown** description')
 		cy.contains('Reminder active').scrollIntoView()
 		cy.contains('Disabled').click()
+		cy.wait('@alarmSounds')
+		cy.contains('option', 'Bell (ios:17, android:15)').should('exist')
 		cy.get('input[type="time"]').clear().type('15:00')
 		cy.contains('Entry cadence in days').parent().find('select').select('0.5')
 		cy.get('input[type="time"]').should('have.value', '09:00')

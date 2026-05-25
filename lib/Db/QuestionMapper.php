@@ -163,8 +163,8 @@ class QuestionMapper extends QBMapper {
 		?string $templateText
 	): Question {
 		$hasAnswers = $this->hasAnswersInChain($question);
-		$targetLabel = $label ?? $displayText ?? $question->getLabel();
-		$targetDisplayText = $displayText ?? $label ?? $question->getDisplayText();
+		$targetLabel = $label ?? $question->getLabel();
+		$targetDisplayText = $displayText ?? $question->getDisplayText();
 		$targetType = $type ?? $question->getType();
 		$targetMinimum = $minimum ?? $question->getMinimum();
 		$targetMaximum = $maximum ?? $question->getMaximum();
@@ -356,6 +356,26 @@ class QuestionMapper extends QBMapper {
 			}
 
 			return $answers;
+		} finally {
+			$result->closeCursor();
+		}
+	}
+
+	/**
+	 * @throws Exception
+	 */
+	public function countAnswersForQuestion(int $questionId): int {
+		$qb = $this->db->getQueryBuilder();
+		$qb->selectAlias($qb->createFunction('COUNT(*)'), 'cnt')
+			->from(TableNames::ANSWERS)
+			->where(
+				$qb->expr()->eq('question_id', $qb->createNamedParameter($questionId, IQueryBuilder::PARAM_INT))
+			);
+
+		$result = $qb->executeQuery();
+		try {
+			$row = $result->fetch();
+			return (int)($row['cnt'] ?? 0);
 		} finally {
 			$result->closeCursor();
 		}

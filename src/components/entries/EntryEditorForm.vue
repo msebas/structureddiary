@@ -9,6 +9,7 @@ const props = defineProps<{
 	entry: Entry | null
 	questions: Question[]
 	answers: Answer[]
+	isCreating: boolean
 }>()
 
 const emit = defineEmits<{
@@ -45,9 +46,12 @@ function submit(): void {
 </script>
 
 <template>
-	<section :class="$style.editor">
+	<form id="structured-diary-entry-edit-form" :class="$style.editor" @submit.prevent="submit()">
 		<header :class="$style.header">
 			<div>
+				<h2 :class="$style.heading">
+					{{ props.isCreating ? t('structureddiary', 'Create entry') : t('structureddiary', 'Edit entry') }}
+				</h2>
 				<div :class="$style.date">{{ formatDateTime(form.timestamp) }}</div>
 				<input
 					v-model="form.title"
@@ -59,7 +63,7 @@ function submit(): void {
 				<button type="button" :class="$style.secondaryButton" @click="emit('cancel')">
 					{{ t('structureddiary', 'Cancel') }}
 				</button>
-				<button type="button" :class="$style.primaryButton" @click="submit()">
+				<button type="submit" :class="$style.primaryButton">
 					{{ t('structureddiary', 'Save') }}
 				</button>
 			</div>
@@ -79,11 +83,11 @@ function submit(): void {
 			<button type="button" :class="$style.secondaryButton" @click="emit('cancel')">
 				{{ t('structureddiary', 'Cancel') }}
 			</button>
-			<button type="button" :class="$style.primaryButton" @click="submit()">
+			<button type="submit" :class="$style.primaryButton">
 				{{ t('structureddiary', 'Save') }}
 			</button>
 		</footer>
-	</section>
+	</form>
 </template>
 
 <style module>
@@ -102,6 +106,13 @@ function submit(): void {
 	align-items: center;
 	justify-content: space-between;
 	gap: 14px;
+}
+
+.heading {
+	margin: 0 0 8px;
+	font-size: 1.35rem;
+	font-weight: 700;
+	color: #102542;
 }
 
 .date {

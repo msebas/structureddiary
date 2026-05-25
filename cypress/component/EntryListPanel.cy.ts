@@ -2,6 +2,7 @@ import { computed, defineComponent, h } from 'vue'
 import { createMemoryHistory, createRouter, useRouter } from 'vue-router'
 import EntryListPanel from '@/components/layout/EntryListPanel.vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
+import { formatDate, formatDateTime } from '@/utils/format'
 
 function dateInputValue(date: Date): string {
 	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -9,6 +10,16 @@ function dateInputValue(date: Date): string {
 
 function timestampFromDateInput(value: string, endOfDay: boolean): number {
 	return Math.floor(new Date(`${value}T${endOfDay ? '23:59:59' : '00:00:00'}`).getTime() / 1000)
+}
+
+function timestampForDate(date: Date, hours: number, minutes: number): number {
+	return Math.floor(new Date(
+		date.getFullYear(),
+		date.getMonth(),
+		date.getDate(),
+		hours,
+		minutes,
+	).getTime() / 1000)
 }
 
 describe('EntryListPanel', () => {
@@ -24,18 +35,23 @@ describe('EntryListPanel', () => {
 		const routeReady = router.push({ name: 'entries', params: { diaryId: 5 } })
 		const loadEntries = cy.stub().as('loadEntries').resolves()
 		const openCenter = cy.stub().as('openCenter')
+		const today = new Date()
+		const sevenDaysAgo = new Date()
+		sevenDaysAgo.setDate(today.getDate() - 7)
+		const yesterday = new Date()
+		yesterday.setDate(today.getDate() - 1)
+		const morningTimestamp = timestampForDate(today, 9, 0)
+		const noonTimestamp = timestampForDate(today, 12, 15)
+		const eveningTimestamp = timestampForDate(today, 17, 0)
+		const soloTimestamp = timestampForDate(yesterday, 14, 30)
 		cy.intercept('GET', '**/structureddiary/api/v1/entries/1', {
 			id: 1,
 			diary_id: 5,
-			timestamp: 1713517200,
+			timestamp: morningTimestamp,
 			title: 'Morning check-in',
 		}).as('entryDetail')
 		cy.intercept('GET', '**/structureddiary/api/v1/entries/1/answers*', []).as('entryAnswers')
 		cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions/active*', []).as('activeQuestions')
-
-		const today = new Date()
-		const sevenDaysAgo = new Date()
-		sevenDaysAgo.setDate(today.getDate() - 7)
 
 		const Wrapper = defineComponent({
 			setup() {
@@ -43,8 +59,10 @@ describe('EntryListPanel', () => {
 				const currentRouter = useRouter()
 				store.entriesByDiary = {
 					5: {
-						1: { id: 1, diary_id: 5, timestamp: 1713517200, title: 'Morning check-in' },
-						2: { id: 2, diary_id: 5, timestamp: 1713546000, title: 'Evening check-in' },
+						1: { id: 1, diary_id: 5, timestamp: morningTimestamp, title: 'Morning check-in' },
+						2: { id: 2, diary_id: 5, timestamp: eveningTimestamp, title: 'Evening check-in' },
+						3: { id: 3, diary_id: 5, timestamp: soloTimestamp, title: null },
+						4: { id: 4, diary_id: 5, timestamp: noonTimestamp, title: null },
 					},
 				}
 				store.loadEntries = loadEntries
@@ -68,13 +86,11 @@ describe('EntryListPanel', () => {
 
 		cy.get('input[type="date"]').eq(0).should('have.value', dateInputValue(sevenDaysAgo))
 		cy.get('input[type="date"]').eq(1).should('have.value', dateInputValue(today))
-		cy.contains('Morning check-in').parent().should('contain.text', '2024')
-		cy.contains('Evening check-in').parent().should('contain.text', '2024')
-
-		cy.get('input[type="date"]').eq(0).clear().type('2024-04-19')
-		cy.get('input[type="date"]').eq(1).clear().type('2024-04-20')
-		cy.get('[aria-label="Apply filter"]').click()
-		cy.get('@loadEntries').should('have.been.calledWith', 5, timestampFromDateInput('2024-04-19', false), timestampFromDateInput('2024-04-20', true))
+		cy.contains('Morning check-in').parent().should('contain.text', String(today.getFullYear()))
+		cy.contains('Evening check-in').parent().should('contain.text', String(today.getFullYear()))
+		cy.contains(formatDate(soloTimestamp)).should('exist')
+		cy.contains(formatDateTime(soloTimestamp)).should('not.exist')
+		cy.contains(formatDateTime(noonTimestamp)).should('exist')
 
 		cy.contains('Morning check-in').click()
 		cy.wait('@entryDetail')
@@ -83,5 +99,10 @@ describe('EntryListPanel', () => {
 		cy.get('[data-cy="route-name"]').should('contain', 'entry')
 		cy.get('[data-cy="entry-id"]').should('contain', '1')
 		cy.get('@openCenter').should('have.been.calledOnce')
+
+		cy.get('input[type="date"]').eq(0).clear().type('2024-04-19')
+		cy.get('input[type="date"]').eq(1).clear().type('2024-04-20')
+		cy.get('[aria-label="Apply filter"]').click()
+		cy.get('@loadEntries').should('have.been.calledWith', 5, timestampFromDateInput('2024-04-19', false), timestampFromDateInput('2024-04-20', true))
 	})
 })

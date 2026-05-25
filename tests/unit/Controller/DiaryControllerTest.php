@@ -89,6 +89,7 @@ final class DiaryControllerTest extends TestCase {
 		$diaryMapper = $this->createMock(DiaryMapper::class);
 		$shareMapper = $this->createMock(DiaryShareMapper::class);
 		$diary = new Diary();
+		$diary->setUserId('alice');
 
 		$diaryMapper->expects($this->once())
 			->method('updateDiary')
@@ -107,6 +108,7 @@ final class DiaryControllerTest extends TestCase {
 		$diaryMapper = $this->createMock(DiaryMapper::class);
 		$shareMapper = $this->createMock(DiaryShareMapper::class);
 		$diary = new Diary();
+		$diary->setUserId('alice');
 
 		$diaryMapper->expects($this->once())
 			->method('getDiaryForUser')
@@ -150,6 +152,7 @@ final class DiaryControllerTest extends TestCase {
 		$diaryMapper = $this->createMock(DiaryMapper::class);
 		$shareMapper = $this->createMock(DiaryShareMapper::class);
 		$diary = new Diary();
+		$diary->setUserId('alice');
 
 		$diaryMapper->expects($this->once())
 			->method('getDiaryForUser')
@@ -165,6 +168,33 @@ final class DiaryControllerTest extends TestCase {
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 		$this->assertSame(['error' => 'The owner cannot be shared explicitly.'], $response->getData());
+	}
+
+	public function testCreateShareAllowsManagerToShareWithSelfWhenTheyAreNotOwner(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$shareMapper = $this->createMock(DiaryShareMapper::class);
+		$diary = new Diary();
+		$diary->setUserId('bob');
+		$share = new DiaryShare();
+
+		$diaryMapper->expects($this->once())
+			->method('getDiaryForUser')
+			->with(42, 'alice', DiaryPermissions::MANAGE)
+			->willReturn($diary);
+		$diaryMapper->expects($this->once())
+			->method('assertManageAccess')
+			->with($diary, 'alice');
+		$shareMapper->expects($this->once())
+			->method('upsertShare')
+			->with(42, 'alice', DiaryPermissions::READ | DiaryPermissions::MANAGE)
+			->willReturn($share);
+
+		$controller = new DiaryController(Application::APP_ID, $request, $diaryMapper, $shareMapper, 'alice');
+		$response = $controller->createShare(42, 'alice', DiaryPermissions::READ | DiaryPermissions::MANAGE);
+
+		$this->assertSame(Http::STATUS_CREATED, $response->getStatus());
+		$this->assertSame($share, $response->getData());
 	}
 
 	public function testUpdateShareRejectsShareFromDifferentDiary(): void {
@@ -359,11 +389,29 @@ final class DiaryControllerTest extends TestCase {
 
 		$diaryMapper->expects($this->once())
 			->method('createDiary')
-			->with('alice', 'Journal', 'Desc', true, 36000, 4, 1800, 'bell', 'vibrate', 86400)
+			->with('alice', 'Journal', 'Desc', true, 36000, 4, 1800, 'bell', 'vibrate', 86400, null)
 			->willReturn($diary);
 
 		$controller = new DiaryController(Application::APP_ID, $request, $diaryMapper, $shareMapper, 'alice');
 		$response = $controller->create('  Journal  ', 'Desc', true, 36000, 4, 1800, 'bell', 'vibrate', 86400);
+
+		$this->assertSame(Http::STATUS_CREATED, $response->getStatus());
+		$this->assertSame($diary, $response->getData());
+	}
+
+	public function testCreatePassesSelectedOwnerToMapper(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$shareMapper = $this->createMock(DiaryShareMapper::class);
+		$diary = new Diary();
+
+		$diaryMapper->expects($this->once())
+			->method('createDiary')
+			->with('alice', 'Journal', 'Desc', false, 0, 3, 2700, '', '', 86400, 'bob')
+			->willReturn($diary);
+
+		$controller = new DiaryController(Application::APP_ID, $request, $diaryMapper, $shareMapper, 'alice');
+		$response = $controller->create('Journal', 'Desc', false, 0, 3, 2700, '', '', 86400, 'bob');
 
 		$this->assertSame(Http::STATUS_CREATED, $response->getStatus());
 		$this->assertSame($diary, $response->getData());

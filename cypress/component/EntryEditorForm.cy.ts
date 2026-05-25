@@ -65,10 +65,12 @@ describe('EntryEditorForm', () => {
 				entry,
 				questions,
 				answers,
+				isCreating: false,
 				onSave: saveSpy,
 			},
 		})
 
+		cy.contains('h2', 'Edit entry').should('be.visible')
 		cy.contains('How do you feel today?').should('be.visible')
 		cy.contains('Should stay hidden').should('not.exist')
 		cy.get('input[placeholder="Entry title"]').clear().type('  Fresh title  ')
@@ -114,10 +116,12 @@ describe('EntryEditorForm', () => {
 				entry: null,
 				questions,
 				answers: [],
+				isCreating: true,
 				onSave: saveSpy,
 			},
 		})
 
+		cy.contains('h2', 'Create entry').should('be.visible')
 		cy.contains('Save').first().click()
 
 		cy.get('@saveSpy').its('firstCall.args.0').should((payload: { answers: Answer[] }) => {

@@ -2,6 +2,7 @@ import {computed, ref} from 'vue'
 import {defineStore} from 'pinia'
 import {answerService, ApiError, diaryService, entryService, questionService} from '@/services'
 import {compareDiaryLabel} from '@/utils/diary'
+import {isAnswerEmptyForQuestion} from '@/utils/format'
 import type {
     Answer,
     AnswerCreatePayload,
@@ -20,7 +21,7 @@ import type {
 import {getCurrentUser} from '@nextcloud/auth'
 import {useRoute, useRouter} from "vue-router";
 import {Permissions} from '@/types/types'
-import { t } from '@nextcloud/l10n'
+import {t} from '@nextcloud/l10n'
 
 export interface DiaryShareInput {
     sharedWith: string
@@ -89,6 +90,36 @@ function normalizeDiaryShareInputs(
     return Array.from(byUser.values())
 }
 
+function entryMetadataChanged(entry: Entry | null | undefined, payload: EntryEditSubmitPayload): boolean {
+    if (entry == null) {
+        return true
+    }
+
+    return entry.title !== payload.title || entry.timestamp !== payload.timestamp
+}
+
+function normalizeQuestionChoices(choices: string[] | null | undefined): string[] | null {
+    return choices == null ? null : choices
+}
+
+function questionChanged(question: Question | undefined, payload: QuestionCreatePayload | QuestionUpdatePayload): boolean {
+    if (question == null) {
+        return true
+    }
+
+    return (payload.label ?? null) !== question.label
+        || (payload.displayText ?? null) !== question.display_text
+        || (payload.type ?? null) !== question.type
+        || (payload.minimum ?? null) !== question.minimum
+        || (payload.maximum ?? null) !== question.maximum
+        || JSON.stringify(normalizeQuestionChoices(payload.choices)) !== JSON.stringify(normalizeQuestionChoices(question.choices))
+        || (payload.active ?? null) !== question.active
+        || (payload.templateText ?? null) !== question.template_text
+}
+
+function diaryCanAnalyze(diary: Diary | null | undefined): boolean {
+    return diary?.is_owner === true || ((diary?.access_level ?? 0) & Permissions.ANALYZE) !== 0
+}
 
 function toRouteNumber(value: unknown): number | null {
     if (typeof value !== 'string' || value.trim() === '') {
@@ -156,6 +187,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const questionIdsByDiary = ref<Record<number, number[]>>({})
     // Reversed order (newest element is at index 0, oldest at index n-1)
     const questionVersionIdsByChainId = ref<Record<number, number[]>>({})
+    const questionAnswerCountById = ref<Record<number, number>>({})
     const activeQuestionIdsByEntry = ref<Record<number, number[]>>({})
 
     const answersByEntryByQuestion = ref<Record<number, Record<number, Answer>>>({})
@@ -172,6 +204,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const cachedQuestionSearch = ref('')
     const cachedEntryFromTimestamp = ref<number | null>(null)
     const cachedEntryUntilTimestamp = ref<number | null>(null)
+    let routeParamUpdateQueue = Promise.resolve()
 
 
     function supportsRouteQueryParam(routeName: unknown, param: string): boolean {
@@ -212,34 +245,40 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         return query
     }
 
-    async function setRouteParam(param: string, value: number | string | null): Promise<void> {
-        if (!supportsRouteQueryParam(route.name, param) || typeof route.name !== 'string') {
-            return
-        }
-
-        const query = workspaceQueryForRoute(route.name)
-        if (value !== '' && value != null) {
-            query[param] = String(value)
-        }
-
-        if (String(route.query[param] ?? '') === String(query[param] ?? '')) {
-            const currentQueryKeys = Object.keys(route.query).sort().join(',')
-            const nextQueryKeys = Object.keys(query).sort().join(',')
-            if (currentQueryKeys === nextQueryKeys) {
+    function setRouteParam(param: string, value: number | string | null): Promise<void> {
+        routeParamUpdateQueue = routeParamUpdateQueue.then(async () => {
+            if (!supportsRouteQueryParam(route.name, param) || typeof route.name !== 'string') {
                 return
             }
-        }
-        const data = {
-            name: route.name,
-            params: route.params,
-            query,
-            hash: route.hash,
-        }
-        if (route.name == data.name)
+
+            const query = workspaceQueryForRoute(route.name)
+            if (value !== '' && value != null) {
+                query[param] = String(value)
+            }
+
+            if (String(route.query[param] ?? '') === String(query[param] ?? '')) {
+                const currentQueryKeys = Object.keys(route.query).sort().join(',')
+                const nextQueryKeys = Object.keys(query).sort().join(',')
+                if (currentQueryKeys === nextQueryKeys) {
+                    return
+                }
+            }
+            const data = {
+                name: route.name,
+                params: route.params,
+                query,
+                hash: route.hash,
+            }
             await router.replace(data)
-        else {
-            await router.push(data)
-        }
+        }).catch((error: unknown) => {
+            addError({
+                message: error instanceof Error ? error.message : t('structureddiary', 'Unable to update route.'),
+                type: 'error',
+                cause: error,
+            })
+        })
+
+        return routeParamUpdateQueue
     }
 
     const diarySearch = computed({
@@ -292,6 +331,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     function isDiaryRoute(routeName: unknown): boolean {
         return typeof routeName === 'string' && routeName.startsWith('diar')
     }
+
     async function pushWorkspaceRoute(location: {
         name: string,
         params?: Record<string, string | number | null | undefined>
@@ -308,7 +348,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         set: async (diaryId: number | null) => {
             if (diaryId !== selectedDiaryId.value) {
                 if (diaryId === null) {
-                    await pushWorkspaceRoute({name: (isEntryRoute(route.name)) ? 'entriesAllDiaries': 'diaries'})
+                    await pushWorkspaceRoute({name: (isEntryRoute(route.name)) ? 'entriesAllDiaries' : 'diaries'})
                     return
                 }
                 if (isEntryRoute(route.name)) {
@@ -383,13 +423,13 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
     const selectedQuestion = computed(() => {
         if (selectedDiaryId.value == null || selectedQuestionId.value === null) return null
-        return questionById.value[selectedQuestionId.value]
+        return questionById.value[selectedQuestionId.value] ?? null
     })
     const currentDiaryQuestions = computed(() => {
         if (selectedDiaryId.value == null) return []
         const questionIds = questionIdsByDiary.value[selectedDiaryId.value] ?? {}
-        const question_list = Object.values(questionIds).map(i => questionById.value[i]).sort(
-            (a, b) => a.diary_question_order - b.diary_question_order)
+        const question_list = Object.values(questionIds).map(i => questionById.value[i]).filter(
+            i => i != null).sort((a, b) => a.diary_question_order - b.diary_question_order)
 
         if (questionSearch.value.trim() === '') return question_list
         const query = questionSearch.value.toLocaleLowerCase()
@@ -413,8 +453,11 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const currentEntryQuestions = computed(() => _currentEntryQuestions.value.filter(i => i != null && i.active))
 
     const selectedQuestionVersionChain = computed(() =>
-        (selectedQuestion.value === null ? [] : questionVersionIdsByChainId.value[selectedQuestion.value.chain_id] ?? []).map(
-            i => questionById.value[i]))
+        (selectedQuestion.value === null ? [] : questionVersionIdsByChainId.value[selectedQuestion.value.chain_id] ?? [])
+            .map(i => questionById.value[i])
+            .filter((question): question is Question => question !== undefined))
+    const selectedQuestionAnswerCount = computed(() =>
+        selectedQuestionId.value === null ? null : questionAnswerCountById.value[selectedQuestionId.value] ?? null)
     const questionVersionMap = computed<Record<number, Question[]>>(() => Object.fromEntries(
         currentDiaryQuestions.value.map((question) => [
             question.id,
@@ -425,18 +468,16 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     ))
 
     const user_permissions = computed(() => {
-        const currentUserId = getCurrentUser()?.uid ?? null
-        const diary_id = selectedDiaryId.value
-        if (diary_id == null || selectedDiary.value === null || currentUserId === null) {
+        if (selectedDiary.value === null) {
             return 0
         }
         if (selectedDiary.value.is_owner) {
             return 0xffffffff
         }
 
-        const share = (diaryShares.value[diary_id] ?? {})[currentUserId]
-        return share?.permission ?? 0
+        return selectedDiary.value.access_level
     })
+    const selectedDiaryCanAnalyze = computed(() => diaryCanAnalyze(selectedDiary.value))
 
     const diaryGroups = computed(() => {
         const normalizedSearch = diarySearch.value.trim().toLocaleLowerCase()
@@ -536,7 +577,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         try {
             return await task()
         } catch (taskError) {
-            const  msg = (taskError as ApiError)?.result?.ocs?.data?.error
+            const msg = (taskError as ApiError)?.result?.ocs?.data?.error
             addError({
                 message: msg ?? (taskError instanceof Error ? (taskError as Error).message : t('structureddiary', 'Unknown error')),
                 type: 'error',
@@ -574,6 +615,11 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     }
 
     async function loadDiaryStats(id: number): Promise<void> {
+        if (!diaryCanAnalyze(diaries.value[id])) {
+            delete diaryStatsById.value[id]
+            return
+        }
+
         diaryStatsById.value[id] = await runTask(() => diaryService.stats(id))
     }
 
@@ -638,17 +684,27 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         }).sort((a, b) => b - a) // sort by version number descending => oldest comes last
     }
 
+    async function loadQuestionAnswerCount(questionId: number): Promise<void> {
+        questionAnswerCountById.value[questionId] = await runTask(() => questionService.answerCount(questionId))
+    }
+
     async function refreshSelectedDiaryWorkspace(): Promise<void> {
         if (selectedDiaryId.value === null) {
             return
         }
 
+        const diaryId = selectedDiaryId.value
         await Promise.all([
-            loadEntries(selectedDiaryId.value, entryFromTimestamp.value, entryUntilTimestamp.value),
-            loadQuestions(selectedDiaryId.value),
-            loadDiaryStats(selectedDiaryId.value).catch(() => undefined),
-            loadDiary(selectedDiaryId.value).catch(() => undefined),
+            loadEntries(diaryId, entryFromTimestamp.value, entryUntilTimestamp.value),
+            loadQuestions(diaryId),
+            loadDiary(diaryId).catch(() => undefined),
         ])
+
+        if (diaryCanAnalyze(diaries.value[diaryId])) {
+            await loadDiaryStats(diaryId).catch(() => undefined)
+        } else {
+            delete diaryStatsById.value[diaryId]
+        }
     }
 
     async function startCreatingDiary(): Promise<void> {
@@ -709,6 +765,24 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
     async function cancelEditingQuestion(): Promise<void> {
         await pushWorkspaceRoute({name: 'questions', params: {diaryId: selectedDiaryId.value}})
+    }
+
+    async function deleteQuestion(questionId: number): Promise<void> {
+        const removedQuestion = await runTask(() => questionService.remove(questionId))
+        delete questionById.value[removedQuestion.id]
+        delete questionAnswerCountById.value[removedQuestion.id]
+        questionVersionIdsByChainId.value[removedQuestion.chain_id] = (
+            questionVersionIdsByChainId.value[removedQuestion.chain_id] ?? []
+        ).filter((versionId) => versionId !== removedQuestion.id)
+        await loadQuestions(removedQuestion.diary_id)
+        const other_candidates = questionIdsByDiary.value[removedQuestion.diary_id].map(i=> questionById.value[i]).filter(
+            i=>i!=null && i.chain_id == removedQuestion.chain_id).sort((a,b)=>(a.id-b.id))
+
+        if (other_candidates.length > 0){
+            await pushWorkspaceRoute({name: 'question', params: {diaryId: removedQuestion.diary_id, questionId: other_candidates[0].id}})
+        } else {
+            await pushWorkspaceRoute({name: 'diary', params: {diaryId: removedQuestion.diary_id}})
+        }
     }
 
 
@@ -879,9 +953,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             delete diaryStatsById.value[removedDiaryId]
 
             if (diaryId == selectedDiaryId.value) {
-                selectedDiaryId.value = null
-                selectedEntryId.value = null
-                selectedQuestionId.value = null
+                await pushWorkspaceRoute({name: 'diaries'})
             }
             await initialize()
         }
@@ -894,13 +966,19 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             throw new Error()
         }
 
-        // TODO Do this only if there is any change to the entry...
-        const saved_entry = await runTask(async () => {
-            if (payload.entryId != null) {
-                return entryService.update(payload.entryId, {title: payload.title, timestamp: payload.timestamp})
-            }
-            return entryService.create(payload.diaryId, {title: payload.title, timestamp: payload.timestamp})
-        })
+        const existingEntry = payload.entryId == null ? null : entriesByDiary.value[payload.diaryId]?.[payload.entryId]
+        const saved_entry = payload.entryId != null && !entryMetadataChanged(existingEntry, payload)
+            ? existingEntry
+            : await runTask(async () => {
+                if (payload.entryId != null) {
+                    return entryService.update(payload.entryId, {title: payload.title, timestamp: payload.timestamp})
+                }
+                return entryService.create(payload.diaryId, {title: payload.title, timestamp: payload.timestamp})
+            })
+
+        if (saved_entry == null) {
+            throw new Error(t('structureddiary', 'Unable to determine saved entry id.'))
+        }
 
         if (entriesByDiary.value[saved_entry.diary_id] == null) {
             entriesByDiary.value[saved_entry.diary_id] = {}
@@ -920,6 +998,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         }
         // This assumes that answers for this entry are loaded now.
         for (const answer of payload.answers) {
+            const question = questionById.value[answer.question_id]
+            if (question != null && isAnswerEmptyForQuestion(question, answer)) continue
             if (answer.text_content === null && answer.numeric_content === null) continue
 
             const existing = answersByEntryByQuestion.value[entryId]?.[answer.question_id]
@@ -1010,18 +1090,22 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             if (questionIdsByDiary.value[payload.diaryId] == null)
                 await loadQuestions(payload.diaryId)
 
-            const newQuestions: Record<number, Question> = {}
-            let promises = []
+            const retainedQuestionIds = new Set<number>()
+            const promises = []
 
             for (const item of payload.questions) {
                 const question = item as QuestionUpdatePayload | QuestionCreatePayload
                 const questionId = (item as QuestionUpdatePayload).questionId
                 question.diaryId = payload.diaryId
 
-                // TODO We should filter here if there was even any change to the question.
-                //  If not we could just add a promise to the queue returning the current question.
                 if (questionId) {
-                    promises.push(questionService.update(questionId, question as QuestionUpdatePayload))
+                    const currentQuestion = questionById.value[questionId]
+                    retainedQuestionIds.add(questionId)
+                    if (questionChanged(currentQuestion, question)) {
+                        promises.push(questionService.update(questionId, question as QuestionUpdatePayload))
+                    } else if (currentQuestion != null) {
+                        promises.push(Promise.resolve(currentQuestion))
+                    }
                 } else {
                     promises.push(questionService.create(payload.diaryId, question as QuestionCreatePayload))
                 }
@@ -1032,12 +1116,12 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
                     continue
                 }
                 questionById.value[question.id] = question
-                newQuestions[question.chain_id] = question
+                retainedQuestionIds.add(question.id)
             }
 
             // We do not delete removed questions, because this would dropt the corresponding answers. We only disable them.
             for (const questionId of questionIdsByDiary.value[payload.diaryId]) {
-                if (newQuestions[questionId] == null) {
+                if (!retainedQuestionIds.has(questionId) && questionById.value[questionId]?.active !== false) {
                     questionById.value[questionId].active = false
                     promises.push(questionService.update(questionId, {active: false} as QuestionUpdatePayload))
                 }
@@ -1046,13 +1130,26 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             await Promise.all(promises)
         }
 
+        await loadDiaries().catch(() => undefined)
 
-        if (setDiary && selectedDiaryId.value !== savedDiary.id)
-            await pushWorkspaceRoute({name: 'diary', params: {diaryId: savedDiary.id}})
+        const savedDiaryIsVisible = diaries.value[savedDiary.id] != null
+        if (setDiary) {
+            await pushWorkspaceRoute(savedDiaryIsVisible
+                ? {name: 'diary', params: {diaryId: savedDiary.id}}
+                : {name: 'diaries'})
+        }
 
-        await loadDiary(savedDiary.id).catch(() => undefined)
-        await loadQuestions(savedDiary.id).catch(() => undefined)
-        await loadDiaryStats(savedDiary.id).catch(() => undefined)
+        if (savedDiaryIsVisible) {
+            await loadDiary(savedDiary.id).catch(() => undefined)
+            await loadQuestions(savedDiary.id).catch(() => undefined)
+            await loadDiaryStats(savedDiary.id).catch(() => undefined)
+        } else {
+            delete diaries.value[savedDiary.id]
+            delete diaryShares.value[savedDiary.id]
+            delete diaryStatsById.value[savedDiary.id]
+            delete entriesByDiary.value[savedDiary.id]
+            delete questionIdsByDiary.value[savedDiary.id]
+        }
 
         return savedDiary
     }
@@ -1065,6 +1162,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         answerHistoryQuestionId,
         user_permissions,
         diaryStatsById,
+        selectedDiaryCanAnalyze,
         questionTypes,
         loading,
         errors,
@@ -1092,6 +1190,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         selectedDiaryShares,
         selectedDiaryStats,
         selectedQuestionVersionChain,
+        selectedQuestionAnswerCount,
         questionVersionMap,
         currentEntryQuestions,
         initialize,
@@ -1100,8 +1199,10 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         loadDiaryStats,
         loadEntries,
         loadEntry,
+        loadQuestion,
         loadQuestions,
         loadQuestionVersions,
+        loadQuestionAnswerCount,
         loadAnswerHistory,
         refreshSelectedDiaryWorkspace,
         pushWorkspaceRoute,
@@ -1116,6 +1217,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         saveDiary,
         saveEntry,
         deleteEntry,
+        deleteQuestion,
         saveQuestion,
         saveQuestionAndReloadVersions,
         reorderQuestions,

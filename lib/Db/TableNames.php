@@ -10,6 +10,7 @@ final class TableNames {
 	public const ENTRIES = 'sd_entries';
 	public const QUESTIONS = 'sd_questions';
 	public const ANSWERS = 'sd_answers';
+	public const ALARM_SOUNDS = 'sd_alarm_sounds';
 
 	private function __construct() {
 	}

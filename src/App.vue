@@ -2,14 +2,15 @@
 import NcAppContent from '@nextcloud/vue/components/NcAppContent'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcContent from '@nextcloud/vue/components/NcContent'
+import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import {emit as emitNextcloudEvent} from '@nextcloud/event-bus'
+import { mdiBookOpenPageVariant, mdiPlus } from '@mdi/js'
 import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {useRoute} from 'vue-router'
 import StructuredDiaryNavigation from '@/components/layout/StructuredDiaryNavigation.vue'
 import EntryListPanel from '@/components/layout/EntryListPanel.vue'
 import QuestionListPanel from '@/components/layout/QuestionListPanel.vue'
 import OverlayPanel from '@/components/common/OverlayPanel.vue'
-import DiaryDetailView from '@/views/DiaryDetailView.vue'
 import {useStructuredDiaryStore} from '@/stores/structuredDiary'
 import type {WorkspaceRouteName} from '@/services/workspaceRoute'
 import {mobileOverlayTitleForRoute} from '@/services/workspaceRoute'
@@ -18,7 +19,6 @@ import { t } from '@nextcloud/l10n'
 const store = useStructuredDiaryStore()
 const route = useRoute()
 const appNavigationMobileQuery = '(max-width: 1024px)'
-const diaryOverlayOpen = ref(false)
 const isCompact = ref(false)
 const isAppNavigationMobile = ref(false)
 const mobileCenterOpen = ref(false)
@@ -46,6 +46,22 @@ function openMobileCenter(): void {
   if (isCompact.value) {
     mobileCenterOpen.value = true
   }
+}
+
+async function openSelectedDiaryInMobileCenter(): Promise<void> {
+  if (store.selectedDiaryId === null) {
+    return
+  }
+
+  await store.pushWorkspaceRoute({
+    name: 'diary',
+    params: { diaryId: store.selectedDiaryId },
+  })
+  openMobileCenter()
+}
+
+async function createDiary(): Promise<void> {
+  await store.startCreatingDiary()
 }
 
 function closeDiarySelectionAfterSelection(): void {
@@ -107,6 +123,27 @@ watch(() => store.selectedEntryId, async (entryId) => {
           </section>
 
           <aside :class="$style.right">
+            <div v-if="isCompact && !mobileCenterOpen" :class="$style.mobileSidebarHeader">
+              <NcButton
+                  :aria-label="t('structureddiary', 'Create new diary')"
+                  variant="secondary"
+                  @click="createDiary()">
+                <template #icon>
+                  <NcIconSvgWrapper :path="mdiPlus"/>
+                </template>
+                {{ t('structureddiary', 'New diary') }}
+              </NcButton>
+              <NcButton
+                  :aria-label="t('structureddiary', 'Open diary')"
+                  variant="secondary"
+                  :disabled="store.selectedDiary === null"
+                  @click="openSelectedDiaryInMobileCenter()">
+                <template #icon>
+                  <NcIconSvgWrapper :path="mdiBookOpenPageVariant"/>
+                </template>
+                {{ t('structureddiary', 'Diary') }}
+              </NcButton>
+            </div>
             <router-view name="sidebar" v-slot="{ Component }">
               <component
                   :is="Component"
@@ -138,10 +175,6 @@ watch(() => store.selectedEntryId, async (entryId) => {
           </div>
         </OverlayPanel>
 
-        <OverlayPanel :open="diaryOverlayOpen" :title="t('structureddiary', 'Diary overview')" @close="diaryOverlayOpen = false">
-          <DiaryDetailView :hide-stats="true"/>
-        </OverlayPanel>
-
       </div>
     </NcAppContent>
   </NcContent>
@@ -149,7 +182,7 @@ watch(() => store.selectedEntryId, async (entryId) => {
 
 <style module>
 .content {
-  min-height: 100vh;
+  min-height: 100%;
 }
 
 .workspace {
@@ -160,7 +193,7 @@ watch(() => store.selectedEntryId, async (entryId) => {
 .columns {
   display: grid;
   grid-template-columns: minmax(420px, 1fr) minmax(300px, 390px);
-  min-height: 100vh;
+  min-height: 100%;
 }
 
 .centerColumn {
@@ -182,10 +215,21 @@ watch(() => store.selectedEntryId, async (entryId) => {
   border-inline-start: 1px solid var(--color-border);
 }
 
+.mobileSidebarHeader {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px 0;
+}
+
 .mobileCenter {
   display: grid;
   grid-template-rows: auto 1fr;
   min-height: 0;
+}
+
+.mobileCenter :global(.sd-header-primary-action) {
+  display: none;
 }
 
 .error {
@@ -217,6 +261,12 @@ watch(() => store.selectedEntryId, async (entryId) => {
 
   .right {
     border-inline-start: 0;
+  }
+}
+
+@media (min-width: 1081px) {
+  .mobileSidebarHeader {
+    display: none;
   }
 }
 </style>

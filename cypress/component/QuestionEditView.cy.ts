@@ -27,6 +27,23 @@ function mountQuestionCreateView() {
 		})
 	}).as('createQuestion')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions*', []).as('questions')
+	cy.intercept('GET', '**/structureddiary/api/v1/questions/33', {
+		id: 33,
+		chain_id: 33,
+		diary_id: 5,
+		diary_question_order: 33,
+		created_at: 1713520000,
+		label: 'Energy',
+		display_text: 'Energy',
+		type: 'text',
+		minimum: null,
+		maximum: null,
+		choices: null,
+		active: true,
+		template_text: '',
+		previous_version_id: null,
+		next_version_id: null,
+	}).as('createdQuestion')
 	cy.intercept('GET', '**/structureddiary/api/v1/questions/33/versions', []).as('questionVersions')
 
 	const router = createRouter({
@@ -155,9 +172,18 @@ function mountQuestionEditView(question: Question) {
 	})
 }
 
+function setQuestionDisplayText(value: string): void {
+	cy.get('.CodeMirror').first().then(($editor) => {
+		const editor = ($editor[0] as unknown as { CodeMirror: { setValue: (value: string) => void, save: () => void } }).CodeMirror
+		editor.setValue(value)
+		editor.save()
+	})
+}
+
 describe('QuestionEditView', () => {
 	it('blocks saving invalid ranges without calling the create endpoint', () => {
 		mountQuestionCreateView().then(({ createCalls }) => {
+			cy.contains('h2', 'Create question').should('be.visible')
 			cy.contains('Label').parent().find('input').first().type('Invalid range question')
 			cy.contains('Minimum').parent().find('input').clear().type('10')
 			cy.contains('Maximum').parent().find('input').clear().type('5')
@@ -170,7 +196,34 @@ describe('QuestionEditView', () => {
 		})
 	})
 
-	it('parses comma-separated choices for selection questions', () => {
+	it('syncs display text with the label until the sync switch is disabled', () => {
+		mountQuestionCreateView()
+
+		cy.get('[data-cy="synced-display-text"]').should('be.visible')
+		cy.contains('Label').parent().find('input').first().type('Energy')
+		cy.get('[data-cy="synced-display-text"]').should('contain.text', 'Energy')
+		cy.contains('button', 'Save question').click()
+		cy.wait('@createQuestion').its('request.body').should('deep.include', {
+			label: 'Energy',
+			displayText: 'Energy',
+		})
+	})
+
+	it('submits custom display text after unsyncing it from the label', () => {
+		mountQuestionCreateView()
+
+		cy.contains('Label').parent().find('input').first().type('Energy')
+		cy.contains('Sync with label').click()
+		cy.get('[data-cy="synced-display-text"]').should('not.exist')
+		setQuestionDisplayText('How much energy did you have?')
+		cy.contains('button', 'Save question').click()
+		cy.wait('@createQuestion').its('request.body').should('deep.include', {
+			label: 'Energy',
+			displayText: 'How much energy did you have?',
+		})
+	})
+
+	it('manages selection choices as chips and submits the resulting list', () => {
 		mountQuestionEditView({
 			id: 17,
 			chain_id: 17,
@@ -189,7 +242,21 @@ describe('QuestionEditView', () => {
 			next_version_id: null,
 		})
 		cy.wait('@question')
-		cy.contains('Choices').parent().find('textarea').clear().type('Blue, Green, , Red')
+		cy.wait('@questions')
+		cy.contains('h2', 'Edit question').should('be.visible')
+		cy.contains('Template text').should('not.exist')
+		cy.get('[data-cy="question-choices"]').should('contain.text', 'Blue')
+		cy.get('[aria-label="Remove choice Blue"]').click()
+		cy.get('[data-cy="question-choices"]').should('not.exist')
+		cy.contains('label', 'New choice').parent().find('input').type('Green')
+		cy.contains('button', 'Add choice').click()
+		cy.get('[data-cy="question-choices"]').should('contain.text', 'Green')
+		cy.contains('label', 'New choice').parent().find('input').type('Green')
+		cy.contains('button', 'Add choice').click()
+		cy.get('[data-cy="question-choices"]').invoke('text').then((text) => {
+			expect(text.match(/Green/g)).to.have.length(1)
+		})
+		cy.contains('label', 'New choice').parent().find('input').type('Red')
 		cy.contains('button', 'Save question').click()
 
 		cy.wait('@updateQuestion').its('request.body').should('deep.include', {
@@ -197,7 +264,7 @@ describe('QuestionEditView', () => {
 			chainId: 17,
 			label: 'Color',
 			type: 'select',
-			choices: ['Blue', 'Green', 'Red'],
+			choices: ['Green', 'Red'],
 		})
 	})
 })

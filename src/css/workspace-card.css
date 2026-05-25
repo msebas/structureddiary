@@ -17,6 +17,12 @@
 	min-height: 100%;
 }
 
+.workspace-card--form {
+	grid-template-rows: none;
+	grid-auto-rows: auto;
+	align-content: start;
+}
+
 .workspace-card-header {
 	padding-bottom: calc(var(--default-grid-baseline) * 4);
 	border-bottom: 1px solid var(--color-border);

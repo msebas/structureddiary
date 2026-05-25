@@ -54,7 +54,7 @@ final class QuestionControllerTest extends TestCase {
 			->with(
 				$question,
 				'Number',
-				'Number',
+				null,
 				QuestionTypes::NUMBER,
 				1.0,
 				10.0,
@@ -75,6 +75,30 @@ final class QuestionControllerTest extends TestCase {
 		$response = $controller->update(11, 'Number', null, QuestionTypes::NUMBER, 1.0, 10.0, null, true, 'template');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+	}
+
+	public function testUpdatePassesSeparateLabelAndDisplayTextToMapper(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$diary = new Diary();
+		$question = new Question();
+		$question->setId(11);
+		$question->setDiaryId(42);
+
+		$diaryMapper->expects($this->once())->method('getDiaryForUser')->with(42, 'alice', DiaryPermissions::MANAGE)->willReturn($diary);
+		$diaryMapper->expects($this->once())->method('assertManageAccess')->with($diary, 'alice');
+		$questionMapper->expects($this->once())->method('getQuestion')->with(11)->willReturn($question);
+		$questionMapper->expects($this->once())
+			->method('updateQuestion')
+			->with($question, 'Mood label', 'How do you feel today?', null, null, null, null, null, null)
+			->willReturn($question);
+
+		$controller = new QuestionController(Application::APP_ID, $request, $diaryMapper, $questionMapper, 'alice');
+		$response = $controller->update(11, ' Mood label ', ' How do you feel today? ');
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame($question, $response->getData());
 	}
 
 	public function testUpdateReturnsErrorWhenManagePermissionIsMissing(): void {
@@ -287,7 +311,7 @@ final class QuestionControllerTest extends TestCase {
 		$this->assertSame(['error' => 'Question label/display text cannot be empty.'], $response->getData());
 	}
 
-	public function testCreateNormalizesChoicesAndSynchronizesDisplayText(): void {
+	public function testCreateNormalizesChoicesAndPreservesSeparateDisplayText(): void {
 		$request = $this->createMock(IRequest::class);
 		$diaryMapper = $this->createMock(DiaryMapper::class);
 		$questionMapper = $this->createMock(QuestionMapper::class);
@@ -305,7 +329,7 @@ final class QuestionControllerTest extends TestCase {
 			->method('createQuestion')
 			->with(
 				42,
-				'Mood?',
+				'Question label',
 				'Mood?',
 				QuestionTypes::SELECT,
 				null,
@@ -324,7 +348,7 @@ final class QuestionControllerTest extends TestCase {
 			'alice',
 		);
 
-		$response = $controller->create(42, 'Ignored label', 'Mood?', QuestionTypes::SELECT, null, null, [' yes ', '', 'no '], true, 'template');
+		$response = $controller->create(42, ' Question label ', ' Mood? ', QuestionTypes::SELECT, null, null, [' yes ', '', 'no '], true, 'template');
 
 		$this->assertSame(Http::STATUS_CREATED, $response->getStatus());
 		$this->assertSame($question, $response->getData());
@@ -381,7 +405,7 @@ final class QuestionControllerTest extends TestCase {
 		$questionMapper->expects($this->once())->method('getQuestion')->with(11)->willReturn($question);
 		$questionMapper->expects($this->once())
 			->method('updateQuestion')
-			->with($question, 'Mood?', 'Mood?', null, null, null, null, null, null)
+			->with($question, null, 'Mood?', null, null, null, null, null, null)
 			->willReturn($question);
 
 		$controller = new QuestionController(Application::APP_ID, $request, $diaryMapper, $questionMapper, 'alice');

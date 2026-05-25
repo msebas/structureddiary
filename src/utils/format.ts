@@ -95,6 +95,8 @@ export function isAnswerEmptyForQuestion(question: Question, answer: Answer | un
 		case 'number':
 		case 'integer':
 			return answer.numeric_content === null
+		case 'text':
+			return !answer.text_content || answer.text_content === question.template_text
 		default:
 			return !answer.text_content
 	}

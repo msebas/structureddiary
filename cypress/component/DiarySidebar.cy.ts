@@ -90,5 +90,10 @@ describe('StructuredDiaryNavigation', () => {
 		cy.contains('Beta writable (carol)').should('be.visible')
 		cy.contains('Zulu owned').should('not.exist')
 		cy.contains('Owned diaries').should('not.exist')
+
+		cy.get('input[type="search"], input[placeholder="Search diaries"]').first().clear({ force: true })
+		cy.get('[data-cy="query"]').should('be.empty')
+		cy.contains('Zulu owned').should('be.visible')
+		cy.contains('Alpha managed (bob)').should('be.visible')
 	})
 })

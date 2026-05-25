@@ -118,6 +118,7 @@ class DiaryController extends ApiOCSController {
 		string $reminderSignalFirst = '',
 		string $reminderSignalRepeat = '',
 		int $entrySchedule = 86400,
+		?string $ownerUserId = null,
 	): DataResponse {
 		try {
 			$title = trim($title);
@@ -137,6 +138,7 @@ class DiaryController extends ApiOCSController {
 					$reminderSignalFirst,
 					$reminderSignalRepeat,
 					$entrySchedule,
+					$ownerUserId,
 				),
 				201
 			);
@@ -252,7 +254,7 @@ class DiaryController extends ApiOCSController {
 			if ($sharedWith === '') {
 				throw new \InvalidArgumentException('sharedWith is required.');
 			}
-			if ($sharedWith === $userId) {
+			if ($sharedWith === $diary->getUserId()) {
 				throw new \InvalidArgumentException('The owner cannot be shared explicitly.');
 			}
 			if (!in_array($permission, DiaryPermissions::all(), true)) {

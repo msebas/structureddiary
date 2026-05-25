@@ -61,6 +61,22 @@ final class DiaryMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->assertSame(DiaryPermissions::OWNER, $forOwner->getAccessLevel());
 	}
 
+	public function testCreateDiaryWithSelectedOwnerKeepsCreatorAsManager(): void {
+		$created = $this->diaryMapper->createDiary('alice', 'Delegated Diary', 'owned by bob', false, 0, 3, 2700, '', '', 86400, 'bob');
+
+		$this->assertSame('bob', $created->getUserId());
+		$this->assertFalse($created->getIsOwner());
+		$this->assertSame(DiaryPermissions::READ | DiaryPermissions::MANAGE, $created->getAccessLevel());
+
+		$forOwner = $this->diaryMapper->getDiaryForUser($created->getId(), 'bob', DiaryPermissions::MANAGE);
+		$this->assertTrue($forOwner->getIsOwner());
+		$this->assertSame(DiaryPermissions::OWNER, $forOwner->getAccessLevel());
+
+		$forCreator = $this->diaryMapper->getDiaryForUser($created->getId(), 'alice', DiaryPermissions::MANAGE);
+		$this->assertFalse($forCreator->getIsOwner());
+		$this->assertSame(DiaryPermissions::READ | DiaryPermissions::MANAGE, $forCreator->getAccessLevel());
+	}
+
 	public function testGetAccessibleDiariesIncludesOwnedAndSharedDiariesWithPermissions(): void {
 		$aliceDiary = $this->diaryMapper->createDiary('alice', 'Alice Diary', 'owned by alice', true, 36000, 4, 1800, 'bell', 'vibrate', 90000);
 		$bobDiary = $this->diaryMapper->createDiary('bob', 'Bob Diary', 'owned by bob', true, 32400, 5, 1200, 'chime', 'buzz', 172800);
@@ -154,7 +170,7 @@ final class DiaryMapperIntegrationTest extends IntegrationTestParentClass {
 
 		$this->assertSame('bob', $updated->getUserId());
 		$this->assertFalse($updated->getIsOwner());
-		$this->assertSame(0, $updated->getAccessLevel());
+		$this->assertSame(DiaryPermissions::READ | DiaryPermissions::MANAGE, $updated->getAccessLevel());
 
 		$fetched = $this->diaryMapper->getDiaryForUser($created->getId(), 'bob', DiaryPermissions::MANAGE);
 		$this->assertSame('Renamed Diary', $fetched->getTitle());
@@ -178,7 +194,7 @@ final class DiaryMapperIntegrationTest extends IntegrationTestParentClass {
 
 		$this->assertSame('bob', $updated->getUserId());
 		$this->assertFalse($updated->getIsOwner());
-		$this->assertSame(0, $updated->getAccessLevel());
+		$this->assertSame(DiaryPermissions::READ | DiaryPermissions::MANAGE, $updated->getAccessLevel());
 
 		$bobDiaries = $this->diaryMapper->getAccessibleDiaries('bob');
 		$this->assertCount(1, $bobDiaries);
@@ -186,7 +202,11 @@ final class DiaryMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->assertTrue($bobDiaries[0]->getIsOwner());
 		$this->assertSame(DiaryPermissions::OWNER, $bobDiaries[0]->getAccessLevel());
 
-		$this->assertSame([], $this->diaryMapper->getAccessibleDiaries('alice'));
+		$aliceDiaries = $this->diaryMapper->getAccessibleDiaries('alice');
+		$this->assertCount(1, $aliceDiaries);
+		$this->assertSame($created->getId(), $aliceDiaries[0]->getId());
+		$this->assertFalse($aliceDiaries[0]->getIsOwner());
+		$this->assertSame(DiaryPermissions::READ | DiaryPermissions::MANAGE, $aliceDiaries[0]->getAccessLevel());
 	}
 
 	public function testUpdateDiaryAllowsSharedManagerToModifyDiary(): void {

@@ -103,6 +103,8 @@ final class QuestionMapperTest extends TestCase {
 			->willReturnCallback(function (Question $updated) use ($originalCreatedAt): Question {
 				$this->assertSame(10, $updated->getChainId());
 				$this->assertSame(10, $updated->getDiaryQuestionOrder());
+				$this->assertSame('Score', $updated->getLabel());
+				$this->assertSame('How was your score?', $updated->getDisplayText());
 				$this->assertSame(QuestionTypes::NUMBER, $updated->getType());
 				$this->assertSame(1.0, $updated->getMinimum());
 				$this->assertSame(9.0, $updated->getMaximum());
@@ -110,7 +112,7 @@ final class QuestionMapperTest extends TestCase {
 				return $updated;
 			});
 
-		$result = $mapper->updateQuestion($question, 'Score', 'Score', QuestionTypes::NUMBER, 1.0, 9.0, null, true, 'template');
+		$result = $mapper->updateQuestion($question, 'Score', 'How was your score?', QuestionTypes::NUMBER, 1.0, 9.0, null, true, 'template');
 
 		$this->assertSame($question, $result);
 		$this->assertSame($originalCreatedAt, $result->getCreatedAt());
@@ -135,6 +137,8 @@ final class QuestionMapperTest extends TestCase {
 			->willReturnCallback(function (Question $newQuestion): Question {
 				$this->assertSame(10, $newQuestion->getChainId());
 				$this->assertSame(10, $newQuestion->getDiaryQuestionOrder());
+				$this->assertSame('Mood', $newQuestion->getLabel());
+				$this->assertSame('How do you feel?', $newQuestion->getDisplayText());
 				$this->assertSame(QuestionTypes::SELECT, $newQuestion->getType());
 				$this->assertSame(['yes', 'no'], $newQuestion->getChoices());
 				$this->assertSame(10, $newQuestion->getPreviousVersionId());
@@ -151,7 +155,7 @@ final class QuestionMapperTest extends TestCase {
 		$newVersion = $mapper->updateQuestion(
 			$current,
 			'Mood',
-			'Mood',
+			'How do you feel?',
 			QuestionTypes::SELECT,
 			null,
 			null,

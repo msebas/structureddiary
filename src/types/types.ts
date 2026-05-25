@@ -40,6 +40,30 @@ export interface DiaryShare {
     permission: number
 }
 
+export interface AlarmSound {
+    id: number
+    path: string | null
+    name: string
+    last_seen_at: number
+    created_at: number
+    is_default: boolean
+    os_affinity: string[]
+}
+
+export interface AlarmSoundCreatePayload {
+    name: string
+    path?: string | null
+    osAffinity?: string[]
+    isDefault?: boolean
+}
+
+export interface AlarmSoundUpdatePayload {
+    name?: string
+    path?: string | null
+    osAffinity?: string[]
+    isDefault?: boolean
+}
+
 export interface Entry {
     id: number
     diary_id: number

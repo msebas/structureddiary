@@ -20,6 +20,7 @@ const diary: Diary = {
 const shares: DiaryShare[] = [
 	{ id: 1, diary_id: 5, shared_with: 'bob', permission: 1 },
 	{ id: 2, diary_id: 5, shared_with: 'carol', permission: 3 },
+	{ id: 3, diary_id: 5, shared_with: 'dave', permission: 13 },
 ]
 
 const stats: DiaryStats = {
@@ -48,15 +49,26 @@ describe('DiaryDisplayCard', () => {
 		cy.contains('Health journal').should('be.visible')
 		cy.contains('Owner: alice').should('be.visible')
 		cy.contains('Daily **markdown** notes').should('be.visible')
-		cy.contains('Target cadence: 0.5 day(s)').should('be.visible')
-		cy.contains('Reminder: Active').should('be.visible')
-		cy.contains('Reminder time: 09:00').should('be.visible')
-		cy.contains('Repeat count: 3').should('be.visible')
-		cy.contains('bob · permission 1').should('be.visible')
-		cy.contains('carol · permission 3').should('be.visible')
-		cy.contains('Questions: 4').should('be.visible')
-		cy.contains('Avg answers: 1.50').should('be.visible')
-		cy.contains('Avg duration: 10m').should('be.visible')
+		cy.contains('Target cadence').should('be.visible')
+		cy.contains('0.5 days').should('be.visible')
+		cy.contains('Reminder').should('be.visible')
+		cy.contains('Active').should('be.visible')
+		cy.contains('Reminder time').should('be.visible')
+		cy.contains('09:00').should('be.visible')
+		cy.contains('Repeat count').should('be.visible')
+		cy.contains('3').should('be.visible')
+		cy.contains('bob').should('be.visible')
+		cy.contains('read').should('be.visible')
+		cy.contains('carol').should('be.visible')
+		cy.contains('write').should('be.visible')
+		cy.contains('dave').should('be.visible')
+		cy.contains('analyze, manage').should('be.visible')
+		cy.contains('Questions').should('be.visible')
+		cy.contains('4').should('be.visible')
+		cy.contains('Avg answers').should('be.visible')
+		cy.contains('1.50').should('be.visible')
+		cy.contains('Avg duration').should('be.visible')
+		cy.contains('10m').should('be.visible')
 	})
 
 	it('hides statistics when requested', () => {

@@ -4,6 +4,9 @@ import type {
 	Answer,
 	AnswerCreatePayload,
 	AnswerUpdatePayload,
+	AlarmSound,
+	AlarmSoundCreatePayload,
+	AlarmSoundUpdatePayload,
 	Diary,
 	DiaryCreatePayload,
 	DiaryShare,
@@ -164,6 +167,30 @@ export const diaryService = {
 	},
 }
 
+export const alarmSoundService = {
+	list(): Promise<AlarmSound[]> {
+		return request('alarm-sounds')
+	},
+	create(payload: AlarmSoundCreatePayload): Promise<AlarmSound> {
+		return request('alarm-sounds', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		})
+	},
+	update(id: number, payload: AlarmSoundUpdatePayload): Promise<AlarmSound> {
+		return request(`alarm-sounds/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(payload),
+		})
+	},
+	patch(id: number, payload: AlarmSoundUpdatePayload): Promise<AlarmSound> {
+		return request(`alarm-sounds/${id}`, {
+			method: 'PATCH',
+			body: JSON.stringify(payload),
+		})
+	},
+}
+
 interface ShareeEntry {
 	label?: string
 	shareWithDisplayNameUnique?: string
@@ -262,6 +289,10 @@ export const questionService = {
 	},
 	get(id: number): Promise<Question> {
 		return request(`questions/${id}`)
+	},
+	async answerCount(id: number): Promise<number> {
+		const response = await request<{ count: number }>(`questions/${id}/answer-count`)
+		return response.count
 	},
 	versions(id: number): Promise<Question[]> {
 		return request(`questions/${id}/versions`)

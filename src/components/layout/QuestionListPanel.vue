@@ -56,7 +56,7 @@ watch(() => store.questionSearch, (search) => {
 	}
 })
 watch(currentQuestionIds, () => {
-	if (!questionOrderDirty.value) {
+	if (!reorderMode.value || !questionOrderDirty.value) {
 		resetDraftOrder()
 	}
 }, {immediate: true})

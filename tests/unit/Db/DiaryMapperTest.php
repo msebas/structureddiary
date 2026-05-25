@@ -137,6 +137,30 @@ final class DiaryMapperTest extends TestCase {
 		$mapper->createDiary('alice', 'Journal', 'Daily notes', false, 86399, 0, 0, '', '', 43200);
 	}
 
+	public function testCreateDiaryUsesSelectedOwnerAndKeepsCreatorAsManager(): void {
+		$mapper = $this->getMockBuilder(DiaryMapper::class)
+			->setConstructorArgs([$this->db])
+			->onlyMethods(['insert', 'ensureShare'])
+			->getMock();
+
+		$mapper->expects($this->once())
+			->method('insert')
+			->willReturnCallback(function (Diary $diary): Diary {
+				$this->assertSame('bob', $diary->getUserId());
+				$diary->setId(42);
+				return $diary;
+			});
+		$mapper->expects($this->once())
+			->method('ensureShare')
+			->with(42, 'alice', DiaryPermissions::READ | DiaryPermissions::MANAGE);
+
+		$result = $mapper->createDiary('alice', 'Journal', 'Daily notes', false, 0, 3, 2700, '', '', 86400, ' bob ');
+
+		$this->assertSame('bob', $result->getUserId());
+		$this->assertFalse($result->getIsOwner());
+		$this->assertSame(DiaryPermissions::READ | DiaryPermissions::MANAGE, $result->getAccessLevel());
+	}
+
 	public function testGetDiaryForUserDecoratesOwnerAccess(): void {
 		$diary = $this->createDiaryEntity('alice');
 
@@ -307,7 +331,7 @@ final class DiaryMapperTest extends TestCase {
 
 		$mapper = $this->getMockBuilder(DiaryMapper::class)
 			->setConstructorArgs([$this->db])
-			->onlyMethods(['getDiaryForUser', 'hasEntriesForDiary', 'update', 'getAccessLevel'])
+			->onlyMethods(['getDiaryForUser', 'hasEntriesForDiary', 'update', 'ensureShare', 'getAccessLevel'])
 			->getMock();
 
 		$mapper->method('getDiaryForUser')->with(42, 'owner', DiaryPermissions::MANAGE)->willReturn($diary);
@@ -319,12 +343,46 @@ final class DiaryMapperTest extends TestCase {
 				$this->assertSame('new-owner', $updated->getUserId());
 				return $updated;
 			});
-		$mapper->method('getAccessLevel')->with(42, 'owner', 'new-owner')->willReturn(DiaryPermissions::MANAGE);
+		$mapper->expects($this->once())
+			->method('ensureShare')
+			->with(42, 'owner', DiaryPermissions::READ | DiaryPermissions::MANAGE);
+		$mapper->method('getAccessLevel')->with(42, 'owner', 'new-owner')->willReturn(DiaryPermissions::READ | DiaryPermissions::MANAGE);
 
 		$result = $mapper->updateDiary(42, 'owner', null, null, 'new-owner');
 
 		$this->assertSame('new-owner', $result->getUserId());
 		$this->assertFalse($result->getIsOwner());
+		$this->assertSame(DiaryPermissions::READ | DiaryPermissions::MANAGE, $result->getAccessLevel());
+	}
+
+	public function testUpdateDiaryBySharedManagerChangingOwnerDoesNotPreservePreviousOwnerShare(): void {
+		$diary = $this->createDiaryEntity('owner');
+		$diary->setAccessLevel(DiaryPermissions::READ | DiaryPermissions::MANAGE);
+		$diary->setIsOwner(false);
+		$diary->resetUpdatedFields();
+
+		$mapper = $this->getMockBuilder(DiaryMapper::class)
+			->setConstructorArgs([$this->db])
+			->onlyMethods(['getDiaryForUser', 'hasEntriesForDiary', 'update', 'ensureShare', 'getAccessLevel'])
+			->getMock();
+
+		$mapper->method('getDiaryForUser')->with(42, 'manager', DiaryPermissions::MANAGE)->willReturn($diary);
+		$mapper->method('hasEntriesForDiary')->with(42)->willReturn(false);
+		$mapper->expects($this->once())
+			->method('update')
+			->with($diary)
+			->willReturnCallback(function (Diary $updated): Diary {
+				$this->assertSame('new-owner', $updated->getUserId());
+				return $updated;
+			});
+		$mapper->expects($this->never())->method('ensureShare');
+		$mapper->method('getAccessLevel')->with(42, 'manager', 'new-owner')->willReturn(DiaryPermissions::READ | DiaryPermissions::MANAGE);
+
+		$result = $mapper->updateDiary(42, 'manager', null, null, 'new-owner');
+
+		$this->assertSame('new-owner', $result->getUserId());
+		$this->assertFalse($result->getIsOwner());
+		$this->assertSame(DiaryPermissions::READ | DiaryPermissions::MANAGE, $result->getAccessLevel());
 	}
 
 	public function testUpdateDiaryRejectsEmptyOwnerUserId(): void {

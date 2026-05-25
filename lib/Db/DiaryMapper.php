@@ -114,10 +114,12 @@ class DiaryMapper extends QBMapper {
 		string $reminderSignalFirst = '',
 		string $reminderSignalRepeat = '',
 		int $entrySchedule = 86400,
+		?string $ownerUserId = null,
 	): Diary {
 		$this->validateReminderSettings($reminderTime, $reminderCount, $reminderDelay, $entrySchedule);
+		$ownerUserId = $this->normalizeOwnerUserId($ownerUserId) ?? $userId;
 		$diary = new Diary();
-		$diary->setUserId($userId);
+		$diary->setUserId($ownerUserId);
 		$diary->setTitle($title);
 		$diary->setDescription($description);
 		$diary->setReminderActive($reminderActive);
@@ -128,7 +130,14 @@ class DiaryMapper extends QBMapper {
 		$diary->setReminderSignalRepeat($reminderSignalRepeat);
 		$diary->setEntrySchedule($entrySchedule);
 		$inserted = $this->insert($diary);
-		$this->decorateDiaryAccess($inserted, $userId, DiaryPermissions::OWNER);
+		if ($ownerUserId !== $userId) {
+			$this->ensureShare($inserted->getId(), $userId, DiaryPermissions::READ | DiaryPermissions::MANAGE);
+		}
+		$this->decorateDiaryAccess(
+			$inserted,
+			$userId,
+			$ownerUserId === $userId ? DiaryPermissions::OWNER : DiaryPermissions::READ | DiaryPermissions::MANAGE
+		);
 
 		return $inserted;
 	}
@@ -153,6 +162,8 @@ class DiaryMapper extends QBMapper {
 		?int $entrySchedule = null,
 	): Diary {
 		$diary = $this->getDiaryForUser($id, $userId, DiaryPermissions::MANAGE);
+		$previousOwnerUserId = $diary->getUserId();
+		$ownerChanged = false;
 		$this->validateReminderSettings(
 			$reminderTime ?? $diary->getReminderTime(),
 			$reminderCount ?? $diary->getReminderCount(),
@@ -166,14 +177,13 @@ class DiaryMapper extends QBMapper {
 		if ($description !== null) {
 			$diary->setDescription($description);
 		}
+		$ownerUserId = $this->normalizeOwnerUserId($ownerUserId);
 		if ($ownerUserId !== null && $ownerUserId !== $diary->getUserId()) {
-			if ($ownerUserId === '') {
-				throw new InvalidArgumentException('ownerUserId cannot be empty.');
-			}
 			if ($this->hasEntriesForDiary($diary->getId())) {
 				throw new InvalidArgumentException('The diary owner can only change if the diary has no entries.');
 			}
 			$diary->setUserId($ownerUserId);
+			$ownerChanged = true;
 		}
 		if ($reminderActive !== null) {
 			$diary->setReminderActive($reminderActive);
@@ -198,6 +208,9 @@ class DiaryMapper extends QBMapper {
 		}
 
 		$updated = $this->update($diary);
+		if ($ownerChanged && $userId === $previousOwnerUserId) {
+			$this->ensureShare($updated->getId(), $previousOwnerUserId, DiaryPermissions::READ | DiaryPermissions::MANAGE);
+		}
 		$this->decorateDiaryAccess($updated, $userId, $this->getAccessLevel($updated->getId(), $userId, $updated->getUserId()));
 
 		return $updated;
@@ -327,6 +340,47 @@ class DiaryMapper extends QBMapper {
 		if ($entrySchedule < 43200) {
 			throw new InvalidArgumentException('entrySchedule must be at least 43200 seconds (half a day).');
 		}
+	}
+
+	private function normalizeOwnerUserId(?string $ownerUserId): ?string {
+		if ($ownerUserId === null) {
+			return null;
+		}
+
+		$ownerUserId = trim($ownerUserId);
+		if ($ownerUserId === '') {
+			throw new InvalidArgumentException('ownerUserId cannot be empty.');
+		}
+
+		return $ownerUserId;
+	}
+
+	/**
+	 * @throws Exception
+	 */
+	protected function ensureShare(int $diaryId, string $sharedWith, int $permission): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->update(TableNames::DIARY_SHARES)
+			->set('permission', $qb->createNamedParameter($permission, IQueryBuilder::PARAM_INT))
+			->where(
+				$qb->expr()->eq('diary_id', $qb->createNamedParameter($diaryId, IQueryBuilder::PARAM_INT))
+			)
+			->andWhere(
+				$qb->expr()->eq('shared_with', $qb->createNamedParameter($sharedWith, IQueryBuilder::PARAM_STR))
+			);
+
+		if ($qb->executeStatement() > 0) {
+			return;
+		}
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->insert(TableNames::DIARY_SHARES)
+			->values([
+				'diary_id' => $qb->createNamedParameter($diaryId, IQueryBuilder::PARAM_INT),
+				'shared_with' => $qb->createNamedParameter($sharedWith, IQueryBuilder::PARAM_STR),
+				'permission' => $qb->createNamedParameter($permission, IQueryBuilder::PARAM_INT),
+			]);
+		$qb->executeStatement();
 	}
 
 	/**

@@ -40,8 +40,7 @@ describe('Structured diary entry flow', () => {
 		]).as('answersVersioned')
 
 		cy.loginToNextcloud()
-		cy.visitStructuredDiary('entries/5')
-		cy.contains('Morning check-in').click()
+		cy.visitStructuredDiary('entries/5/7')
 		cy.wait('@answersVersioned')
 		cy.contains('Versions').click()
 		cy.wait('@answerHistory')
@@ -107,12 +106,14 @@ describe('Structured diary entry flow', () => {
 		cy.loginToNextcloud()
 		cy.visitStructuredDiary('entries/5/7/edit')
 		cy.wait('@currentAnswersForEdit')
+		cy.get('[aria-label="Create new entry"]').should('not.exist')
+		cy.get('[aria-label="Save entry"]').should('be.visible')
 		cy.get('.CodeMirror').first().then(($editor) => {
 			const editor = ($editor[0] as unknown as { CodeMirror: { setValue: (value: string) => void, save: () => void } }).CodeMirror
 			editor.setValue('Feeling better now.')
 			editor.save()
 		})
-		cy.contains('Save').first().click()
+		cy.get('[aria-label="Save entry"]').first().click()
 		cy.wait('@updateAnswerFirst').its('request.body').should('deep.include', {
 			questionId: 17,
 			textContent: 'Feeling better now.',
@@ -140,13 +141,30 @@ describe('Structured diary entry flow', () => {
 		cy.contains('Feeling excellent.').should('exist')
 	})
 
+	it('confirms that deleting an entry also deletes its answers', () => {
+		cy.mockStructuredDiaryBootstrap()
+		cy.loginToNextcloud()
+		cy.visitStructuredDiary('entries/5/7')
+
+		cy.contains('button', 'Delete entry').click()
+		cy.wait('@answerCount')
+		cy.contains('[role="dialog"]', 'Delete this entry?').should('be.visible')
+		cy.contains('[role="dialog"]', '1 answer').should('be.visible')
+		cy.contains('[role="dialog"] button', 'Delete entry').click()
+
+		cy.wait('@deleteEntry')
+		cy.location('pathname').should('include', '/apps/structureddiary/entries/5')
+	})
+
 	it('does not create a new answer version when the edited answer is unchanged', () => {
 		cy.mockStructuredDiaryBootstrap()
 
+		let entryUpdateCalls = 0
 		let answerUpdateCalls = 0
 		cy.intercept('PUT', '**/structureddiary/api/v1/entries/7', (request) => {
+			entryUpdateCalls += 1
 			request.reply({ id: 7, diary_id: 5, timestamp: request.body.timestamp, title: request.body.title })
-		}).as('updateEntryOnly')
+		})
 		cy.intercept('PUT', '**/structureddiary/api/v1/answers/*', (request) => {
 			answerUpdateCalls += 1
 			request.reply({ statusCode: 500, body: { error: 'No answer update expected' } })
@@ -156,8 +174,9 @@ describe('Structured diary entry flow', () => {
 		cy.visitStructuredDiary('entries/5/7/edit')
 		cy.wait('@answers')
 		cy.contains('Save').first().click()
-		cy.wait('@updateEntryOnly')
+		cy.wait(100)
 		cy.then(() => {
+			expect(entryUpdateCalls).to.equal(0)
 			expect(answerUpdateCalls).to.equal(0)
 		})
 	})

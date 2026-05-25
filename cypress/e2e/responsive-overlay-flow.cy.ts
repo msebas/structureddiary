@@ -58,15 +58,74 @@ function assertOverlayCloseButtonIsTopmost(title: string): void {
 	})
 }
 
+function setResponsiveViewport(width: number, height: number): void {
+	cy.viewport(width, height)
+	cy.window().then((win) => {
+		win.dispatchEvent(new Event('resize'))
+	})
+	cy.window().its('innerWidth').should('equal', width)
+}
+
 describe('Structured diary responsive overlays', () => {
+	it('opens the current diary overview from the compact sidebar and hides that row behind the center overlay', () => {
+		cy.mockStructuredDiaryBootstrap()
+		cy.loginToNextcloud()
+		cy.visitStructuredDiary('entries/5')
+		setResponsiveViewport(760, 720)
+
+		cy.get('[aria-label="Create new diary"]').should('be.visible')
+		cy.get('[aria-label="Open diary"]').should('be.visible')
+		cy.get('[aria-label="Create new diary"]').then(($newDiaryButton) => {
+			cy.get('[aria-label="Open diary"]').then(($diaryButton) => {
+				expect($newDiaryButton[0].getBoundingClientRect().right).to.be.at.most($diaryButton[0].getBoundingClientRect().left)
+			})
+		})
+		cy.get('[aria-label="Open diary"]').click()
+		cy.contains('h3', 'Diary').should('be.visible')
+		fixedOverlayByTitle('Diary').within(() => {
+			cy.contains('Health journal').should('be.visible')
+			cy.get('[aria-label="Create new diary"]').should('not.be.visible')
+			cy.contains('button', 'Edit diary').should('be.visible')
+		})
+		assertOverlayOwnsViewportEdges('Diary')
+		assertOverlayCloseButtonIsTopmost('Diary')
+
+		fixedOverlayByTitle('Diary').within(() => {
+			cy.contains('button', 'Close').click()
+		})
+		cy.contains('h3', 'Diary').should('not.exist')
+
+		cy.visitStructuredDiary('entries/5')
+		setResponsiveViewport(760, 720)
+		cy.get('[aria-label="Open diary"]').should('be.visible')
+		cy.contains('button', 'Morning check-in').scrollIntoView().click()
+		cy.contains('h3', 'Entry').should('be.visible')
+		cy.get('[aria-label="Open diary"]').should('not.exist')
+		fixedOverlayByTitle('Entry').within(() => {
+			cy.get('[aria-label="Create new entry"]').should('not.be.visible')
+		})
+
+		fixedOverlayByTitle('Entry').within(() => {
+			cy.contains('button', 'Close').click()
+		})
+		cy.get('[aria-label="Open diary"]').should('be.visible').click()
+		fixedOverlayByTitle('Diary').within(() => {
+			cy.contains('button', 'Edit diary').click()
+		})
+		cy.contains('h3', 'Edit diary').should('be.visible')
+		fixedOverlayByTitle('Edit diary').within(() => {
+			cy.get('[aria-label="Edit diary"]').should('not.exist')
+			cy.get('[aria-label="Create new diary"]').should('not.exist')
+		})
+	})
+
 	it('keeps the compact entry overlay above the left navigation and right entry list', () => {
 		cy.mockStructuredDiaryBootstrap()
 		cy.loginToNextcloud()
 		cy.visitStructuredDiary('entries/5')
-		cy.viewport(760, 720)
-		cy.window().its('innerWidth').should('equal', 760)
+		setResponsiveViewport(760, 720)
 
-		cy.contains('Morning check-in').click()
+		cy.contains('button', 'Morning check-in').scrollIntoView().click()
 		cy.contains('h3', 'Entry').should('be.visible')
 
 		assertOverlayOwnsViewportEdges('Entry')
@@ -76,7 +135,7 @@ describe('Structured diary responsive overlays', () => {
 			cy.contains('button', 'Close').click()
 		})
 		cy.contains('h3', 'Entry').should('not.exist')
-		cy.contains('Morning check-in').click()
+		cy.contains('button', 'Morning check-in').scrollIntoView().click()
 		cy.contains('h3', 'Entry').should('be.visible')
 	})
 
@@ -99,8 +158,7 @@ describe('Structured diary responsive overlays', () => {
 
 		cy.loginToNextcloud()
 		cy.visitStructuredDiary('entries/5')
-		cy.viewport(390, 740)
-		cy.window().its('innerWidth').should('equal', 390)
+		setResponsiveViewport(390, 740)
 
 		cy.contains('Morning check-in').click()
 		cy.wait('@answersVersioned')

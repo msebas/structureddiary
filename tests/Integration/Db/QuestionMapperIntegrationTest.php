@@ -116,7 +116,7 @@ final class QuestionMapperIntegrationTest extends IntegrationTestParentClass {
 		$updated = $this->questionMapper->updateQuestion(
 			$question,
 			'Score',
-			'Score',
+			'How was your score?',
 			QuestionTypes::NUMBER,
 			1.0,
 			10.0,
@@ -133,6 +133,8 @@ final class QuestionMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->assertNull($updated->getNextVersionId());
 
 		$reloaded = $this->questionMapper->getQuestion($question->getId());
+		$this->assertSame('Score', $reloaded->getLabel());
+		$this->assertSame('How was your score?', $reloaded->getDisplayText());
 		$this->assertSame(QuestionTypes::NUMBER, $reloaded->getType());
 		$this->assertSame($question->getChainId(), $reloaded->getChainId());
 		$this->assertSame($question->getDiaryQuestionOrder(), $reloaded->getDiaryQuestionOrder());
@@ -149,9 +151,11 @@ final class QuestionMapperIntegrationTest extends IntegrationTestParentClass {
 		$question = $this->questionMapper->createQuestion($diary->getId(), 'Mood', 'Mood', QuestionTypes::TEXT, null, null, null, true, '');
 		$this->answerMapper->createAnswer($diary->getId(), $entry->getId(), $question->getId(), 'good', null);
 
-		$newVersion = $this->questionMapper->updateQuestion($question, 'Mood 2', 'Mood 2', QuestionTypes::TEXT, null, null, null, true, 'new');
+		$newVersion = $this->questionMapper->updateQuestion($question, 'Mood 2', 'How do you feel now?', QuestionTypes::TEXT, null, null, null, true, 'new');
 		$reloadedOriginal = $this->questionMapper->getQuestion($question->getId());
 
+		$this->assertSame('Mood 2', $newVersion->getLabel());
+		$this->assertSame('How do you feel now?', $newVersion->getDisplayText());
 		$this->assertSame($question->getId(), $newVersion->getPreviousVersionId());
 		$this->assertSame($question->getChainId(), $newVersion->getChainId());
 		$this->assertSame($question->getDiaryQuestionOrder(), $newVersion->getDiaryQuestionOrder());
