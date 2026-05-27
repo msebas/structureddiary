@@ -17,7 +17,7 @@ This app is made to collect a given set of values for later analysis on a regula
   * Rating (Stars 1-10) and
   * Float values.
 * To allow back tracing of later changes the answers are editable, but keep a history.</description>
-	<version>0.0.1</version>
+	<version>0.0.2</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="sebastian.mueller@mcservice.de" homepage="https://github.com/msebas">Sebastian Müller</author>
 	<namespace>StructuredDiary</namespace>

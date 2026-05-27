@@ -253,8 +253,14 @@ export const userService = {
 }
 
 export const entryService = {
-	list(diaryId: number, fromTimestamp?: number | null, untilTimestamp?: number | null): Promise<Entry[]> {
-		return request(withQuery(`diaries/${diaryId}/entries`, { fromTimestamp, untilTimestamp }))
+	list(
+		diaryId: number,
+		fromTimestamp?: number | null,
+		untilTimestamp?: number | null,
+		limit?: number | null,
+		offset?: number | null,
+	): Promise<Entry[]> {
+		return request(withQuery(`diaries/${diaryId}/entries`, { fromTimestamp, untilTimestamp, limit, offset }))
 	},
 	get(id: number): Promise<Entry> {
 		return request(`entries/${id}`)

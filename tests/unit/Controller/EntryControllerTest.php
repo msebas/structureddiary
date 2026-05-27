@@ -29,7 +29,7 @@ final class EntryControllerTest extends TestCase {
 			->willReturn($this->createStub(Diary::class));
 		$entryMapper->expects($this->once())
 			->method('getEntriesForDiary')
-			->with(42, null, null)
+			->with(42, null, null, null, null)
 			->willReturn([]);
 
 		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
@@ -51,11 +51,33 @@ final class EntryControllerTest extends TestCase {
 			->willReturn($this->createStub(Diary::class));
 		$entryMapper->expects($this->once())
 			->method('getEntriesForDiary')
-			->with(42, 1000, 2000)
+			->with(42, 1000, 2000, null, null)
 			->willReturn($entries);
 
 		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
 		$response = $controller->index(42, 1000, 2000);
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame($entries, $response->getData());
+	}
+
+	public function testIndexPassesOptionalPagination(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$entries = [new Entry()];
+
+		$diaryMapper->expects($this->once())
+			->method('getDiaryForUser')
+			->with(42, 'alice', DiaryPermissions::READ)
+			->willReturn($this->createStub(Diary::class));
+		$entryMapper->expects($this->once())
+			->method('getEntriesForDiary')
+			->with(42, 1000, 2000, 200, 400)
+			->willReturn($entries);
+
+		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
+		$response = $controller->index(42, 1000, 2000, 200, 400);
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($entries, $response->getData());

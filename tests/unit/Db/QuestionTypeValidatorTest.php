@@ -56,6 +56,20 @@ final class QuestionTypeValidatorTest extends TestCase {
 		QuestionTypeValidator::validateQuestionDefinition(QuestionTypes::NUMBER, 5.0, 1.0, null);
 	}
 
+	public function testValidateQuestionDefinitionRejectsMinimumGreaterThanMaximumForEditableSelect(): void {
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('Minimum cannot be greater than maximum.');
+
+		QuestionTypeValidator::validateQuestionDefinition(QuestionTypes::EDITABLE_SELECT, 5.0, 1.0, ['yes']);
+	}
+
+	public function testValidateQuestionDefinitionRejectsNegativeTextMinimum(): void {
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('Minimum cannot be negative.');
+
+		QuestionTypeValidator::validateQuestionDefinition(QuestionTypes::TEXT, -1.0, 10.0, null);
+	}
+
 	public function testValidateQuestionDefinitionRejectsRatingOutsideZeroToTen(): void {
 		$this->expectException(\InvalidArgumentException::class);
 		$this->expectExceptionMessage('Ratings must stay between 0 and 10.');
@@ -352,6 +366,28 @@ final class QuestionTypeValidatorTest extends TestCase {
 		QuestionTypeValidator::validateAnswerPayload($question, 'custom', null);
 
 		$this->addToAssertionCount(1);
+	}
+
+	public function testValidateAnswerPayloadRejectsEditableSelectionShorterThanMinimum(): void {
+		$question = new \OCA\StructuredDiary\Db\Question();
+		$question->setType(QuestionTypes::EDITABLE_SELECT);
+		$question->setMinimum(5.0);
+
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('Editable selection answer is shorter than the configured minimum.');
+
+		QuestionTypeValidator::validateAnswerPayload($question, 'abc', null);
+	}
+
+	public function testValidateAnswerPayloadRejectsEditableSelectionLongerThanMaximum(): void {
+		$question = new \OCA\StructuredDiary\Db\Question();
+		$question->setType(QuestionTypes::EDITABLE_SELECT);
+		$question->setMaximum(2.0);
+
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('Editable selection answer is longer than the configured maximum.');
+
+		QuestionTypeValidator::validateAnswerPayload($question, 'abcd', null);
 	}
 
 	public function testAnswerIsValidForQuestionReturnsTrueForValidPayload(): void {

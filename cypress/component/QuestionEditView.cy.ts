@@ -60,6 +60,7 @@ function mountQuestionCreateView() {
 			const store = useStructuredDiaryStore()
 			store.questionTypes = [
 				{ id: 'TEXT', value: 'text' },
+				{ id: 'RATING', value: 'rating' },
 				{ id: 'NUMBER', value: 'number' },
 				{ id: 'INTEGER', value: 'integer' },
 				{ id: 'SELECT', value: 'select' },
@@ -200,12 +201,16 @@ describe('QuestionEditView', () => {
 		mountQuestionCreateView()
 
 		cy.get('[data-cy="synced-display-text"]').should('be.visible')
+		cy.contains('Minimum').parent().find('input').should('have.value', '5')
+		cy.contains('Maximum').parent().find('input').should('have.value', '65536')
 		cy.contains('Label').parent().find('input').first().type('Energy')
 		cy.get('[data-cy="synced-display-text"]').should('contain.text', 'Energy')
 		cy.contains('button', 'Save question').click()
 		cy.wait('@createQuestion').its('request.body').should('deep.include', {
 			label: 'Energy',
 			displayText: 'Energy',
+			minimum: 5,
+			maximum: 65536,
 		})
 	})
 

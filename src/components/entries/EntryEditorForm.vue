@@ -23,20 +23,50 @@ const form = reactive({
 	answers: {} as Record<number, Answer>,
 })
 
+const activeQuestions = computed(() =>
+	props.questions.filter((question) => question.created_at <= form.timestamp && question.active))
+
 watch(() => props.entry, (entry) => {
 	form.title = entry?.title ?? ''
 	form.timestamp = entry?.timestamp ?? Math.floor(Date.now() / 1000)
 	form.answers = Object.fromEntries((props.answers ?? []).map((answer) => [answer.question_id, { ...answer }]))
+	ensureDefaultBooleanAnswers()
 }, { immediate: true })
 
 watch(() => props.answers, (answers) => {
 	form.answers = Object.fromEntries(answers.map((answer) => [answer.question_id, { ...answer }]))
+	ensureDefaultBooleanAnswers()
 }, { immediate: true })
 
-const activeQuestions = computed(() =>
-	props.questions.filter((question) => question.created_at <= form.timestamp && question.active))
+watch(activeQuestions, () => {
+	ensureDefaultBooleanAnswers()
+}, { immediate: true })
+
+function defaultBooleanAnswer(question: Question): Answer {
+	return {
+		id: 0,
+		diary_id: question.diary_id,
+		entry_id: props.entry?.id ?? 0,
+		question_id: question.id,
+		created_at: 0,
+		text_content: null,
+		numeric_content: 0,
+		previous_version_id: null,
+		next_version_id: null,
+	}
+}
+
+function ensureDefaultBooleanAnswers(): void {
+	for (const question of activeQuestions.value) {
+		if (question.type === 'boolean' && form.answers[question.id] === undefined) {
+			form.answers[question.id] = defaultBooleanAnswer(question)
+		}
+	}
+}
 
 function submit(): void {
+	ensureDefaultBooleanAnswers()
+
 	emit('save', {
 		title: form.title.trim() === '' ? null : form.title.trim(),
 		timestamp: form.timestamp,

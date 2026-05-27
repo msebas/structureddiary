@@ -8,8 +8,6 @@ import { mdiBookOpenPageVariant, mdiPlus } from '@mdi/js'
 import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {useRoute} from 'vue-router'
 import StructuredDiaryNavigation from '@/components/layout/StructuredDiaryNavigation.vue'
-import EntryListPanel from '@/components/layout/EntryListPanel.vue'
-import QuestionListPanel from '@/components/layout/QuestionListPanel.vue'
 import OverlayPanel from '@/components/common/OverlayPanel.vue'
 import {useStructuredDiaryStore} from '@/stores/structuredDiary'
 import type {WorkspaceRouteName} from '@/services/workspaceRoute'
@@ -48,7 +46,7 @@ function openMobileCenter(): void {
   }
 }
 
-async function openSelectedDiaryInMobileCenter(): Promise<void> {
+async function openDiary(): Promise<void> {
   if (store.selectedDiaryId === null) {
     return
   }
@@ -57,7 +55,6 @@ async function openSelectedDiaryInMobileCenter(): Promise<void> {
     name: 'diary',
     params: { diaryId: store.selectedDiaryId },
   })
-  openMobileCenter()
 }
 
 async function createDiary(): Promise<void> {
@@ -137,7 +134,7 @@ watch(() => store.selectedEntryId, async (entryId) => {
                   :aria-label="t('structureddiary', 'Open diary')"
                   variant="secondary"
                   :disabled="store.selectedDiary === null"
-                  @click="openSelectedDiaryInMobileCenter()">
+                  @click="openDiary()">
                 <template #icon>
                   <NcIconSvgWrapper :path="mdiBookOpenPageVariant"/>
                 </template>
@@ -182,28 +179,38 @@ watch(() => store.selectedEntryId, async (entryId) => {
 
 <style module>
 .content {
-  min-height: 100%;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .workspace {
   display: grid;
-  min-height: 100%;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .columns {
   display: grid;
   grid-template-columns: minmax(420px, 1fr) minmax(300px, 390px);
-  min-height: 100%;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .centerColumn {
   min-width: 0;
+  min-height: 0;
   display: grid;
   grid-template-rows: auto 1fr;
+  overflow: hidden;
 }
 
 .center {
   min-width: 0;
+  min-height: 0;
+  overflow: auto;
 }
 
 .centerPadded {
@@ -212,7 +219,20 @@ watch(() => store.selectedEntryId, async (entryId) => {
 
 .right {
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border-inline-start: 1px solid var(--color-border);
+}
+
+.right > :global(*) {
+  min-height: 0;
+  min-width: 0;
+}
+
+.right > :global(:last-child) {
+  flex: 1 1 auto;
 }
 
 .mobileSidebarHeader {
@@ -226,6 +246,8 @@ watch(() => store.selectedEntryId, async (entryId) => {
   display: grid;
   grid-template-rows: auto 1fr;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .mobileCenter :global(.sd-header-primary-action) {

@@ -136,11 +136,13 @@ async function selectEntry(entryId: number): Promise<void> {
 				v-for="entry in store.currentEntries"
 				:key="entry.id"
 				type="button"
-				:class="[$style.item, entry.id === store.selectedEntryId && $style.itemActive]"
+				:class="$style.itemButton"
 				@click="selectEntry(entry.id)">
-				<strong>{{ formatEntryListTitle(entry) }}</strong>
-				<span v-if="hasExplicitEntryTitle(entry)">
-					{{ formatEntryListTimestamp(entry) }}
+				<span :class="[$style.item, entry.id === store.selectedEntryId && $style.itemActive]">
+					<strong>{{ formatEntryListTitle(entry) }}</strong>
+					<span v-if="hasExplicitEntryTitle(entry)">
+						{{ formatEntryListTimestamp(entry) }}
+					</span>
 				</span>
 			</button>
 		</div>
@@ -154,6 +156,8 @@ async function selectEntry(entryId: number): Promise<void> {
 	gap: 14px;
 	padding: 18px;
 	min-height: 0;
+	height: 100%;
+	overflow: hidden;
 	background: var(--color-main-background);
 }
 
@@ -168,7 +172,7 @@ async function selectEntry(entryId: number): Promise<void> {
 
 .filters {
 	display: grid;
-	grid-template-columns: 1fr 1fr auto;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
 	gap: 8px;
 	align-items: end;
 }
@@ -195,29 +199,59 @@ async function selectEntry(entryId: number): Promise<void> {
 }
 
 .list {
-	display: grid;
-	gap: 8px;
-	overflow: auto;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+.itemButton + .itemButton {
+	margin-block-start: 8px;
+}
+
+.itemButton.itemButton {
+	display: block;
+	width: 100%;
+  min-height: var(--default-clickable-area);
+	padding: 0;
+	font: inherit;
+	text-align: left;
+	white-space: normal;
+	cursor: pointer;
 }
 
 .item {
 	display: grid;
+	grid-auto-rows: auto;
+	align-content: start;
 	gap: 4px;
+	width: 100%;
 	padding: 12px 14px;
 	border: 1px solid var(--color-border);
 	border-radius: var(--border-radius-large);
 	background: var(--color-main-background);
 	text-align: left;
-	cursor: pointer;
+	line-height: 1.25;
+	white-space: normal;
+	box-sizing: border-box;
 }
 
 .item strong {
+	display: block;
+	min-width: 0;
 	color: var(--color-main-text);
+	line-height: 1.25;
+	overflow-wrap: anywhere;
 }
 
 .item span {
+	display: block;
+	min-width: 0;
 	font-size: 0.82rem;
+	font-weight: 600;
+	line-height: 1.25;
 	color: var(--color-text-maxcontrast);
+	overflow-wrap: anywhere;
 }
 
 .itemActive {

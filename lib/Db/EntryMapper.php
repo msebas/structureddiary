@@ -35,7 +35,7 @@ class EntryMapper extends QBMapper {
 	 * @return list<Entry>
 	 * @throws Exception
 	 */
-	public function getEntriesForDiary(int $diaryId, ?int $fromTimestamp = null, ?int $untilTimestamp = null): array {
+	public function getEntriesForDiary(int $diaryId, ?int $fromTimestamp = null, ?int $untilTimestamp = null, ?int $limit = null, ?int $offset = null): array {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from($this->getTableName())
@@ -54,6 +54,12 @@ class EntryMapper extends QBMapper {
 		}
 		$qb
 			->orderBy('timestamp', 'DESC');
+		if ($limit !== null) {
+			$qb->setMaxResults(max(1, $limit));
+		}
+		if ($offset !== null) {
+			$qb->setFirstResult(max(0, $offset));
+		}
 
 		return $this->findEntities($qb);
 	}

@@ -41,11 +41,11 @@ class EntryController extends ApiOCSController {
 	 */
 	#[NoAdminRequired]
 	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/diaries/{diaryId}/entries', requirements: ['apiVersion' => '(v1)'])]
-	public function index(int $diaryId, ?int $fromTimestamp = null, ?int $untilTimestamp = null): DataResponse {
+	public function index(int $diaryId, ?int $fromTimestamp = null, ?int $untilTimestamp = null, ?int $limit = null, ?int $offset = null): DataResponse {
 		try {
 			$this->diaryMapper->getDiaryForUser($diaryId, $this->requireUser($this->userId), DiaryPermissions::READ);
 
-			return $this->respond($this->entryMapper->getEntriesForDiary($diaryId, $fromTimestamp, $untilTimestamp));
+			return $this->respond($this->entryMapper->getEntriesForDiary($diaryId, $fromTimestamp, $untilTimestamp, $limit, $offset));
 		} catch (Throwable $e) {
 			return $this->respondError($e->getMessage(), 404);
 		}

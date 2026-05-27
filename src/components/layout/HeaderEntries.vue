@@ -6,6 +6,7 @@ import {mdiContentSave, mdiDeleteOutline, mdiPencil, mdiPlus} from '@mdi/js'
 import {computed, ref} from 'vue'
 import {useRoute} from 'vue-router'
 import {useStructuredDiaryStore} from '@/stores/structuredDiary'
+import {Permissions} from '@/types/types'
 import '@/components/layout/workspaceHeader.css'
 import { n, t } from '@nextcloud/l10n'
 
@@ -16,6 +17,7 @@ const entry = computed(() => store.selectedEntry)
 const deleteDialogOpen = ref(false)
 const deleteAnswerLabel = ref('')
 const isEntryEditFormRoute = computed(() => route.name === 'entryCreate' || route.name === 'entryEdit')
+const canWriteDiary = computed(() => (store.user_permissions & Permissions.WRITE) !== 0)
 
 async function createEntry(): Promise<void> {
 	await store.startCreatingEntry(store.selectedDiaryId)
@@ -87,7 +89,7 @@ const deleteEntryDialogButtons = computed(() => [
 				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Save entry') }}</span>
 			</NcButton>
 			<NcButton
-				v-else
+				v-else-if="canWriteDiary"
 				class="sd-mobile-icon-button sd-header-primary-action"
 				:aria-label="t('structureddiary', 'Create new entry')"
 				@click="createEntry()">
@@ -97,7 +99,7 @@ const deleteEntryDialogButtons = computed(() => [
 				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Add entry') }}</span>
 			</NcButton>
 			<NcButton
-				v-if="entry !== null && !isEntryEditFormRoute"
+				v-if="canWriteDiary && entry !== null && !isEntryEditFormRoute"
 				class="sd-mobile-icon-button sd-header-edit-action"
 				variant="secondary"
 				:aria-label="t('structureddiary', 'Edit entry')"
@@ -108,7 +110,7 @@ const deleteEntryDialogButtons = computed(() => [
 				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Edit entry') }}</span>
 			</NcButton>
 			<NcButton
-				v-if="entry !== null"
+				v-if="canWriteDiary && entry !== null"
 				class="sd-mobile-icon-button"
 				variant="error"
 				:aria-label="t('structureddiary', 'Delete entry')"

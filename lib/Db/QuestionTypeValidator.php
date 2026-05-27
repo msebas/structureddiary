@@ -29,9 +29,14 @@ final class QuestionTypeValidator {
 			throw new InvalidArgumentException('Choices are only valid for selection questions.');
 		}
 
-		if (in_array($type, [QuestionTypes::TEXT, QuestionTypes::NUMBER, QuestionTypes::INTEGER, QuestionTypes::RATING], true)
+		if (in_array($type, [QuestionTypes::TEXT, QuestionTypes::EDITABLE_SELECT, QuestionTypes::NUMBER, QuestionTypes::INTEGER, QuestionTypes::RATING], true)
 			&& $minimum !== null && $maximum !== null && $minimum > $maximum) {
 			throw new InvalidArgumentException('Minimum cannot be greater than maximum.');
+		}
+
+		if (in_array($type, [QuestionTypes::TEXT, QuestionTypes::EDITABLE_SELECT], true)
+			&& $minimum !== null && $minimum < 0) {
+			throw new InvalidArgumentException('Minimum cannot be negative.');
 		}
 
 		if ($type === QuestionTypes::RATING) {
@@ -118,6 +123,13 @@ final class QuestionTypeValidator {
 			case QuestionTypes::EDITABLE_SELECT:
 				if ($textContent === null || $textContent === '') {
 					throw new InvalidArgumentException('Editable selection answers require text_content.');
+				}
+				$length = function_exists('mb_strlen') ? mb_strlen($textContent) : strlen($textContent);
+				if ($question->getMinimum() !== null && $length < $question->getMinimum()) {
+					throw new InvalidArgumentException('Editable selection answer is shorter than the configured minimum.');
+				}
+				if ($question->getMaximum() !== null && $length > $question->getMaximum()) {
+					throw new InvalidArgumentException('Editable selection answer is longer than the configured maximum.');
 				}
 				return;
 		}

@@ -129,7 +129,27 @@ describe('Structured diary management flow', () => {
 		cy.mockStructuredDiaryBootstrap()
 		let questionDeleted = false
 		let versionsRequestedAfterDelete = false
+		const question = {
+			id: 17,
+			chain_id: 17,
+			diary_id: 5,
+			diary_question_order: 17,
+			created_at: 1713500000,
+			label: 'Mood',
+			display_text: 'How do you feel today?',
+			type: 'text',
+			minimum: null,
+			maximum: null,
+			choices: null,
+			active: true,
+			template_text: 'Write a short note',
+			previous_version_id: null,
+			next_version_id: 18,
+		}
 		cy.intercept('GET', '**/structureddiary/api/v1/questions/17/answer-count', { count: 0 }).as('questionAnswerCountEmpty')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions*', (request) => {
+			request.reply(questionDeleted ? [] : [question])
+		}).as('questionsAfterDelete')
 		cy.intercept('GET', '**/structureddiary/api/v1/questions/17/versions', (request) => {
 			if (questionDeleted) {
 				versionsRequestedAfterDelete = true
@@ -139,21 +159,8 @@ describe('Structured diary management flow', () => {
 		cy.intercept('DELETE', '**/structureddiary/api/v1/questions/17', (request) => {
 			questionDeleted = true
 			request.reply({
-				id: 17,
-				chain_id: 17,
-				diary_id: 5,
-				diary_question_order: 17,
-				created_at: 1713500000,
-				label: 'Mood',
-				display_text: 'How do you feel today?',
-				type: 'text',
-				minimum: null,
-				maximum: null,
-				choices: null,
+				...question,
 				active: false,
-				template_text: 'Write a short note',
-				previous_version_id: null,
-				next_version_id: 18,
 			})
 		}).as('deleteQuestion')
 		cy.loginToNextcloud()

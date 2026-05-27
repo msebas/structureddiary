@@ -128,4 +128,48 @@ describe('EntryEditorForm', () => {
 			expect(payload.answers).to.have.length(0)
 		})
 	})
+
+	it('submits false for untouched boolean questions by default', () => {
+		const saveSpy = cy.spy().as('saveSpy')
+		const questions: Question[] = [
+			{
+				id: 19,
+				chain_id: 19,
+				diary_id: 4,
+				diary_question_order: 19,
+				created_at: 1713500000,
+				label: 'Walk',
+				display_text: 'Did you walk?',
+				type: 'boolean',
+				minimum: null,
+				maximum: null,
+				choices: null,
+				active: true,
+				template_text: '',
+				previous_version_id: null,
+				next_version_id: null,
+			},
+		]
+
+		cy.mount(EntryEditorForm, {
+			props: {
+				entry: null,
+				questions,
+				answers: [],
+				isCreating: true,
+				onSave: saveSpy,
+			},
+		})
+
+		cy.contains('Did you walk?')
+			.parents('[data-cy="answer-field"]')
+			.should('have.attr', 'data-empty', 'false')
+		cy.contains('Save').first().click()
+
+		cy.get('@saveSpy').its('firstCall.args.0').should((payload: { answers: Answer[] }) => {
+			expect(payload.answers).to.have.length(1)
+			expect(payload.answers[0].question_id).to.equal(19)
+			expect(payload.answers[0].numeric_content).to.equal(0)
+		})
+	})
 })

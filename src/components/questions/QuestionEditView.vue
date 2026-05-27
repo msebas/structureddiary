@@ -73,6 +73,28 @@ const form = reactive({
   templateText: '',
 })
 
+function defaultRangeForType(type: QuestionType): { minimum: string, maximum: string } | null {
+  switch (type) {
+    case 'rating':
+      return {minimum: '0', maximum: '10'}
+    case 'text':
+    case 'editable_select':
+      return {minimum: '5', maximum: '65536'}
+    default:
+      return null
+  }
+}
+
+function isDefaultRange(minimum: string, maximum: string): boolean {
+  return [defaultRangeForType('rating'), defaultRangeForType('text')]
+      .some((defaults) => defaults !== null && minimum === defaults.minimum && maximum === defaults.maximum)
+}
+
+function applyDefaultRange(type: QuestionType): void {
+  const defaults = defaultRangeForType(type)
+  form.minimum = defaults?.minimum ?? ''
+  form.maximum = defaults?.maximum ?? ''
+}
 
 watch(
     () => [store.creatingQuestion, store.selectedQuestion?.id ?? null] as const,
@@ -83,8 +105,12 @@ watch(
       form.displayTextSynced = question?.display_text == null || question.display_text === '' || question.display_text === (question?.label ?? '')
       form.displayText = form.displayTextSynced ? form.label : question?.display_text ?? ''
       form.type = question?.type ?? 'text'
-      form.minimum = String(question?.minimum ?? '')
-      form.maximum = String(question?.maximum ?? '')
+      if (creatingQuestion) {
+        applyDefaultRange(form.type)
+      } else {
+        form.minimum = String(question?.minimum ?? '')
+        form.maximum = String(question?.maximum ?? '')
+      }
       form.choices = question?.choices ?? []
       form.choiceDraft = ''
       form.active = question?.active ?? true
@@ -112,13 +138,30 @@ watch(
     },
 )
 
+watch(
+    () => form.type,
+    (type, previousType) => {
+      if (!store.creatingQuestion) {
+        return
+      }
+
+      const previousDefaults = previousType === undefined ? null : defaultRangeForType(previousType)
+      const currentRangeIsUnsetOrDefault = (form.minimum === '' && form.maximum === '')
+          || isDefaultRange(form.minimum, form.maximum)
+          || (previousDefaults !== null && form.minimum === previousDefaults.minimum && form.maximum === previousDefaults.maximum)
+
+      if (currentRangeIsUnsetOrDefault) {
+        applyDefaultRange(type)
+      }
+    },
+)
+
 const rangeStep = computed<'1' | '0.01' | null>(() => {
   switch (form.type) {
     case 'text':
     case 'integer':
     case 'editable_select':
       return '1'
-    case 'time':
     case 'number':
     case 'rating':
       return '0.01'

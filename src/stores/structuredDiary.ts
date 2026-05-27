@@ -172,6 +172,7 @@ export type DiaryError = {
 
 type WorkspaceRouteQuery = Record<string, string>
 const ERROR_TIMEOUT_MS = 60_000
+const ENTRY_PAGE_SIZE = 200
 
 export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const route = useRoute()
@@ -624,14 +625,25 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     }
 
     async function loadEntries(diaryId: number, fromTimestamp?: number | null, untilTimestamp?: number | null): Promise<void> {
-        const entries = await runTask(() => entryService.list(
-            diaryId,
-            fromTimestamp ?? effectiveEntryFromTimestamp.value,
-            untilTimestamp ?? effectiveEntryUntilTimestamp.value,
-        ))
-        entriesByDiary.value[diaryId] = {
-            ...(entriesByDiary.value[diaryId] ?? {}), ...Object.fromEntries(entries.map(i => [i.id, i]))
-        }
+        const effectiveFromTimestamp = fromTimestamp ?? effectiveEntryFromTimestamp.value
+        const effectiveUntilTimestamp = untilTimestamp ?? effectiveEntryUntilTimestamp.value
+        const entries: Entry[] = []
+        let offset = 0
+        let page: Entry[] = []
+
+        do {
+            page = await runTask(() => entryService.list(
+                diaryId,
+                effectiveFromTimestamp,
+                effectiveUntilTimestamp,
+                ENTRY_PAGE_SIZE,
+                offset,
+            ))
+            entries.push(...page)
+            offset += page.length
+        } while (page.length === ENTRY_PAGE_SIZE)
+
+        entriesByDiary.value[diaryId] = Object.fromEntries(entries.map(i => [i.id, i]))
     }
 
     function setAnswersForEntry(entryId: number, answers: Answer[]): void {

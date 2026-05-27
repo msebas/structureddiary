@@ -105,6 +105,19 @@ final class EntryMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->assertNotContains($tooNew->getId(), array_map(static fn ($entry) => $entry->getId(), $entries));
 	}
 
+	public function testGetEntriesForDiaryCanLimitAndOffsetResults(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+		$oldest = $this->entryMapper->createEntry($diary->getId(), 1000, 'oldest');
+		$middle = $this->entryMapper->createEntry($diary->getId(), 2000, 'middle');
+		$newest = $this->entryMapper->createEntry($diary->getId(), 3000, 'newest');
+
+		$entries = $this->entryMapper->getEntriesForDiary($diary->getId(), null, null, 1, 1);
+
+		$this->assertSame([$middle->getId()], array_map(static fn ($entry) => $entry->getId(), $entries));
+		$this->assertNotContains($oldest->getId(), array_map(static fn ($entry) => $entry->getId(), $entries));
+		$this->assertNotContains($newest->getId(), array_map(static fn ($entry) => $entry->getId(), $entries));
+	}
+
 	public function testUpdateEntryOnlyTitlePreservesTimestamp(): void {
 		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
 		$entry = $this->entryMapper->createEntry($diary->getId(), 1713254400, 'old');

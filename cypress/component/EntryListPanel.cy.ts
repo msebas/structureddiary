@@ -88,6 +88,13 @@ describe('EntryListPanel', () => {
 		cy.get('input[type="date"]').eq(1).should('have.value', dateInputValue(today))
 		cy.contains('Morning check-in').parent().should('contain.text', String(today.getFullYear()))
 		cy.contains('Evening check-in').parent().should('contain.text', String(today.getFullYear()))
+		cy.contains('Morning check-in').then(($entryTitle) => {
+			const button = $entryTitle.closest('button')[0]
+			expect(button).to.not.equal(undefined)
+			const buttonRect = button.getBoundingClientRect()
+			const dateRect = button.querySelector('span')!.getBoundingClientRect()
+			expect(dateRect.bottom).to.be.at.most(buttonRect.bottom)
+		})
 		cy.contains(formatDate(soloTimestamp)).should('exist')
 		cy.contains(formatDateTime(soloTimestamp)).should('not.exist')
 		cy.contains(formatDateTime(noonTimestamp)).should('exist')

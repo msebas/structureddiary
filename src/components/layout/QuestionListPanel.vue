@@ -310,6 +310,8 @@ async function saveQuestionOrder(): Promise<void> {
 	flex-direction: column;
 	gap: 12px;
 	min-height: 0;
+	height: 100%;
+	overflow: hidden;
 	padding: 18px;
 	background: var(--color-main-background);
 }
@@ -329,9 +331,14 @@ async function saveQuestionOrder(): Promise<void> {
 }
 
 .list {
-	display: grid;
-	gap: 10px;
-	overflow: auto;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+.questionWrap + .questionWrap {
+	margin-block-start: 10px;
 }
 
 .questionWrap {

@@ -110,7 +110,10 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 </script>
 
 <template>
-	<div :class="[$style.field, props.highlightEmpty && $style.fieldEmpty]">
+	<div
+		data-cy="answer-field"
+		:data-empty="props.highlightEmpty ? 'true' : 'false'"
+		:class="[$style.field, props.highlightEmpty && $style.fieldEmpty]">
 		<label v-if="props.question.type === 'text' || props.question.type === 'rating' || props.question.type === 'boolean'" :class="$style.label">
 			{{ props.question.display_text }}
 		</label>
