@@ -70,7 +70,7 @@ class AnswerController extends ApiOCSController {
 			$entry = $this->entryMapper->getEntry($entryId);
 			$this->diaryMapper->getDiaryForUser($entry->getDiaryId(), $this->requireUser($this->userId), DiaryPermissions::READ);
 			$question = $this->questionMapper->getQuestion($questionId);
-			$this->assertQuestionMatchesEntry($question, $entry->getDiaryId());
+			$this->assertQuestionBelongsToDiary($question, $entry->getDiaryId());
 
 			return $this->respond($this->answerMapper->getAnswerChainForEntryQuestion($entryId, $questionId));
 		} catch (Throwable $e) {
@@ -169,14 +169,18 @@ class AnswerController extends ApiOCSController {
 	}
 
 	private function assertQuestionMatchesEntry(Question $question, int $diaryId): void {
-		if ($question->getDiaryId() !== $diaryId) {
-			throw new \InvalidArgumentException('Question and entry must belong to the same diary.');
-		}
+		$this->assertQuestionBelongsToDiary($question, $diaryId);
 		if ($question->getNextVersionId() !== null) {
 			throw new \InvalidArgumentException('Answers may only be created for the current question version.');
 		}
 		if (!$question->getActive()) {
 			throw new \InvalidArgumentException('Inactive questions cannot be answered.');
+		}
+	}
+
+	private function assertQuestionBelongsToDiary(Question $question, int $diaryId): void {
+		if ($question->getDiaryId() !== $diaryId) {
+			throw new \InvalidArgumentException('Question and entry must belong to the same diary.');
 		}
 	}
 }

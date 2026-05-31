@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import NcRichText from '@nextcloud/vue/components/NcRichText'
 import type { Answer, Question } from '@/types/types'
 import { formatQuestionValue } from '@/utils/format'
@@ -8,6 +9,8 @@ const props = defineProps<{
 	answer?: Answer
 	question: Question
 }>()
+
+const ratingStars = computed(() => Math.max(1, Math.floor(props.question.maximum ?? 10)))
 </script>
 
 <template>
@@ -21,7 +24,7 @@ const props = defineProps<{
 		<template v-else-if="props.question.type === 'rating'">
 			<div :class="$style.rating">
 				<span
-					v-for="index in 10"
+					v-for="index in ratingStars"
 					:key="index"
 					:class="[index <= Math.round(props.answer?.numeric_content ?? 0) && $style.starOn]">
 					★
@@ -88,8 +91,11 @@ const props = defineProps<{
 }
 
 .rating {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 0.05em;
+	max-width: 100%;
 	font-size: 1.1rem;
-	letter-spacing: 0.05em;
 	color: #c5ccd4;
 }
 

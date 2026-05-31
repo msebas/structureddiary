@@ -41,9 +41,7 @@ function closeMobileCenter(): void {
 }
 
 function openMobileCenter(): void {
-  if (isCompact.value) {
-    mobileCenterOpen.value = true
-  }
+  mobileCenterOpen.value = true
 }
 
 async function openDiary(): Promise<void> {

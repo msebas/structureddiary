@@ -158,6 +158,7 @@ function mountQuestionEditView(question: Question) {
 			const store = useStructuredDiaryStore()
 			store.questionTypes = [
 				{ id: 'TEXT', value: 'text' },
+				{ id: 'RATING', value: 'rating' },
 				{ id: 'SELECT', value: 'select' },
 				{ id: 'EDITABLE_SELECT', value: 'editable_select' },
 			]
@@ -270,6 +271,43 @@ describe('QuestionEditView', () => {
 			label: 'Color',
 			type: 'select',
 			choices: ['Green', 'Red'],
+		})
+	})
+
+	it('applies rating defaults when changing an existing question to rating', () => {
+		mountQuestionEditView({
+			id: 17,
+			chain_id: 17,
+			diary_id: 5,
+			diary_question_order: 17,
+			created_at: 1713500000,
+			label: 'Mood',
+			display_text: 'Mood',
+			type: 'text',
+			minimum: null,
+			maximum: null,
+			choices: null,
+			active: true,
+			template_text: '',
+			previous_version_id: null,
+			next_version_id: null,
+		})
+		cy.wait('@question')
+		cy.wait('@questions')
+
+		cy.get('.v-select').first().click()
+		cy.contains('.vs__dropdown-option', 'RATING').click()
+		cy.contains('Minimum').parent().find('input').should('have.value', '0')
+		cy.contains('Maximum').parent().find('input').should('have.value', '10')
+		cy.contains('button', 'Save question').click()
+
+		cy.wait('@updateQuestion').its('request.body').should('deep.include', {
+			questionId: 17,
+			chainId: 17,
+			label: 'Mood',
+			type: 'rating',
+			minimum: 0,
+			maximum: 10,
 		})
 	})
 })

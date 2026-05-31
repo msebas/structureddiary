@@ -12,7 +12,7 @@ describe('HeaderEntries', () => {
 				{ path: '/entries/:diaryId', name: 'entries', component: { template: '<div />' } },
 			],
 		})
-		void router.push({ name: 'entries', params: { diaryId: 5 } })
+		const routeReady = router.push({ name: 'entries', params: { diaryId: 5 } })
 
 		const Wrapper = defineComponent({
 			setup() {
@@ -38,10 +38,12 @@ describe('HeaderEntries', () => {
 			},
 		})
 
-		cy.mount(Wrapper, {
-			global: {
-				plugins: [router],
-			},
+		cy.wrap(routeReady).then(() => router.isReady()).then(() => {
+			cy.mount(Wrapper, {
+				global: {
+					plugins: [router],
+				},
+			})
 		})
 
 		cy.contains('Read only diary').should('be.visible')

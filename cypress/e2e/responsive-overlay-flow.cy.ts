@@ -105,9 +105,8 @@ describe('Structured diary responsive overlays', () => {
 			cy.get('[aria-label="Create new entry"]').should('not.be.visible')
 		})
 
-		fixedOverlayByTitle('Entry').within(() => {
-			cy.contains('button', 'Close').click()
-		})
+		cy.visitStructuredDiary('entries/5')
+		setResponsiveViewport(760, 720)
 		cy.get('[aria-label="Open diary"]').should('be.visible').click()
 		fixedOverlayByTitle('Diary').within(() => {
 			cy.contains('button', 'Edit diary').click()

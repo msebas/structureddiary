@@ -40,8 +40,11 @@ final class QuestionTypeValidator {
 		}
 
 		if ($type === QuestionTypes::RATING) {
-			if (($minimum !== null && $minimum < 0) || ($maximum !== null && $maximum > 10)) {
-				throw new InvalidArgumentException('Ratings must stay between 0 and 10.');
+			if ($minimum === null || $maximum === null) {
+				throw new InvalidArgumentException('Rating questions require minimum and maximum values.');
+			}
+			if (($minimum !== null && $minimum < 0) || ($maximum !== null && $maximum > 50)) {
+				throw new InvalidArgumentException('Ratings must stay between 0 and 50.');
 			}
 		}
 		if ($type === QuestionTypes::INTEGER) {
@@ -71,8 +74,8 @@ final class QuestionTypeValidator {
 				return;
 
 			case QuestionTypes::RATING:
-				if ($numericContent === null || $numericContent < 0 || $numericContent > 10) {
-					throw new InvalidArgumentException('Ratings must be between 0 and 10.');
+				if ($numericContent === null || $numericContent < 0 || $numericContent > 50) {
+					throw new InvalidArgumentException('Ratings must be between 0 and 50.');
 				}
 				return;
 

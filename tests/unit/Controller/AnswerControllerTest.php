@@ -501,7 +501,7 @@ final class AnswerControllerTest extends TestCase {
 		$this->assertSame(['error' => 'Question and entry must belong to the same diary.'], $response->getData());
 	}
 
-	public function testHistoryRejectsHistoricalQuestionVersion(): void {
+	public function testHistoryAllowsHistoricalQuestionVersion(): void {
 		$request = $this->createMock(IRequest::class);
 		$diaryMapper = $this->createMock(DiaryMapper::class);
 		$entryMapper = $this->createMock(EntryMapper::class);
@@ -525,7 +525,7 @@ final class AnswerControllerTest extends TestCase {
 			->with(42, 'alice', DiaryPermissions::READ)
 			->willReturn($this->createStub(Diary::class));
 		$questionMapper->expects($this->once())->method('getQuestion')->with(11)->willReturn($question);
-		$answerMapper->expects($this->never())->method('getAnswerChainForEntryQuestion');
+		$answerMapper->expects($this->once())->method('getAnswerChainForEntryQuestion')->with(5, 11)->willReturn([]);
 
 		$controller = new AnswerController(
 			Application::APP_ID,
@@ -539,11 +539,11 @@ final class AnswerControllerTest extends TestCase {
 
 		$response = $controller->history(5, 11);
 
-		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
-		$this->assertSame(['error' => 'Answers may only be created for the current question version.'], $response->getData());
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame([], $response->getData());
 	}
 
-	public function testHistoryRejectsInactiveQuestion(): void {
+	public function testHistoryAllowsInactiveQuestion(): void {
 		$request = $this->createMock(IRequest::class);
 		$diaryMapper = $this->createMock(DiaryMapper::class);
 		$entryMapper = $this->createMock(EntryMapper::class);
@@ -567,7 +567,7 @@ final class AnswerControllerTest extends TestCase {
 			->with(42, 'alice', DiaryPermissions::READ)
 			->willReturn($this->createStub(Diary::class));
 		$questionMapper->expects($this->once())->method('getQuestion')->with(11)->willReturn($question);
-		$answerMapper->expects($this->never())->method('getAnswerChainForEntryQuestion');
+		$answerMapper->expects($this->once())->method('getAnswerChainForEntryQuestion')->with(5, 11)->willReturn([]);
 
 		$controller = new AnswerController(
 			Application::APP_ID,
@@ -581,8 +581,8 @@ final class AnswerControllerTest extends TestCase {
 
 		$response = $controller->history(5, 11);
 
-		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
-		$this->assertSame(['error' => 'Inactive questions cannot be answered.'], $response->getData());
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame([], $response->getData());
 	}
 
 	public function testIndexUsesReadPermissionAndReturnsAnswers(): void {

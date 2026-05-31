@@ -110,4 +110,17 @@ describe('AnswerEditorField', () => {
 		cy.get('@updateSpy').should('have.been.calledWithMatch', { question_id: 22, text_content: 'Green' })
 		cy.get('@updateSpy').should('have.been.calledWithMatch', { question_id: 23, text_content: 'Mango' })
 	})
+
+	it('wraps large rating sets instead of forcing a single row', () => {
+		cy.mount(AnswerEditorField, {
+			props: {
+				question: question('rating', { maximum: 50 }),
+				modelValue: answer(),
+				highlightEmpty: false,
+			},
+		})
+
+		cy.get('.p-rating').should('have.css', 'flex-wrap', 'wrap')
+		cy.get('.p-rating-option').should('have.length', 50)
+	})
 })

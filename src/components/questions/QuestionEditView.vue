@@ -141,10 +141,6 @@ watch(
 watch(
     () => form.type,
     (type, previousType) => {
-      if (!store.creatingQuestion) {
-        return
-      }
-
       const previousDefaults = previousType === undefined ? null : defaultRangeForType(previousType)
       const currentRangeIsUnsetOrDefault = (form.minimum === '' && form.maximum === '')
           || isDefaultRange(form.minimum, form.maximum)
@@ -200,6 +196,8 @@ function isValidRangeValue(value: string): boolean {
 
 const minimumHasError = computed(() => showsRangeFields.value && !isValidRangeValue(form.minimum))
 const maximumHasError = computed(() => showsRangeFields.value && !isValidRangeValue(form.maximum))
+const minimumRequiredError = computed(() => form.type === 'rating' && form.minimum.trim() === '')
+const maximumRequiredError = computed(() => form.type === 'rating' && form.maximum.trim() === '')
 
 function parsedRangeValue(value: string): number | null {
   if (value.trim() === '') {
@@ -224,7 +222,7 @@ const rangeOrderError = computed(() => {
   return minimum > maximum
 })
 
-const hasRangeError = computed(() => minimumHasError.value || maximumHasError.value || rangeOrderError.value)
+const hasRangeError = computed(() => minimumHasError.value || maximumHasError.value || minimumRequiredError.value || maximumRequiredError.value || rangeOrderError.value)
 
 function normalizedChoice(value: string): string {
   return value.trim()
@@ -291,12 +289,14 @@ async function saveQuestion(): Promise<void> {
 }
 
 const minimumHelperText = computed<string | undefined>(() => {
+  if (minimumRequiredError.value) return t('structureddiary', 'Minimum is required for rating questions.')
   if (form.minimum === '') return undefined
   if (minimumHasError.value) return t('structureddiary', 'Invalid value. {helperText}', {helperText: rangeHelperText.value})
   if (rangeOrderError.value) return t('structureddiary', 'Minimum must be smaller than or equal to maximum.')
   return rangeHelperText.value
 })
 const maximumHelperText = computed<string | undefined>(() => {
+  if (maximumRequiredError.value) return t('structureddiary', 'Maximum is required for rating questions.')
   if (form.maximum === '') return undefined
   if (maximumHasError.value) return t('structureddiary', 'Invalid value. {helperText}', {helperText: rangeHelperText.value})
   if (rangeOrderError.value) return t('structureddiary', 'Maximum must be greater than or equal to minimum.')
@@ -350,14 +350,14 @@ const maximumHelperText = computed<string | undefined>(() => {
     <div v-if="showsRangeFields" :class="$style.grid">
       <NcTextField
           v-model="form.minimum"
-          :error="minimumHasError || rangeOrderError"
+          :error="minimumHasError || minimumRequiredError || rangeOrderError"
           :helper-text="minimumHelperText"
           :label="t('structureddiary', 'Minimum')"
           inputmode="decimal"
           type="number"/>
       <NcTextField
           v-model="form.maximum"
-          :error="maximumHasError || rangeOrderError"
+          :error="maximumHasError || maximumRequiredError || rangeOrderError"
           :helper-text="maximumHelperText"
           :label="t('structureddiary', 'Maximum')"
           inputmode="decimal"

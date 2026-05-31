@@ -16,6 +16,8 @@ function isPiniaPlugin(plugin: unknown): boolean {
 		&& plugin !== null
 		&& 'install' in plugin
 		&& 'state' in plugin
+		&& 'use' in plugin
+		&& '_p' in plugin
 }
 
 declare global {

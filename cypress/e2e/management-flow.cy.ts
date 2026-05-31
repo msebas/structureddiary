@@ -66,6 +66,18 @@ function setMarkdownEditorValue(value: string, index = 0): void {
 	})
 }
 
+function assertReachable(element: Cypress.Chainable<JQuery<HTMLElement>>, label: string): void {
+	element.scrollIntoView({ block: 'center', inline: 'center' }).should('be.visible').then(($element) => {
+		const bounds = $element[0].getBoundingClientRect()
+		cy.window().then((win) => {
+			expect(bounds.left, `${label} left`).to.be.at.least(0)
+			expect(bounds.top, `${label} top`).to.be.at.least(0)
+			expect(bounds.right, `${label} right`).to.be.at.most(win.innerWidth)
+			expect(bounds.bottom, `${label} bottom`).to.be.at.most(win.innerHeight)
+		})
+	})
+}
+
 describe('Structured diary management flow', () => {
 	it('creates a diary from the workspace header', () => {
 		cy.mockStructuredDiaryBootstrap()
@@ -104,7 +116,9 @@ describe('Structured diary management flow', () => {
 		cy.contains('Sync with label').click()
 		setMarkdownEditorValue('How much energy did you have?')
 		setMarkdownEditorValue('0 to 10', 1)
-		cy.contains('Save question').click()
+		assertReachable(cy.contains('#structured-diary-question-edit-form button', 'Cancel'), 'create question lower cancel')
+		assertReachable(cy.contains('#structured-diary-question-edit-form button', 'Save question'), 'create question lower save')
+		cy.contains('#structured-diary-question-edit-form button', 'Save question').click()
 
 		cy.wait('@createQuestion').its('request.body').should('deep.include', {
 			label: 'Energy',
@@ -120,7 +134,8 @@ describe('Structured diary management flow', () => {
 		cy.loginToNextcloud()
 		cy.visitStructuredDiary('questions/5/new')
 		cy.contains('Create question').should('be.visible')
-		cy.contains('button', 'Cancel').click()
+		assertReachable(cy.contains('#structured-diary-question-edit-form button', 'Cancel'), 'question create lower cancel')
+		cy.contains('#structured-diary-question-edit-form button', 'Cancel').click()
 		cy.location('pathname').should('include', '/apps/structureddiary/diaries/5')
 		cy.contains('Statistics').should('be.visible')
 	})
@@ -276,7 +291,8 @@ describe('Structured diary management flow', () => {
 		cy.contains('Label').parent().find('input').first().clear().type('Mood v2')
 		setMarkdownEditorValue('How is your mood now?')
 		setMarkdownEditorValue('Write a longer note', 1)
-		cy.get('[aria-label="Save question"]').first().click()
+		assertReachable(cy.contains('#structured-diary-question-edit-form button', 'Save question'), 'question edit lower save')
+		cy.contains('#structured-diary-question-edit-form button', 'Save question').click()
 		cy.wait('@updateQuestionFirst').its('request.body').should('deep.include', {
 			questionId: 17,
 			chainId: 17,
@@ -289,7 +305,8 @@ describe('Structured diary management flow', () => {
 		cy.contains('button', 'Edit question').click()
 		cy.contains('Label').parent().find('input').first().clear().type('Mood v3')
 		setMarkdownEditorValue('How is your mood this evening?')
-		cy.contains('button', 'Save question').click()
+		assertReachable(cy.contains('#structured-diary-question-edit-form button', 'Save question'), 'second question edit lower save')
+		cy.contains('#structured-diary-question-edit-form button', 'Save question').click()
 		cy.wait('@updateQuestionSecond').its('request.body').should('deep.include', {
 			questionId: 18,
 			chainId: 17,

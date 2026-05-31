@@ -9,12 +9,17 @@ import { n, t } from '@nextcloud/l10n'
 
 const props = defineProps<{
 	question: Question | null
+	questions: Question[]
 	answers: Answer[]
 }>()
 
 const emit = defineEmits<{
 	(event: 'delete', answerId: number): void
 }>()
+
+function questionForAnswer(answer: Answer): Question {
+	return props.questions.find((question) => question.id === answer.question_id) ?? props.question!
+}
 </script>
 
 <template>
@@ -44,7 +49,7 @@ const emit = defineEmits<{
 						<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Delete') }}</span>
 					</NcButton>
 				</div>
-				<AnswerDisplay :question="props.question" :answer="answer" />
+				<AnswerDisplay :question="questionForAnswer(answer)" :answer="answer" />
 			</article>
 		</div>
 

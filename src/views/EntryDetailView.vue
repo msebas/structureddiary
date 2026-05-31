@@ -2,7 +2,7 @@
 import {computed, ref} from 'vue'
 import EntryDisplayCard from '@/components/entries/EntryDisplayCard.vue'
 import {useStructuredDiaryStore} from '@/stores/structuredDiary'
-import type {Answer} from '@/types/types'
+import type {Answer, Question} from '@/types/types'
 import OverlayPanel from "@/components/common/OverlayPanel.vue";
 import AnswerHistoryList from "@/components/answers/AnswerHistoryList.vue";
 import { t } from '@nextcloud/l10n'
@@ -22,13 +22,31 @@ const answerHistories = computed<Record<string, Answer[]>>(() => {
 })
 
 const showAnswerHistory = ref<number | null>(null)
+const answerHistoryQuestion = computed<Question | null>(() =>
+  store.currentEntryQuestions.find((question) => question?.id === showAnswerHistory.value) ?? null)
+const answerHistoryQuestions = computed<Question[]>(() => {
+  const question = answerHistoryQuestion.value
+  if (question === null) {
+    return []
+  }
+
+  const versionQuestions = store.questionVersionMap[question.id] ?? []
+  const loadedAnswerQuestions = store.answerHistoryByEntryQuestion[store.selectedEntryId ?? 0]?.[question.id]
+      ?.map((answer) => store.questionById[answer.question_id])
+      .filter((question): question is Question => question !== undefined) ?? []
+
+  return [...new Map([question, ...versionQuestions, ...loadedAnswerQuestions].map((question) => [question.id, question])).values()]
+})
 
 async function openAnswerHistory(questionId: number): Promise<void> {
   if (store.selectedEntryId === null) {
     return
   }
   showAnswerHistory.value = questionId
-  await store.loadAnswerHistory(store.selectedEntryId, questionId)
+  await Promise.all([
+    store.loadQuestionVersions(questionId),
+    store.loadAnswerHistory(store.selectedEntryId, questionId),
+  ])
 }
 
 async function deleteCurrentAnswer(answerId: number): Promise<void> {
@@ -51,7 +69,8 @@ async function deleteCurrentAnswer(answerId: number): Promise<void> {
       :title="t('structureddiary', 'Answer versions')"
       @close="showAnswerHistory = null">
     <AnswerHistoryList
-        :question="store.currentEntryQuestions.find((question) => question?.id === showAnswerHistory) ?? null"
+        :question="answerHistoryQuestion"
+        :questions="answerHistoryQuestions"
         :answers="store.answerHistoryByEntryQuestion[store.selectedEntryId ?? 0]?.[showAnswerHistory ?? 0] ?? []"
         @delete="deleteCurrentAnswer"/>
   </OverlayPanel>

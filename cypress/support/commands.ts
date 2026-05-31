@@ -87,7 +87,7 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 		9,
 		0,
 	).getTime() / 1000)
-	const questionCreatedAt = entryTimestamp - 3600
+	const questionCreatedAt = Math.min(entryTimestamp - 3600, Math.floor(Date.now() / 1000) - 3600)
 	const answerCreatedAt = entryTimestamp + 600
 	const answerVersionCreatedAt = entryTimestamp + 700
 	const diary = {
@@ -123,6 +123,21 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 		previous_version_id: null,
 		next_version_id: 18,
 	}]
+	const questionVersions = [
+		questions[0],
+		{
+			...questions[0],
+			id: 18,
+			label: 'Mood score',
+			display_text: 'How strong was your mood?',
+			type: 'rating',
+			minimum: 0,
+			maximum: 10,
+			template_text: '',
+			previous_version_id: 17,
+			next_version_id: null,
+		},
+	]
 	const answers = [{
 		id: 11,
 		diary_id: 5,
@@ -196,6 +211,8 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions*', (request) => {
 		request.reply(createdQuestion === null ? questions : [...questions, createdQuestion])
 	}).as('questions')
+	cy.intercept('GET', '**/structureddiary/api/v1/questions/17/versions', questionVersions).as('questionVersions')
+	cy.intercept('GET', '**/structureddiary/api/v1/questions/18/versions', questionVersions).as('questionVersionsCurrent')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/shares*', []).as('shares')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/stats*', stats).as('stats')
 	cy.intercept('PUT', '**/structureddiary/api/v1/diaries/5', (request) => {

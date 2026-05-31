@@ -781,20 +781,24 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
     async function deleteQuestion(questionId: number): Promise<void> {
         const removedQuestion = await runTask(() => questionService.remove(questionId))
+        const otherCandidates = (questionIdsByDiary.value[removedQuestion.diary_id] ?? [])
+            .map((id) => questionById.value[id])
+            .filter((question) => question != null
+                && question.id !== removedQuestion.id
+                && question.chain_id === removedQuestion.chain_id)
+            .sort((a, b) => a.id - b.id)
         delete questionById.value[removedQuestion.id]
         delete questionAnswerCountById.value[removedQuestion.id]
         questionVersionIdsByChainId.value[removedQuestion.chain_id] = (
             questionVersionIdsByChainId.value[removedQuestion.chain_id] ?? []
         ).filter((versionId) => versionId !== removedQuestion.id)
-        await loadQuestions(removedQuestion.diary_id)
-        const other_candidates = questionIdsByDiary.value[removedQuestion.diary_id].map(i=> questionById.value[i]).filter(
-            i=>i!=null && i.chain_id == removedQuestion.chain_id).sort((a,b)=>(a.id-b.id))
 
-        if (other_candidates.length > 0){
-            await pushWorkspaceRoute({name: 'question', params: {diaryId: removedQuestion.diary_id, questionId: other_candidates[0].id}})
+        if (otherCandidates.length > 0) {
+            await pushWorkspaceRoute({name: 'question', params: {diaryId: removedQuestion.diary_id, questionId: otherCandidates[0].id}})
         } else {
             await pushWorkspaceRoute({name: 'diary', params: {diaryId: removedQuestion.diary_id}})
         }
+        await loadQuestions(removedQuestion.diary_id)
     }
 
 
@@ -1170,6 +1174,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         diaries,
         diaryShares,
         entriesByDiary,
+        questionById,
         answerHistoryByEntryQuestion,
         answerHistoryQuestionId,
         user_permissions,

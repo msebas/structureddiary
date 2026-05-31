@@ -70,15 +70,29 @@ final class QuestionTypeValidatorTest extends TestCase {
 		QuestionTypeValidator::validateQuestionDefinition(QuestionTypes::TEXT, -1.0, 10.0, null);
 	}
 
-	public function testValidateQuestionDefinitionRejectsRatingOutsideZeroToTen(): void {
+	public function testValidateQuestionDefinitionRejectsRatingOutsideZeroToFifty(): void {
 		$this->expectException(\InvalidArgumentException::class);
-		$this->expectExceptionMessage('Ratings must stay between 0 and 10.');
+		$this->expectExceptionMessage('Ratings must stay between 0 and 50.');
 
-		QuestionTypeValidator::validateQuestionDefinition(QuestionTypes::RATING, -1.0, 10.0, null);
+		QuestionTypeValidator::validateQuestionDefinition(QuestionTypes::RATING, -1.0, 50.0, null);
 	}
 
-	public function testValidateQuestionDefinitionAcceptsRatingWithinZeroToTen(): void {
-		QuestionTypeValidator::validateQuestionDefinition(QuestionTypes::RATING, 0.0, 10.0, null);
+	public function testValidateQuestionDefinitionRejectsRatingWithoutMinimum(): void {
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('Rating questions require minimum and maximum values.');
+
+		QuestionTypeValidator::validateQuestionDefinition(QuestionTypes::RATING, null, 50.0, null);
+	}
+
+	public function testValidateQuestionDefinitionRejectsRatingWithoutMaximum(): void {
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('Rating questions require minimum and maximum values.');
+
+		QuestionTypeValidator::validateQuestionDefinition(QuestionTypes::RATING, 0.0, null, null);
+	}
+
+	public function testValidateQuestionDefinitionAcceptsRatingWithinZeroToFifty(): void {
+		QuestionTypeValidator::validateQuestionDefinition(QuestionTypes::RATING, 0.0, 50.0, null);
 
 		$this->addToAssertionCount(1);
 	}
@@ -181,16 +195,16 @@ final class QuestionTypeValidatorTest extends TestCase {
 		$question->setType(QuestionTypes::RATING);
 
 		$this->expectException(\InvalidArgumentException::class);
-		$this->expectExceptionMessage('Ratings must be between 0 and 10.');
+		$this->expectExceptionMessage('Ratings must be between 0 and 50.');
 
-		QuestionTypeValidator::validateAnswerPayload($question, null, 11.0);
+		QuestionTypeValidator::validateAnswerPayload($question, null, 51.0);
 	}
 
 	public function testValidateAnswerPayloadAcceptsRatingWithinRange(): void {
 		$question = new \OCA\StructuredDiary\Db\Question();
 		$question->setType(QuestionTypes::RATING);
 
-		QuestionTypeValidator::validateAnswerPayload($question, null, 7.5);
+		QuestionTypeValidator::validateAnswerPayload($question, null, 42.5);
 
 		$this->addToAssertionCount(1);
 	}

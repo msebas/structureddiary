@@ -63,6 +63,7 @@ const ratingValue = computed({
 	get: () => props.modelValue?.numeric_content ?? 0,
 	set: (value: number) => nextValue({numeric_content: value}),
 })
+const ratingStars = computed(() => Math.max(1, Math.floor(props.question.maximum ?? 10)))
 
 function nextValue(patch: Partial<Answer>): void {
 	emit('update:modelValue', {
@@ -177,7 +178,8 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 		<Rating
 			v-else-if="props.question.type === 'rating'"
 			v-model="ratingValue"
-			:stars="10"
+			:stars="ratingStars"
+			:class="$style.ratingInput"
 			:cancel="false" />
 
 		<NcCheckboxRadioSwitch
@@ -304,6 +306,17 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 .inlineTemplate {
 	color: var(--color-text-maxcontrast);
 	white-space: pre-wrap;
+}
+
+.ratingInput {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	max-width: 100%;
+}
+
+.ratingInput :global(.p-rating-option) {
+	flex: 0 0 auto;
 }
 
 </style>

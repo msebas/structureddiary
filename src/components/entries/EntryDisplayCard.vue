@@ -65,8 +65,8 @@ function hasMultipleVersions(questionId: number): boolean {
 						<div>
 							<h3 :class="$style.questionTitle">{{ question.display_text }}</h3>
 							<div :class="['workspace-card-muted', $style.questionMeta]">
-								{{ formatDateTime(question.created_at) }}
-							</div>
+                {{ formatDateTime(currentAnswer(question.id)?.created_at) }}
+              </div>
 						</div>
 						<div :class="$style.answerActions">
 							<NcButton
