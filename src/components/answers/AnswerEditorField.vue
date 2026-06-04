@@ -15,6 +15,7 @@ const props = defineProps<{
 	question: Question
 	modelValue: Answer | undefined
 	highlightEmpty: boolean
+	highlightInvalid?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -114,7 +115,8 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 	<div
 		data-cy="answer-field"
 		:data-empty="props.highlightEmpty ? 'true' : 'false'"
-		:class="[$style.field, props.highlightEmpty && $style.fieldEmpty]">
+		:data-invalid="props.highlightInvalid ? 'true' : 'false'"
+		:class="[$style.field, props.highlightEmpty && $style.fieldEmpty, props.highlightInvalid && $style.fieldInvalid]">
 		<label v-if="props.question.type === 'text' || props.question.type === 'rating' || props.question.type === 'boolean'" :class="$style.label">
 			{{ props.question.display_text }}
 		</label>
@@ -206,6 +208,11 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 .fieldEmpty {
 	border-color: var(--color-warning);
 	box-shadow: inset 0 0 0 1px var(--color-warning-hover);
+}
+
+.fieldInvalid {
+	border-color: var(--color-error);
+	box-shadow: inset 0 0 0 1px var(--color-error);
 }
 
 .label {

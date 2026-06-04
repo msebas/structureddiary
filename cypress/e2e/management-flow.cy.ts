@@ -286,9 +286,10 @@ describe('Structured diary management flow', () => {
 
 		cy.loginToNextcloud()
 		cy.visitStructuredDiary('questions/5/17/edit')
+		cy.wait('@question17')
 		cy.get('[aria-label="Create new question"]').should('not.exist')
 		cy.get('[aria-label="Save question"]').should('be.visible')
-		cy.contains('Label').parent().find('input').first().clear().type('Mood v2')
+		cy.contains('Label').parent().find('input').first().type('{selectall}{backspace}Mood v2')
 		setMarkdownEditorValue('How is your mood now?')
 		setMarkdownEditorValue('Write a longer note', 1)
 		assertReachable(cy.contains('#structured-diary-question-edit-form button', 'Save question'), 'question edit lower save')
@@ -303,7 +304,8 @@ describe('Structured diary management flow', () => {
 		cy.wait('@questionVersionsLive')
 
 		cy.contains('button', 'Edit question').click()
-		cy.contains('Label').parent().find('input').first().clear().type('Mood v3')
+		cy.wait('@question18')
+		cy.contains('Label').parent().find('input').first().type('{selectall}{backspace}Mood v3')
 		setMarkdownEditorValue('How is your mood this evening?')
 		assertReachable(cy.contains('#structured-diary-question-edit-form button', 'Save question'), 'second question edit lower save')
 		cy.contains('#structured-diary-question-edit-form button', 'Save question').click()

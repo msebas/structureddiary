@@ -33,6 +33,8 @@ function updateCompactState(): void {
   isAppNavigationMobile.value = window.matchMedia(appNavigationMobileQuery).matches
   if (!isCompact.value) {
     mobileCenterOpen.value = false
+  } else if (currentRouteName.value !== 'entries' && currentRouteName.value !== 'questions' && currentRouteName.value !== 'diaries') {
+    mobileCenterOpen.value = true
   }
 }
 

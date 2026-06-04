@@ -9,6 +9,7 @@ const props = defineProps<{
 	entry: Entry | null
 	questions: Question[]
 	answers: Answer[]
+	invalidQuestionIds?: number[]
 	isCreating: boolean
 }>()
 
@@ -106,6 +107,7 @@ function submit(): void {
 				:question="question"
 				:model-value="form.answers[question.id]"
 				:highlight-empty="isAnswerEmptyForQuestion(question, form.answers[question.id])"
+				:highlight-invalid="props.invalidQuestionIds?.includes(question.id) ?? false"
 				@update:model-value="form.answers[question.id] = $event" />
 		</div>
 

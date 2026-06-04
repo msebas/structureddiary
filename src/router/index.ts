@@ -120,14 +120,17 @@ export const router = createRouter({
 
 if (import.meta.env.DEV) {
     let stateBackup: History['state'] | null = null
+    let stateBackupUrl: string | null = null
     router.beforeEach(() => {
-        if (!history.state && stateBackup) {
+        if (!history.state && stateBackup && stateBackupUrl === location.href) {
             history.replaceState(stateBackup, '', location.href)
         }
     })
 
     router.afterEach(() => {
-        if (history.state)
+        if (history.state) {
             stateBackup = history.state
+            stateBackupUrl = location.href
+        }
     })
 }

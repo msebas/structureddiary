@@ -45,6 +45,17 @@ export interface EntryEditSubmitPayload {
     answers: Answer[]
 }
 
+export class EntryPartialSaveError extends Error {
+    constructor(
+        public readonly entry: Entry,
+        public readonly failures: unknown[],
+        public readonly failedQuestionIds: number[],
+    ) {
+        super(t('structureddiary', 'Some answers could not be saved.'))
+        this.name = 'EntryPartialSaveError'
+    }
+}
+
 function cloneQuestionAsCreatePayload(question: Question): DuplicatedQuestionPayload {
     return {
         label: question.label,
@@ -173,6 +184,7 @@ export type DiaryError = {
 type WorkspaceRouteQuery = Record<string, string>
 const ERROR_TIMEOUT_MS = 60_000
 const ENTRY_PAGE_SIZE = 200
+const LAST_DIARY_STORAGE_KEY = 'structureddiary:lastDiaryId'
 
 export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const route = useRoute()
@@ -192,6 +204,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const activeQuestionIdsByEntry = ref<Record<number, number[]>>({})
 
     const answersByEntryByQuestion = ref<Record<number, Record<number, Answer>>>({})
+    const failedAnswerDraftsByEntryByQuestion = ref<Record<number, Record<number, Answer>>>({})
+    const failedAnswerQuestionIdsByEntry = ref<Record<number, number[]>>({})
     const answerHistoryByEntryQuestion = ref<Record<number, Record<number, Answer[]>>>({})
     const answerHistoryQuestionId = ref<number | null>(null)
 
@@ -207,6 +221,68 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     const cachedEntryUntilTimestamp = ref<number | null>(null)
     let routeParamUpdateQueue = Promise.resolve()
 
+    function readStoredLastDiaryId(): number | null {
+        if (typeof window === 'undefined') {
+            return null
+        }
+
+        const stored = window.localStorage.getItem(LAST_DIARY_STORAGE_KEY)
+        if (stored == null) return null
+        const diaryId = Number(stored)
+        return Number.isInteger(diaryId) && diaryId > 0 ? diaryId : null
+    }
+
+    function storeLastDiaryId(diaryId: number): void {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        window.localStorage.setItem(LAST_DIARY_STORAGE_KEY, String(diaryId))
+    }
+
+    function clearStoredLastDiaryId(): void {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        window.localStorage.removeItem(LAST_DIARY_STORAGE_KEY)
+    }
+
+    function firstVisibleDiaryId(): number | null {
+        return Object.values(diaries.value)
+            .sort((a, b) => compareDiaryLabel(a, b) || a.id - b.id)
+            .at(0)?.id ?? null
+    }
+
+    function startupDiaryId(): number | null {
+        const storedDiaryId = readStoredLastDiaryId()
+        if (storedDiaryId !== null && diaries.value[storedDiaryId] !== undefined) {
+            return storedDiaryId
+        }
+
+        if (storedDiaryId !== null) {
+            clearStoredLastDiaryId()
+        }
+
+        return firstVisibleDiaryId()
+    }
+
+    async function selectStartupDiaryIfNeeded(): Promise<void> {
+        if (selectedDiaryId.value !== null || creatingDiary.value) {
+            return
+        }
+
+        const diaryId = startupDiaryId()
+        if (diaryId === null) {
+            return
+        }
+
+        await pushWorkspaceRoute({
+            name: isEntryRoute(route.name) ? 'entries' : isQuestionRoute(route.name) ? 'questions' : 'diary',
+            params: {diaryId},
+        })
+        storeLastDiaryId(diaryId)
+    }
 
     function supportsRouteQueryParam(routeName: unknown, param: string): boolean {
         if (param === 'diarySearch') {
@@ -352,6 +428,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
                     await pushWorkspaceRoute({name: (isEntryRoute(route.name)) ? 'entriesAllDiaries' : 'diaries'})
                     return
                 }
+                storeLastDiaryId(diaryId)
                 if (isEntryRoute(route.name)) {
                     await pushWorkspaceRoute({name: 'entries', params: {diaryId}})
                 } else if (isQuestionRoute(route.name)) {
@@ -421,6 +498,10 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     })
     const currentAnswers = computed<Record<number, Answer>>(() =>
         selectedEntryId.value === null ? {} : answersByEntryByQuestion.value[selectedEntryId.value] ?? {})
+    const currentFailedAnswerDrafts = computed<Record<number, Answer>>(() =>
+        selectedEntryId.value === null ? {} : failedAnswerDraftsByEntryByQuestion.value[selectedEntryId.value] ?? {})
+    const currentFailedAnswerQuestionIds = computed<number[]>(() =>
+        selectedEntryId.value === null ? [] : failedAnswerQuestionIdsByEntry.value[selectedEntryId.value] ?? [])
 
     const selectedQuestion = computed(() => {
         if (selectedDiaryId.value == null || selectedQuestionId.value === null) return null
@@ -706,6 +787,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         }
 
         const diaryId = selectedDiaryId.value
+        storeLastDiaryId(diaryId)
         await Promise.all([
             loadEntries(diaryId, entryFromTimestamp.value, entryUntilTimestamp.value),
             loadQuestions(diaryId),
@@ -845,26 +927,31 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     }
 
 
-    function initialize(): Promise<void> {
-        const promises = [
-            loadDiaries()
-        ]
+    async function initialize(): Promise<void> {
+        await loadDiaries()
         if (questionTypes.value.length === 0)
-            promises.push(ensureQuestionTypes())
+            await ensureQuestionTypes()
+
+        await selectStartupDiaryIfNeeded()
 
         if (selectedDiaryId.value !== null) {
-            promises.push(loadDiary(selectedDiaryId.value))
-            promises.push(loadEntries(selectedDiaryId.value, entryFromTimestamp.value, entryUntilTimestamp.value))
-            promises.push((loadQuestions(selectedDiaryId.value)))
+            const diaryId = selectedDiaryId.value
+            if (diaries.value[diaryId] !== undefined) {
+                storeLastDiaryId(diaryId)
+            }
+            const promises = [
+                loadDiary(diaryId),
+                loadEntries(diaryId, entryFromTimestamp.value, entryUntilTimestamp.value),
+                loadQuestions(diaryId),
+            ]
             if (selectedEntryId.value !== null) {
                 promises.push(loadEntry(selectedEntryId.value))
             }
             if (selectedQuestionId.value !== null) {
                 promises.push(loadQuestion(selectedQuestionId.value))
             }
+            await Promise.all(promises)
         }
-
-        return Promise.all(promises).then()
     }
 
     async function saveQuestion(payload: QuestionCreatePayload | QuestionUpdatePayload): Promise<Question> {
@@ -1007,7 +1094,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             await loadAnswers(saved_entry.id)
         }
 
-        const promises: Promise<any>[] = []
+        const answerSaves: Array<{ answer: Answer, promise: Promise<Answer> }> = []
         const entryId = saved_entry.id || payload.entryId
         if (entryId == null) {
             throw new Error(t('structureddiary', 'Unable to determine saved entry id.'))
@@ -1022,15 +1109,35 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             if (existing && existing.text_content === answer.text_content && existing.numeric_content === answer.numeric_content) {
                 continue
             }
-            promises.push(saveAnswer(entryId, {
-                questionId: answer.question_id,
-                textContent: answer.text_content,
-                numericContent: answer.numeric_content
-            }, existing?.id))
+            answerSaves.push({
+                answer,
+                promise: saveAnswer(entryId, {
+                    questionId: answer.question_id,
+                    textContent: answer.text_content,
+                    numericContent: answer.numeric_content
+                }, existing?.id)
+            })
         }
 
-        await Promise.all(promises)
+        const answerResults = await Promise.allSettled(answerSaves.map((answerSave) => answerSave.promise))
         await loadAnswers(entryId)
+
+        const failedAnswerSaves = answerResults
+            .map((result, index) => ({result, answer: answerSaves[index].answer}))
+            .filter((answerSave): answerSave is { result: PromiseRejectedResult, answer: Answer } => answerSave.result.status === 'rejected')
+        const failures = failedAnswerSaves.map((answerSave) => answerSave.result.reason)
+        if (failures.length > 0) {
+            failedAnswerDraftsByEntryByQuestion.value[entryId] = Object.fromEntries(
+                failedAnswerSaves.map((answerSave) => [answerSave.answer.question_id, {
+                    ...answerSave.answer,
+                    entry_id: entryId,
+                }])
+            )
+            failedAnswerQuestionIdsByEntry.value[entryId] = failedAnswerSaves.map((answerSave) => answerSave.answer.question_id)
+            throw new EntryPartialSaveError(saved_entry, failures, failedAnswerQuestionIdsByEntry.value[entryId])
+        }
+        delete failedAnswerDraftsByEntryByQuestion.value[entryId]
+        delete failedAnswerQuestionIdsByEntry.value[entryId]
 
         if (setEntry && saved_entry?.id && selectedEntryId.value !== saved_entry.id) {
             if (selectedDiaryId.value !== saved_entry.diary_id) {
@@ -1204,6 +1311,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         currentEntries,
         currentDiaryQuestions,
         currentAnswers,
+        currentFailedAnswerDrafts,
+        currentFailedAnswerQuestionIds,
         selectedDiaryShares,
         selectedDiaryStats,
         selectedQuestionVersionChain,

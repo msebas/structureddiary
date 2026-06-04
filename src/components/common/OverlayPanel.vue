@@ -4,6 +4,7 @@ import { t } from '@nextcloud/l10n'
 const props = defineProps<{
 	title: string
 	open: boolean
+	level?: number
 }>()
 
 const emit = defineEmits<{
@@ -14,7 +15,10 @@ const emit = defineEmits<{
 <template>
 	<Teleport to="body">
 		<transition name="overlay-fade">
-			<div v-if="props.open" :class="$style.overlay">
+			<div
+				v-if="props.open"
+				:class="$style.overlay"
+				:style="{ zIndex: 80 + (props.level ?? 0) * 10 }">
 				<div :class="$style.panel">
 					<header :class="$style.header">
 						<h3 :class="$style.title">

@@ -50,6 +50,7 @@ Cypress.Commands.add('visitStructuredDiary', (path = '') => {
 			if (structuredDiaryMockState === null) {
 				return
 			}
+			win.localStorage.removeItem('structureddiary:lastDiaryId')
 			const originalFetch = win.fetch.bind(win)
 			win.fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
 				const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url

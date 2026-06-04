@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue'
+import {computed} from 'vue'
 import EntryDisplayCard from '@/components/entries/EntryDisplayCard.vue'
 import {useStructuredDiaryStore} from '@/stores/structuredDiary'
 import type {Answer, Question} from '@/types/types'
@@ -21,9 +21,8 @@ const answerHistories = computed<Record<string, Answer[]>>(() => {
   )
 })
 
-const showAnswerHistory = ref<number | null>(null)
 const answerHistoryQuestion = computed<Question | null>(() =>
-  store.currentEntryQuestions.find((question) => question?.id === showAnswerHistory.value) ?? null)
+  store.currentEntryQuestions.find((question) => question?.id === store.answerHistoryQuestionId) ?? null)
 const answerHistoryQuestions = computed<Question[]>(() => {
   const question = answerHistoryQuestion.value
   if (question === null) {
@@ -42,7 +41,7 @@ async function openAnswerHistory(questionId: number): Promise<void> {
   if (store.selectedEntryId === null) {
     return
   }
-  showAnswerHistory.value = questionId
+  store.answerHistoryQuestionId = questionId
   await Promise.all([
     store.loadQuestionVersions(questionId),
     store.loadAnswerHistory(store.selectedEntryId, questionId),
@@ -65,13 +64,14 @@ async function deleteCurrentAnswer(answerId: number): Promise<void> {
       @delete-answer="deleteCurrentAnswer"/>
 
   <OverlayPanel
-      :open="showAnswerHistory !=null"
+      :open="store.answerHistoryQuestionId != null"
       :title="t('structureddiary', 'Answer versions')"
-      @close="showAnswerHistory = null">
+      :level="1"
+      @close="store.answerHistoryQuestionId = null">
     <AnswerHistoryList
         :question="answerHistoryQuestion"
         :questions="answerHistoryQuestions"
-        :answers="store.answerHistoryByEntryQuestion[store.selectedEntryId ?? 0]?.[showAnswerHistory ?? 0] ?? []"
+        :answers="store.answerHistoryByEntryQuestion[store.selectedEntryId ?? 0]?.[store.answerHistoryQuestionId ?? 0] ?? []"
         @delete="deleteCurrentAnswer"/>
   </OverlayPanel>
 </template>

@@ -54,6 +54,7 @@ function mountRouteHarness(initialRoute: Record<string, unknown>) {
 				} }, 'set entry filters'),
 				h('button', { 'data-cy': 'go-diary', onClick: () => void store.pushWorkspaceRoute({ name: 'diary', params: { diaryId: 5 } }) }, 'go diary'),
 				h('button', { 'data-cy': 'go-entries', onClick: () => void store.pushWorkspaceRoute({ name: 'entries', params: { diaryId: 5 } }) }, 'go entries'),
+				h('button', { 'data-cy': 'initialize', onClick: () => void store.initialize() }, 'initialize'),
 			])
 		},
 	})
@@ -94,6 +95,23 @@ describe('Structured diary store route synchronization', () => {
 			previous_version_id: null,
 			next_version_id: null,
 		}).as('questionDetail')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries', [
+			{ id: 5, user_id: 'alice', title: 'Health journal', description: '', reminder_active: false, reminder_time: null, reminder_count: 0, reminder_delay: 0, reminder_signal_first: null, reminder_signal_repeat: null, entry_schedule: 86400, access_level: 15, is_owner: true },
+			{ id: 9, user_id: 'alice', title: 'Work journal', description: '', reminder_active: false, reminder_time: null, reminder_count: 0, reminder_delay: 0, reminder_signal_first: null, reminder_signal_repeat: null, entry_schedule: 86400, access_level: 15, is_owner: true },
+		]).as('diaries')
+		cy.intercept('GET', '**/structureddiary/api/v1/diary-shares*', []).as('allShares')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/5', { id: 5, user_id: 'alice', title: 'Health journal', description: '', reminder_active: false, reminder_time: null, reminder_count: 0, reminder_delay: 0, reminder_signal_first: null, reminder_signal_repeat: null, entry_schedule: 86400, access_level: 15, is_owner: true }).as('diary5')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/9', { id: 9, user_id: 'alice', title: 'Work journal', description: '', reminder_active: false, reminder_time: null, reminder_count: 0, reminder_delay: 0, reminder_signal_first: null, reminder_signal_repeat: null, entry_schedule: 86400, access_level: 15, is_owner: true }).as('diary9')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/shares*', []).as('shares5')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/9/shares*', []).as('shares9')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/entries*', []).as('entries5')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/9/entries*', []).as('entries9')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions*', []).as('questions5')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/9/questions*', []).as('questions9')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/stats*', {}).as('stats5')
+		cy.intercept('GET', '**/structureddiary/api/v1/diaries/9/stats*', {}).as('stats9')
+		cy.intercept('GET', '**/structureddiary/api/v1/question-types*', []).as('questionTypes')
+		cy.window().then((win) => win.localStorage.removeItem('structureddiary:lastDiaryId'))
 	})
 
 	it('keeps selected diary and entry in sync with the entry route and preserves entry query values', () => {
@@ -202,5 +220,30 @@ describe('Structured diary store route synchronization', () => {
 		cy.get('[data-cy="go-entries"]').click()
 		cy.get('[data-cy="route-name"]').should('contain', 'entries')
 		cy.get('[data-cy="full-path"]').should('contain', '/entries/5?from=111&until=222')
+	})
+
+	it('selects the stored diary when opening without a diary route parameter', () => {
+		cy.window().then((win) => win.localStorage.setItem('structureddiary:lastDiaryId', '9'))
+		mountRouteHarness({ name: 'entriesAllDiaries' })
+
+		cy.get('[data-cy="initialize"]').click()
+		cy.wait('@diaries')
+		cy.get('[data-cy="route-name"]').should('contain', 'entries')
+		cy.get('[data-cy="selected-diary-id"]').should('contain', '9')
+		cy.get('[data-cy="full-path"]').should('have.text', '/entries/9')
+	})
+
+	it('falls back to the first visible diary when the stored diary is unavailable', () => {
+		cy.window().then((win) => win.localStorage.setItem('structureddiary:lastDiaryId', '999'))
+		mountRouteHarness({ name: 'entriesAllDiaries' })
+
+		cy.get('[data-cy="initialize"]').click()
+		cy.wait('@diaries')
+		cy.get('[data-cy="route-name"]').should('contain', 'entries')
+		cy.get('[data-cy="selected-diary-id"]').should('contain', '5')
+		cy.get('[data-cy="full-path"]').should('have.text', '/entries/5')
+		cy.window().then((win) => {
+			expect(win.localStorage.getItem('structureddiary:lastDiaryId')).to.equal('5')
+		})
 	})
 })
