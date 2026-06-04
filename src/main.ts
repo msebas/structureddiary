@@ -10,6 +10,7 @@ import "easymde/dist/easymde.min.css"
 import '@/css/easymde.css'
 import '@/css/workspace-card.css'
 import '@/css/responsive-actions.css'
+import '@/css/mobile.css'
 
 import App from './App.vue'
 

@@ -89,7 +89,7 @@ describe('EntryListPanel', () => {
 		cy.contains('Morning check-in').parent().should('contain.text', String(today.getFullYear()))
 		cy.contains('Evening check-in').parent().should('contain.text', String(today.getFullYear()))
 		cy.contains('Morning check-in').then(($entryTitle) => {
-			const button = $entryTitle.closest('button')[0]
+			const button = ($entryTitle as any).closest('button')[0]
 			expect(button).to.not.equal(undefined)
 			const buttonRect = button.getBoundingClientRect()
 			const dateRect = button.querySelector('span')!.getBoundingClientRect()

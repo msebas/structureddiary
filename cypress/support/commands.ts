@@ -1,3 +1,5 @@
+import Chainable = Cypress.Chainable;
+
 declare global {
 	namespace Cypress {
 		interface Chainable {
@@ -319,7 +321,7 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 	cy.intercept('GET', '**/structureddiary/api/v1/entries/8/answers*', (request) => {
 		request.reply(createdEntryAnswers)
 	}).as('newEntryAnswers')
-	return cy.intercept('GET', '**/structureddiary/api/v1/entries/7/questions/17/answers/history', answerHistory).as('answerHistory')
+	return cy.intercept('GET', '**/structureddiary/api/v1/entries/7/questions/17/answers/history', answerHistory).as('answerHistory') as unknown as Chainable<void>
 })
 
 export {}

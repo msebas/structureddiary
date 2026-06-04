@@ -1,0 +1,12 @@
+
+.mobileCenter {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.mobileCenter .sd-header-primary-action {
+    display: none;
+}

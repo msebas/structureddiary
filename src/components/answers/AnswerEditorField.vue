@@ -262,24 +262,6 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 	box-shadow: none;
 }
 
-:global(.structured-diary-select.p-select),
-:global(.structured-diary-select.p-focus),
-:global(.structured-diary-select.p-inputwrapper-focus),
-:global(.structured-diary-select.p-select-open),
-:global(.structured-diary-select.p-select:not(.p-disabled):hover) {
-	border-color: var(--color-border);
-	box-shadow: none;
-	outline: none;
-}
-
-:global(.structured-diary-select input),
-:global(.structured-diary-select .p-select-label) {
-	border: 0;
-	background: transparent;
-	outline: none;
-	box-shadow: none;
-}
-
 .selectLabel {
 	width: min(100%, 28rem);
 	min-width: 25%;
@@ -320,10 +302,6 @@ function updateTimeValue(value: Date | [Date, Date] | null): void {
 	flex-wrap: wrap;
 	gap: 4px;
 	max-width: 100%;
-}
-
-.ratingInput :global(.p-rating-option) {
-	flex: 0 0 auto;
 }
 
 </style>

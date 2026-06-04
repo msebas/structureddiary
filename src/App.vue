@@ -153,7 +153,7 @@ watch(() => store.selectedEntryId, async (entryId) => {
             :open="isCompact && mobileCenterOpen"
             :title="String(mobileOverlayTitle)"
             @close="closeMobileCenter()">
-          <div :class="$style.mobileCenter">
+          <div class="mobileCenter">
             <router-view name="nav"/>
 
             <main :class="$style.center">
@@ -242,17 +242,6 @@ watch(() => store.selectedEntryId, async (entryId) => {
   padding: 12px 18px 0;
 }
 
-.mobileCenter {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-}
-
-.mobileCenter :global(.sd-header-primary-action) {
-  display: none;
-}
 
 .error {
   display: grid;
