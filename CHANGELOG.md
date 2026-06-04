@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed question list refresh after editing creates a new current question version.
 - Fixed canceling question creation so it returns to the selected diary overview.
 - Fixed backend validation for question min/max ranges.
+- Fixed double entry creation when answer creation fails because of invalid inputs
 
 ### Tests
 
