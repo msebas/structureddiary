@@ -8,9 +8,13 @@ import QuestionEditView from '@/components/questions/QuestionEditView.vue'
 import HeaderEntries from "@/components/layout/HeaderEntries.vue";
 import HeaderDiaries from "@/components/layout/HeaderDiaries.vue";
 import HeaderQuestions from "@/components/layout/HeaderQuestions.vue";
+import HeaderAnalyses from "@/components/layout/HeaderAnalyses.vue";
 import {generateUrl} from "@nextcloud/router";
 import EntryListPanel from "@/components/layout/EntryListPanel.vue";
 import QuestionListPanel from "@/components/layout/QuestionListPanel.vue";
+import AnalysisListPanel from "@/components/layout/AnalysisListPanel.vue";
+import AnalysisDetailView from "@/components/analysis/AnalysisDetailView.vue";
+import AnalysisCreateView from "@/components/analysis/AnalysisCreateView.vue";
 
 
 export const router = createRouter({
@@ -113,6 +117,27 @@ export const router = createRouter({
                 default: QuestionEditView,
                 nav: HeaderQuestions,
                 sidebar: QuestionListPanel,
+            },
+        },
+        {
+            path: '/analyses/:diaryId(\\d+)/new', name: 'analysisCreate', components: {
+                default: AnalysisCreateView,
+                nav: HeaderAnalyses,
+                sidebar: AnalysisListPanel,
+            },
+        },
+        {
+            path: '/analyses/:diaryId(\\d+)/:jobId(\\d+)', name: 'analysis', components: {
+                default: AnalysisDetailView,
+                nav: HeaderAnalyses,
+                sidebar: AnalysisListPanel,
+            },
+        },
+        {
+            path: '/analyses/:diaryId(\\d+)?', name: 'analyses', components: {
+                default: AnalysisDetailView,
+                nav: HeaderAnalyses,
+                sidebar: AnalysisListPanel,
             },
         },
     ],

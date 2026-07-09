@@ -111,6 +111,117 @@ namespace OCA\StructuredDiary;
  * @psalm-type StructuredDiaryAnswerCount = array{
  *   count: int
  * }
+ *
+ * @psalm-type StructuredDiaryAnalysisJob = array{
+ *   id: int,
+ *   diary_id: int,
+ *   created_by: string,
+ *   created_at: int,
+ *   updated_at: int,
+ *   data_from: int,
+ *   data_until: int,
+ *   started_at: int|null,
+ *   finished_at: int|null,
+ *   title: string,
+ *   language: string,
+ *   analysis_type: string,
+ *   status: string,
+ *   progress: float,
+ *   output_types: list<string>,
+ *   parameters: array<string, mixed>,
+ *   storage_url: string|null,
+ *   status_message: string,
+ *   error_message: string|null,
+ *   cancel_requested_at: int|null
+ * }
+ *
+ * @psalm-type StructuredDiaryAnalysisArtifact = array{
+ *   id: int,
+ *   parent_id: int|null,
+ *   job_id: int,
+ *   artifact_type: string,
+ *   mime_type: string,
+ *   file_name: string,
+ *   file_path: string,
+ *   file_id: int|null,
+ *   size: int,
+ *   checksum: string|null,
+ *   created_at: int
+ * }
+ *
+ * @psalm-type StructuredDiaryAdminSettings = array{
+ *   service_url: string,
+ *   service_secret_configured: bool,
+ *   output_base_folder: string,
+ *   https_warning: bool
+ * }
+ *
+ * @psalm-type StructuredDiaryAnalysisConnectionTest = array{
+ *   ok: bool,
+ *   health?: array<string, mixed>,
+ *   error?: string,
+ *   settings: StructuredDiaryAdminSettings
+ * }
+ *
+ * @psalm-type StructuredDiaryHealthcheck = array{
+ *   ok: bool
+ * }
+ *
+ * @psalm-type StructuredDiaryAnalysisExportQuestion = array{
+ *   id: int,
+ *   diaryQuestionOrder: int,
+ *   label: string,
+ *   displayText: string,
+ *   type: string,
+ *   minimum: float|null,
+ *   maximum: float|null,
+ *   jsonChoices: string|null,
+ *   templateText: string,
+ *   previousVersionId: int|null,
+ *   nextVersionId: int|null,
+ *   chainId: int
+ * }
+ *
+ * @psalm-type StructuredDiaryAnalysisExportAnswer = array{
+ *   id: int,
+ *   diaryId: int,
+ *   entryId: int,
+ *   questionId: int,
+ *   createdAt: int,
+ *   textContent: string|null,
+ *   numericContent: float|null,
+ *   previousVersionId: int|null,
+ *   nextVersionId: int|null
+ * }
+ *
+ * @psalm-type StructuredDiaryAnalysisExportEntry = array{
+ *   id: int,
+ *   diaryId: int,
+ *   timestamp: int,
+ *   title: string|null,
+ *   answers: list<StructuredDiaryAnalysisExportAnswer>
+ * }
+ *
+ * @psalm-type StructuredDiaryAnalysisExportDiary = array{
+ *   schema_version: int,
+ *   diary: array{
+ *     id: int,
+ *     title: string,
+ *     entrySchedule: int
+ *   },
+ *   questions: list<StructuredDiaryAnalysisExportQuestion>
+ * }
+ *
+ * @psalm-type StructuredDiaryAnalysisExportEntries = array{
+ *   schema_version: int,
+ *   offset: int,
+ *   limit: int,
+ *   total_entries: int,
+ *   from_entry: int|null,
+ *   until_entry: int|null,
+ *   has_more: bool,
+ *   entries: list<StructuredDiaryAnalysisExportEntry>
+ * }
  */
 class ResponseDefinitions {
 }

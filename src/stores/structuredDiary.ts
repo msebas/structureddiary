@@ -409,6 +409,10 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         return typeof routeName === 'string' && routeName.startsWith('diar')
     }
 
+    function isAnalysisRoute(routeName: unknown): boolean {
+        return typeof routeName === 'string' && (routeName.startsWith('analysis') || routeName === 'analyses')
+    }
+
     async function pushWorkspaceRoute(location: {
         name: string,
         params?: Record<string, string | number | null | undefined>
@@ -425,7 +429,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         set: async (diaryId: number | null) => {
             if (diaryId !== selectedDiaryId.value) {
                 if (diaryId === null) {
-                    await pushWorkspaceRoute({name: (isEntryRoute(route.name)) ? 'entriesAllDiaries' : 'diaries'})
+                    await pushWorkspaceRoute({name: (isEntryRoute(route.name)) ? 'entriesAllDiaries' : isAnalysisRoute(route.name) ? 'analyses' : 'diaries'})
                     return
                 }
                 storeLastDiaryId(diaryId)
@@ -433,6 +437,8 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
                     await pushWorkspaceRoute({name: 'entries', params: {diaryId}})
                 } else if (isQuestionRoute(route.name)) {
                     await pushWorkspaceRoute({name: 'questions', params: {diaryId}})
+                } else if (isAnalysisRoute(route.name)) {
+                    await pushWorkspaceRoute({name: 'analyses', params: {diaryId}})
                 } else {
                     await pushWorkspaceRoute({name: 'diary', params: {diaryId}})
                 }
@@ -1290,6 +1296,7 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
         questionTypes,
         loading,
         errors,
+        addError,
         removeError,
         warnQuestionReorderRequiresDiaryMode,
         creatingDiary,

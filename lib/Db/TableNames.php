@@ -11,6 +11,8 @@ final class TableNames {
 	public const QUESTIONS = 'sd_questions';
 	public const ANSWERS = 'sd_answers';
 	public const ALARM_SOUNDS = 'sd_alarm_sounds';
+	public const ANALYSIS_JOBS = 'sd_analysis_jobs';
+	public const ANALYSIS_ARTIFACTS = 'sd_analysis_artifacts';
 
 	private function __construct() {
 	}

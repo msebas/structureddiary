@@ -3,7 +3,7 @@ import NcAppNavigation from '@nextcloud/vue/components/NcAppNavigation'
 import NcAppNavigationItem from '@nextcloud/vue/components/NcAppNavigationItem'
 import NcAppNavigationSearch from '@nextcloud/vue/components/NcAppNavigationSearch'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
-import {mdiCogOutline, mdiShareVariantOutline} from '@mdi/js'
+import {mdiChartLine, mdiCogOutline, mdiNotebookOutline, mdiShareVariantOutline} from '@mdi/js'
 import {computed} from 'vue'
 import {useRoute} from 'vue-router'
 import {useStructuredDiaryStore} from '@/stores/structuredDiary'
@@ -23,6 +23,7 @@ const emit = defineEmits<{
   (event: 'diary-selected'): void
 }>()
 const inManagement = computed(() => route.name?.toString()?.startsWith("diar") || route.name?.toString()?.startsWith("question"))
+const inAnalysis = computed(() => route.name?.toString()?.startsWith("analysis") || route.name === 'analyses')
 const selectedQuestionRoute = computed(() => route.name === 'question' || route.name === 'questionEdit')
 
 const visibleGroupEntries = computed(() =>
@@ -48,12 +49,17 @@ function selectDiary(diary: Diary): void {
 
 function openManagement(): void {
   const diaryId = store.selectedDiaryId
-  if (inManagement.value) {
+  if (inAnalysis.value) {
     if (diaryId !== null) {
       store.pushWorkspaceRoute({name: 'entries', params: {diaryId}})
       return
     }
     store.pushWorkspaceRoute({name: 'entriesAllDiaries'})
+    return
+  }
+
+  if (inManagement.value) {
+    store.pushWorkspaceRoute({name: 'analyses', params: {diaryId}})
     return
   }
 
@@ -99,10 +105,10 @@ function openManagement(): void {
     <template #footer>
       <div :class="$style.footer">
         <NcAppNavigationItem
-            :name="inManagement ? t('structureddiary', 'Entries') : t('structureddiary', 'Management')"
+            :name="inAnalysis ? t('structureddiary', 'Entries') : inManagement ? t('structureddiary', 'Analyse') : t('structureddiary', 'Management')"
             @click="openManagement()">
           <template #icon>
-            <NcIconSvgWrapper :path="mdiCogOutline"/>
+            <NcIconSvgWrapper :path="inAnalysis ? mdiNotebookOutline : inManagement ? mdiChartLine : mdiCogOutline"/>
           </template>
         </NcAppNavigationItem>
       </div>

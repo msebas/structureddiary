@@ -198,6 +198,99 @@ export interface AnswerUpdatePayload {
     numericContent?: number | null
 }
 
+export type AnalysisJobStatus =
+    | 'DRAFT'
+    | 'READY_QUEUE'
+    | 'QUEUED'
+    | 'LOAD_DATA'
+    | 'RUNNING'
+    | 'RESTART'
+    | 'CANCEL_REQUESTED'
+    | 'JOB_CANCELED'
+    | 'CANCELED'
+    | 'JOB_FAILED'
+    | 'FAILED'
+    | 'JOB_COMPLETED'
+    | 'COMPLETED'
+
+export type AnalysisOutputType = 'JSON' | 'HTML' | 'PDF' | 'XLSX'
+
+export interface AnalysisJobParameters {
+    includeTextAnalysis?: boolean
+    movingAverageWindow?: number
+    showStandardDeviation?: boolean
+}
+
+export interface AnalysisJob {
+    id: number
+    diary_id: number
+    created_by: string
+    created_at: number
+    updated_at: number
+    data_from: number
+    data_until: number
+    started_at: number | null
+    finished_at: number | null
+    title: string
+    language: string
+    analysis_type: string
+    status: AnalysisJobStatus
+    progress: number
+    output_types: AnalysisOutputType[]
+    parameters: AnalysisJobParameters
+    storage_url: string | null
+    status_message: string
+    error_message: string | null
+    cancel_requested_at: number | null
+}
+
+export interface AnalysisJobCreatePayload {
+    diaryId: number
+    fromTimestamp: number
+    untilTimestamp: number
+    title: string
+    language: string
+    start?: boolean
+    outputFormats: AnalysisOutputType[]
+    parameters: AnalysisJobParameters
+}
+
+export interface AnalysisJobUpdatePayload {
+    fromTimestamp?: number | null
+    untilTimestamp?: number | null
+    title?: string | null
+    language?: string | null
+    outputFormats?: AnalysisOutputType[] | null
+    parameters?: AnalysisJobParameters | null
+    status?: AnalysisJobStatus | null
+}
+
+export type AnalysisArtifactType =
+    | 'JSON'
+    | 'HTML'
+    | 'PDF'
+    | 'XLSX'
+    | 'PLOT'
+    | 'MANIFEST'
+    | 'LOG'
+    | 'MARKDOWN'
+    | 'ERROR_LOG'
+    | 'ERROR_MARKDOWN'
+
+export interface AnalysisArtifact {
+    id: number
+    parent_id: number | null
+    job_id: number
+    artifact_type: AnalysisArtifactType
+    mime_type: string
+    file_name: string
+    file_path?: string
+    file_id: number | null
+    size: number
+    checksum: string | null
+    created_at: number
+}
+
 export interface DiaryGroupSet {
     owned: Diary[]
     managed: Diary[]

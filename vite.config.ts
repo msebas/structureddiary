@@ -39,7 +39,10 @@ export default createAppConfig({
 				emptyOutDir: false,
 				chunkSizeWarningLimit: 2048,
 				rollupOptions: {
-					input: 'src/main.ts',
+					input: {
+						main: 'src/main.ts',
+						settings: 'src/settings.ts',
+					},
 					output: {
 						format: 'es',
 						inlineDynamicImports: false,

@@ -33,7 +33,7 @@ function updateCompactState(): void {
   isAppNavigationMobile.value = window.matchMedia(appNavigationMobileQuery).matches
   if (!isCompact.value) {
     mobileCenterOpen.value = false
-  } else if (currentRouteName.value !== 'entries' && currentRouteName.value !== 'questions' && currentRouteName.value !== 'diaries') {
+  } else if (currentRouteName.value !== 'entries' && currentRouteName.value !== 'questions' && currentRouteName.value !== 'diaries' && currentRouteName.value !== 'analyses') {
     mobileCenterOpen.value = true
   }
 }
@@ -80,7 +80,7 @@ onBeforeUnmount(() => {
 
 watch(() => route.fullPath, () => {
   if (isCompact.value) {
-    mobileCenterOpen.value = currentRouteName.value !== 'entries' && currentRouteName.value !== 'questions' && currentRouteName.value !== 'diaries'
+    mobileCenterOpen.value = currentRouteName.value !== 'entries' && currentRouteName.value !== 'questions' && currentRouteName.value !== 'diaries' && currentRouteName.value !== 'analyses'
   }
 }, {immediate: true})
 

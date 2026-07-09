@@ -7,6 +7,10 @@ import type {
 	AlarmSound,
 	AlarmSoundCreatePayload,
 	AlarmSoundUpdatePayload,
+	AnalysisArtifact,
+	AnalysisJob,
+	AnalysisJobCreatePayload,
+	AnalysisJobUpdatePayload,
 	Diary,
 	DiaryCreatePayload,
 	DiaryShare,
@@ -56,7 +60,11 @@ async function handleError(path:string, init?:RequestInit, response?:Response){
 	let payload = null
 	try {
 		payload = await response?.json()
-		message = payload.error ?? payload.message ?? message
+		message = payload.error
+			?? payload.message
+			?? payload.ocs?.data?.error
+			?? payload.ocs?.meta?.message
+			?? message
 	} catch {
 		// ignore invalid error payloads
 	}
@@ -353,5 +361,38 @@ export const answerService = {
 	},
 	remove(id: number): Promise<Answer> {
 		return request(`answers/${id}`, { method: 'DELETE' })
+	},
+}
+
+export const analysisService = {
+	list(changedSince?: string | number | null): Promise<AnalysisJob[]> {
+		return request(withQuery('jobs', { changedSince }))
+	},
+	create(payload: AnalysisJobCreatePayload): Promise<AnalysisJob> {
+		return request('jobs', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		})
+	},
+	update(id: number, payload: AnalysisJobUpdatePayload): Promise<AnalysisJob> {
+		return request(`jobs/${id}`, {
+			method: 'PATCH',
+			body: JSON.stringify(payload),
+		})
+	},
+	remove(id: number): Promise<AnalysisJob> {
+		return request(`jobs/${id}`, { method: 'DELETE' })
+	},
+	artifacts(id: number): Promise<AnalysisArtifact[]> {
+		return request(`jobs/${id}/artifacts`)
+	},
+	artifactDownloadUrl(id: number, artifactType?: string | null): string {
+		const path = artifactType == null || artifactType === ''
+			? `/apps/structureddiary/api/v1/jobs/${id}/artifacts/download`
+			: `/apps/structureddiary/api/v1/jobs/${id}/artifacts/download/${encodeURIComponent(artifactType)}`
+		return generateOcsUrl(path)
+	},
+	artifactContentUrl(id: number, artifactId: number): string {
+		return generateOcsUrl(`/apps/structureddiary/api/v1/jobs/${id}/artifacts/${artifactId}/content`)
 	},
 }

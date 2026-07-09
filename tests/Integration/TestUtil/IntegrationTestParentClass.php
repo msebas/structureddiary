@@ -44,7 +44,9 @@ class IntegrationTestParentClass extends TestCase {
         $tables = $schemaManager->listTableNames();
 
         foreach ([
-                     TableNames::ANSWERS,
+                 TableNames::ANALYSIS_ARTIFACTS,
+                 TableNames::ANALYSIS_JOBS,
+                 TableNames::ANSWERS,
                  TableNames::QUESTIONS,
                  TableNames::ENTRIES,
                  TableNames::DIARY_SHARES,

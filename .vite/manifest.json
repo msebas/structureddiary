@@ -1,7 +1,15 @@
 {
-  "_index-uw2jWuKT.chunk.mjs.license": {
-    "file": "js/index-uw2jWuKT.chunk.mjs.license",
-    "src": "_index-uw2jWuKT.chunk.mjs.license"
+  "__plugin-vue_export-helper-CKmc2anP.chunk.mjs": {
+    "file": "js/_plugin-vue_export-helper-CKmc2anP.chunk.mjs",
+    "name": "_plugin-vue_export-helper"
+  },
+  "__plugin-vue_export-helper-CKmc2anP.chunk.mjs.license": {
+    "file": "js/_plugin-vue_export-helper-CKmc2anP.chunk.mjs.license",
+    "src": "__plugin-vue_export-helper-CKmc2anP.chunk.mjs.license"
+  },
+  "_index-z7wH9BuP.chunk.mjs.license": {
+    "file": "js/index-z7wH9BuP.chunk.mjs.license",
+    "src": "_index-z7wH9BuP.chunk.mjs.license"
   },
   "_structureddiary-main.css": {
     "file": "css/structureddiary-main.css",
@@ -11,22 +19,31 @@
     "file": "js/structureddiary-main.mjs.license",
     "src": "_structureddiary-main.mjs.license"
   },
-  "_vendor-CSMyGlbn.chunk.mjs": {
-    "file": "js/vendor-CSMyGlbn.chunk.mjs",
+  "_structureddiary-settings.css": {
+    "file": "css/structureddiary-settings.css",
+    "src": "_structureddiary-settings.css"
+  },
+  "_structureddiary-settings.mjs.license": {
+    "file": "js/structureddiary-settings.mjs.license",
+    "src": "_structureddiary-settings.mjs.license"
+  },
+  "_vendor-DI0OKLC8.chunk.mjs": {
+    "file": "js/vendor-DI0OKLC8.chunk.mjs",
     "name": "vendor"
   },
-  "_vendor-CSMyGlbn.chunk.mjs.license": {
-    "file": "js/vendor-CSMyGlbn.chunk.mjs.license",
-    "src": "_vendor-CSMyGlbn.chunk.mjs.license"
+  "_vendor-DI0OKLC8.chunk.mjs.license": {
+    "file": "js/vendor-DI0OKLC8.chunk.mjs.license",
+    "src": "_vendor-DI0OKLC8.chunk.mjs.license"
   },
   "node_modules/rehype-highlight/index.js": {
-    "file": "js/index-uw2jWuKT.chunk.mjs",
+    "file": "js/index-z7wH9BuP.chunk.mjs",
     "name": "index",
     "src": "node_modules/rehype-highlight/index.js",
     "isDynamicEntry": true,
     "imports": [
+      "__plugin-vue_export-helper-CKmc2anP.chunk.mjs",
       "src/main.ts",
-      "_vendor-CSMyGlbn.chunk.mjs"
+      "_vendor-DI0OKLC8.chunk.mjs"
     ]
   },
   "src/main.ts": {
@@ -35,13 +52,27 @@
     "src": "src/main.ts",
     "isEntry": true,
     "imports": [
-      "_vendor-CSMyGlbn.chunk.mjs"
+      "_vendor-DI0OKLC8.chunk.mjs",
+      "__plugin-vue_export-helper-CKmc2anP.chunk.mjs"
     ],
     "dynamicImports": [
       "node_modules/rehype-highlight/index.js"
     ],
     "css": [
-      "css/main-O_uFKxVV.chunk.css"
+      "css/main-BZloQOry.chunk.css"
+    ]
+  },
+  "src/settings.ts": {
+    "file": "js/structureddiary-settings.mjs",
+    "name": "settings",
+    "src": "src/settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_vendor-DI0OKLC8.chunk.mjs",
+      "__plugin-vue_export-helper-CKmc2anP.chunk.mjs"
+    ],
+    "css": [
+      "css/settings-D9sWvKci.chunk.css"
     ]
   }
 }

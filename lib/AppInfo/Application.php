@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace OCA\StructuredDiary\AppInfo;
 
+use OCA\StructuredDiary\Cron\AnalysisJobCron;
+use OCA\StructuredDiary\Settings\AdminSection;
+use OCA\StructuredDiary\Settings\AdminSettings;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCP\BackgroundJob\IJobList;
+use OCP\Settings\IManager;
 
 class Application extends App implements IBootstrap {
 	public const APP_ID = 'structureddiary';
@@ -21,5 +26,12 @@ class Application extends App implements IBootstrap {
 	}
 
 	public function boot(IBootContext $context): void {
+		$context->injectFn(function (IManager $settingsManager, IJobList $jobList): void {
+			$settingsManager->registerSection(IManager::SETTINGS_ADMIN, AdminSection::class);
+			$settingsManager->registerSetting(IManager::SETTINGS_ADMIN, AdminSettings::class);
+			if (!$jobList->has(AnalysisJobCron::class, null)) {
+				$jobList->add(AnalysisJobCron::class);
+			}
+		});
 	}
 }
