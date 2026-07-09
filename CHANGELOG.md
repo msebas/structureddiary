@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.3]
+
+### Added
+
+- Added the first analysis workspace with analysis creation, listing, detail views, status display, result previews, and artifact downloads.
+- Added analysis job persistence, lifecycle handling, cancel/delete support, cron processing, and artifact metadata storage.
+- Added integration with an external Python analysis service, including job submission, health checks, status callbacks, diary/entry export endpoints, result collection, and cleanup.
+- Added admin settings for configuring the analysis service URL, service secret, and output folder.
+- Added analysis artifact storage in Nextcloud Files, ZIP downloads, filtered artifact downloads, and inline artifact viewing.
+- Added OpenAPI scopes for administration, Python analysis callbacks, and the combined API.
+
+### Missing/Known Bugs
+
+- Analysis artifact display and controls in the App are broken. Only access via the file app works.
+- After submitting a new analysis the list is not updated.
+
+### Changed
+
+- Updated app metadata for the `0.0.3` development release and Nextcloud 32+ compatibility.
+- Extended routing, navigation, API services, store types, and workspace headers to include analysis workflows.
+- Added stable UUIDs for analysis jobs while keeping Nextcloud job IDs distinct from Python service job IDs.
+
+### Tests
+
+- Added backend unit and integration coverage for analysis jobs, artifacts, export payloads, service configuration, Python service client behavior, and callback access checks.
+- Added Cypress component and e2e coverage for the analysis workspace.
+
 ## [0.0.2]
 
 ### Added

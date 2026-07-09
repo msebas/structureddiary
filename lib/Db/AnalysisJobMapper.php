@@ -505,7 +505,7 @@ class AnalysisJobMapper extends QBMapper {
 
 	private function decorateStorageUrl(AnalysisJob $job): AnalysisJob {
 		$filesBase = rtrim($this->urlGenerator->linkTo('files', ''), '/');
-		$job->setStorageUrl($this->urlGenerator->getAbsoluteURL($filesBase . '/files/0?' . http_build_query([
+		$job->setStorageUrl($this->urlGenerator->getAbsoluteURL("index.php/" . $filesBase . '/files/0?' . http_build_query([
 			'dir' => $job->getStoragePath(),
 		])));
 
