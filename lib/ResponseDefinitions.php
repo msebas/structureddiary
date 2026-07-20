@@ -132,10 +132,35 @@ namespace OCA\StructuredDiary;
  *   storage_url: string|null,
  *   status_message: string,
  *   error_message: string|null,
- *   cancel_requested_at: int|null
- * }
- *
- * @psalm-type StructuredDiaryAnalysisArtifact = array{
+	 *   cancel_requested_at: int|null
+	 * }
+	 *
+	 * @psalm-type StructuredDiaryPythonAnalysisJob = array{
+	 *   id: int,
+	 *   diary_id: int,
+	 *   created_by: string,
+	 *   created_at: int,
+	 *   updated_at: int,
+	 *   data_from: int,
+	 *   data_until: int,
+	 *   started_at: int|null,
+	 *   finished_at: int|null,
+	 *   title: string,
+	 *   language: string,
+	 *   analysis_type: string,
+	 *   status: string,
+	 *   progress: float,
+	 *   output_types: list<string>,
+	 *   parameters: array<string, mixed>,
+	 *   storage_url: string|null,
+	 *   status_message: string,
+	 *   error_message: string|null,
+	 *   cancel_requested_at: int|null,
+	 *   uuid: string,
+	 *   job_token: string
+	 * }
+	 *
+	 * @psalm-type StructuredDiaryAnalysisArtifact = array{
  *   id: int,
  *   parent_id: int|null,
  *   job_id: int,

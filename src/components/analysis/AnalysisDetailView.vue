@@ -130,20 +130,28 @@ async function loadArtifacts(): Promise<void> {
 
 async function startJob(): Promise<void> {
 	if (!canStartAnalysis(job.value)) return
-	job.value = await analysisService.update(job.value.id, { status: 'READY_QUEUE' })
+	job.value = await analysisService.update(job.value.id, { status: 'SUBMITTED' })
+	document.dispatchEvent(new CustomEvent('structured-diary-analysis-job-changed', { detail: { job: job.value } }))
 }
 
 async function cancelJob(): Promise<void> {
 	if (!canCancelAnalysis(job.value)) return
 	job.value = await analysisService.update(job.value.id, { status: 'CANCEL_REQUESTED' })
+	document.dispatchEvent(new CustomEvent('structured-diary-analysis-job-changed', { detail: { job: job.value } }))
 	cancelDialogOpen.value = false
 }
 
 async function deleteJob(): Promise<void> {
 	if (!canDeleteAnalysis(job.value)) return
 	const removed = await analysisService.remove(job.value.id)
+	document.dispatchEvent(new CustomEvent('structured-diary-analysis-job-changed', { detail: { job: removed, removed: true } }))
 	deleteDialogOpen.value = false
 	await store.pushWorkspaceRoute({ name: 'analyses', params: { diaryId: removed.diary_id } })
+}
+
+async function createDraftFromJob(): Promise<void> {
+	if (job.value === null) return
+	await store.pushWorkspaceRoute({ name: 'analysisCreate', params: { diaryId: job.value.diary_id }, query: { sourceJobId: String(job.value.id) } })
 }
 
 function handleHeaderAction(event: Event): void {
@@ -151,6 +159,7 @@ function handleHeaderAction(event: Event): void {
 	if (action === 'start') void startJob()
 	if (action === 'cancel' && canCancelAnalysis(job.value)) cancelDialogOpen.value = true
 	if (action === 'delete' && canDeleteAnalysis(job.value)) deleteDialogOpen.value = true
+	if (action === 'draft') void createDraftFromJob()
 }
 
 function handleJobsRefreshed(event: Event): void {
@@ -235,8 +244,9 @@ onBeforeUnmount(() => {
 						<div><dt>{{ t('structureddiary', 'Formats') }}</dt><dd>{{ job.output_types.join(', ') }}</dd></div>
 						<div><dt>{{ t('structureddiary', 'Text analysis') }}</dt><dd>{{ job.parameters.includeTextAnalysis ? t('structureddiary', 'Enabled') : t('structureddiary', 'Disabled') }}</dd></div>
 						<div><dt>{{ t('structureddiary', 'Language') }}</dt><dd>{{ job.language }}</dd></div>
-						<div><dt>{{ t('structureddiary', 'Moving average') }}</dt><dd>{{ job.parameters.movingAverageWindow ?? 11 }}</dd></div>
-						<div><dt>{{ t('structureddiary', 'Standard deviation') }}</dt><dd>{{ job.parameters.showStandardDeviation ? t('structureddiary', 'Enabled') : t('structureddiary', 'Disabled') }}</dd></div>
+						<div><dt>{{ t('structureddiary', 'Moving average') }}</dt><dd>{{ job.parameters.shifting_median_width ?? 11 }}</dd></div>
+						<div><dt>{{ t('structureddiary', 'Standard deviation') }}</dt><dd>{{ job.parameters.plot_std_error ? t('structureddiary', 'Enabled') : t('structureddiary', 'Disabled') }}</dd></div>
+						<div><dt>{{ t('structureddiary', 'Single data points') }}</dt><dd>{{ job.parameters.show_single_data_points ? t('structureddiary', 'Enabled') : t('structureddiary', 'Disabled') }}</dd></div>
 					</dl>
 				</details>
 			</div>
@@ -278,7 +288,7 @@ onBeforeUnmount(() => {
 
 				<div v-if="showArtifactList && sortedArtifacts.length > 0" :class="$style.tree">
 					<div v-for="artifact in sortedArtifacts" :key="artifact.id" :class="[$style.artifactRow, artifact.parent_id !== null && $style.artifactChild]">
-						<span>{{ artifact.file_path ?? artifact.file_name }}</span>
+						<span>{{ artifact.file_name }}</span>
 						<span>{{ formatBytes(artifact.size) }}</span>
 						<a :href="fileUrl(artifact, true) ?? undefined" :aria-disabled="fileUrl(artifact, true) === null">{{ t('structureddiary', 'Download') }}</a>
 					</div>

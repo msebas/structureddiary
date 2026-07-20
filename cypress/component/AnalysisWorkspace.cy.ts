@@ -1,4 +1,5 @@
 import { computed, defineComponent, h } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter, RouterView, useRouter } from 'vue-router'
 import AnalysisCreateView from '@/components/analysis/AnalysisCreateView.vue'
 import AnalysisDetailView from '@/components/analysis/AnalysisDetailView.vue'
@@ -50,6 +51,8 @@ const completedJob: AnalysisJob = {
 }
 
 function mountWithRoutes(path: string, component: object) {
+	const pinia = createPinia()
+	setActivePinia(pinia)
 	const router = createRouter({
 		history: createMemoryHistory(),
 		routes: [
@@ -92,7 +95,7 @@ function mountWithRoutes(path: string, component: object) {
 	})
 
 	return cy.wrap(ready).then(() => router.isReady()).then(() => {
-		cy.mount(Wrapper, { global: { plugins: [router] } })
+		cy.mount(Wrapper, { global: { plugins: [pinia, router] } })
 	})
 }
 
@@ -105,10 +108,11 @@ describe('Analysis workspace', () => {
 			expect(request.body.outputFormats).to.deep.eq(['JSON', 'HTML'])
 			expect(request.body.parameters).to.include({
 				includeTextAnalysis: true,
-				movingAverageWindow: 11,
-				showStandardDeviation: false,
+				shifting_median_width: 11,
+				plot_std_error: false,
+				show_single_data_points: true,
 			})
-			request.reply({ ...completedJob, id: 44, status: 'READY_QUEUE', title: request.body.title })
+			request.reply({ ...completedJob, id: 44, status: 'SUBMITTED', title: request.body.title })
 		}).as('createAnalysis')
 
 		mountWithRoutes('/analyses/5/new', AnalysisCreateView)
@@ -119,23 +123,18 @@ describe('Analysis workspace', () => {
 		cy.get('[data-cy="route-name"]').should('contain', 'analysis')
 	})
 
-	it('polls changed jobs with an ISO changedSince value', () => {
-		cy.clock(new Date('2026-07-03T10:00:00.000Z'))
+	it('refreshes jobs through the analysis jobs API path', () => {
 		let requestCount = 0
 		cy.intercept('GET', '**/structureddiary/api/v1/jobs*', (request) => {
 			requestCount += 1
-			if (requestCount > 1) {
-				expect(new URL(request.url).searchParams.get('changedSince')).to.match(/^2026-07-03T10:00:00\.000Z$/)
-			}
+			expect(new URL(request.url).pathname).to.contain('/api/v1/jobs')
 			request.reply([{ ...completedJob, status: 'RUNNING', progress: requestCount > 1 ? 55 : 40 }])
 		}).as('analysisJobs')
 
 		mountWithRoutes('/analyses/5', AnalysisListPanel)
 		cy.wait('@analysisJobs')
 		cy.contains('Weekly analysis').should('be.visible')
-		cy.get('button[aria-label="Polling rate"]').click()
-		cy.get('select').select('1')
-		cy.tick(1000)
+		cy.get('button[aria-label="Refresh analyses"]').click()
 		cy.wait('@analysisJobs')
 		cy.contains('55%').should('be.visible')
 	})
@@ -198,8 +197,9 @@ describe('Analysis workspace', () => {
 		cy.get('iframe')
 			.should('have.attr', 'sandbox')
 			.and('contain', 'allow-same-origin')
-		cy.get('iframe').should('have.attr', 'src').and('match', /\/f\/1001/)
+		cy.get('iframe').should('have.attr', 'src').and('match', /\/jobs\/21\/artifacts\/301\/content/)
 		cy.get('a[href*="/artifacts/download"]').its('length').should('be.gte', 2)
+		cy.get('button[aria-label="Show artifact list"]').click()
 		cy.contains('<img src=x onerror=alert(1)>report.html').should('exist')
 		cy.get('img[src="x"]').should('not.exist')
 		cy.get('body').should('not.contain', '/must/not/be/used')

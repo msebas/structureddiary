@@ -365,8 +365,8 @@ export const answerService = {
 }
 
 export const analysisService = {
-	list(changedSince?: string | number | null): Promise<AnalysisJob[]> {
-		return request(withQuery('jobs', { changedSince }))
+	list(changedSince?: string | number | null, longPollTimeout?: number | null): Promise<AnalysisJob[]> {
+		return request(withQuery('jobs', { changedSince, longPollTimeout }))
 	},
 	create(payload: AnalysisJobCreatePayload): Promise<AnalysisJob> {
 		return request('jobs', {

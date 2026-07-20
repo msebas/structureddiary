@@ -11,10 +11,12 @@ final class AnalysisJobTest extends TestCase {
 	public function testStatusConstantsContainLifecycleFromTicket(): void {
 		$this->assertSame([
 			'DRAFT',
+			'SUBMITTED',
 			'READY_QUEUE',
 			'QUEUED',
 			'LOAD_DATA',
 			'RUNNING',
+			'WORKER_UPLOAD',
 			'RESTART',
 			'CANCEL_REQUESTED',
 			'JOB_CANCELED',
@@ -44,7 +46,7 @@ final class AnalysisJobTest extends TestCase {
 		$job->setStatus(AnalysisJob::STATUS_DRAFT);
 		$job->setProgress(0.0);
 		$job->setOutputTypes('["JSON","HTML"]');
-		$job->setParametersJson('{"includeTextAnalysis":true}');
+		$job->setParametersJson('{"includeTextAnalysis":true,"shifting_median_width":11,"plot_std_error":false,"show_single_data_points":true}');
 		$job->setLlmUrl('http://llm');
 		$job->setLlmHeader('{"Authorization":"secret"}');
 		$job->setPythonJobId('py-1');
@@ -61,7 +63,12 @@ final class AnalysisJobTest extends TestCase {
 		$data = $job->jsonSerialize();
 
 		$this->assertSame(['JSON', 'HTML'], $data['output_types']);
-		$this->assertSame(['includeTextAnalysis' => true], $data['parameters']);
+		$this->assertSame([
+			'includeTextAnalysis' => true,
+			'shifting_median_width' => 11,
+			'plot_std_error' => false,
+			'show_single_data_points' => true,
+		], $data['parameters']);
 		$this->assertSame('https://cloud.example/apps/files/?dir=/StructuredDiary/Analyses/report-42', $data['storage_url']);
 		$this->assertArrayNotHasKey('token', $data);
 		$this->assertArrayNotHasKey('llm_header', $data);

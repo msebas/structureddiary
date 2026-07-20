@@ -79,7 +79,8 @@ async function submit(action: 'save' | 'test'): Promise<void> {
 	busy.value = true
 	setStatus('', 'info')
 	try {
-		const response = await fetch(action === 'test' ? props.testUrl : props.saveUrl, {
+		const request = async (url: string): Promise<{ response: Response, payload: unknown, data: unknown }> => {
+			const response = await fetch(url, {
 			method: 'POST',
 			credentials: 'same-origin',
 			headers: {
@@ -89,11 +90,20 @@ async function submit(action: 'save' | 'test'): Promise<void> {
 			},
 			body,
 		})
-		const payload = await response.json().catch(() => null)
-		const data = ocsData(payload)
+			const payload = await response.json().catch(() => null)
+			return { response, payload, data: ocsData(payload) }
+		}
+		let { response, payload, data } = await request(action === 'test' ? props.testUrl : props.saveUrl)
 		if (!response.ok || (data !== null && typeof data === 'object' && (data as Record<string, unknown>).ok === false)) {
 			setStatus(messageFromPayload(payload, t('structureddiary', 'Analysis settings request failed.')), 'error')
 			return
+		}
+		if (action === 'save') {
+			;({ response, payload, data } = await request(props.testUrl))
+			if (!response.ok || (data !== null && typeof data === 'object' && (data as Record<string, unknown>).ok === false)) {
+				setStatus(messageFromPayload(payload, t('structureddiary', 'Analysis settings were saved, but the analysis service health check failed.')), 'error')
+				return
+			}
 		}
 		setStatus(action === 'test'
 			? t('structureddiary', 'Analysis service connection works.')

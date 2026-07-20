@@ -46,6 +46,7 @@ class AdminSettings implements IDelegatedSettings {
 			Application::APP_ID => [
 				'/' . preg_quote(AnalysisConfigService::KEY_SERVICE_URL, '/') . '/',
 				'/' . preg_quote(AnalysisConfigService::KEY_SERVICE_SECRET, '/') . '/',
+				'/' . preg_quote(AnalysisConfigService::KEY_NEXTCLOUD_API_TOKEN, '/') . '/',
 				'/' . preg_quote(AnalysisConfigService::KEY_OUTPUT_BASE_FOLDER, '/') . '/',
 			],
 		];

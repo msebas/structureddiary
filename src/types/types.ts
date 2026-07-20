@@ -200,6 +200,7 @@ export interface AnswerUpdatePayload {
 
 export type AnalysisJobStatus =
     | 'DRAFT'
+    | 'SUBMITTED'
     | 'READY_QUEUE'
     | 'QUEUED'
     | 'LOAD_DATA'
@@ -217,8 +218,9 @@ export type AnalysisOutputType = 'JSON' | 'HTML' | 'PDF' | 'XLSX'
 
 export interface AnalysisJobParameters {
     includeTextAnalysis?: boolean
-    movingAverageWindow?: number
-    showStandardDeviation?: boolean
+    shifting_median_width?: number
+    plot_std_error?: boolean
+    show_single_data_points?: boolean
 }
 
 export interface AnalysisJob {

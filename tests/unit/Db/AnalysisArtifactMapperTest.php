@@ -27,16 +27,32 @@ final class AnalysisArtifactMapperTest extends TestCase {
 		$artifact->setChecksum('abc');
 		$artifact->setCreatedAt(1234);
 		$artifact->setDownloaded(true);
-		$artifact->setDownloadFails(2);
-		$artifact->setDownloadLastFailAt(1235);
 
 		$data = $artifact->jsonSerialize();
 
 		$this->assertArrayNotHasKey('python_parent_id', $data);
 		$this->assertArrayNotHasKey('python_file_id', $data);
 		$this->assertArrayNotHasKey('downloaded', $data);
-		$this->assertArrayNotHasKey('download_fails', $data);
-		$this->assertArrayNotHasKey('download_last_fail_at', $data);
+	}
+
+	public function testJsonPythonSerializeOnlyExposesIdMapping(): void {
+		$artifact = new AnalysisArtifact();
+		$artifact->setId(10);
+		$artifact->setParentId(9);
+		$artifact->setJobId(42);
+		$artifact->setPythonParentId(12);
+		$artifact->setPythonFileId(13);
+		$artifact->setSize(20);
+		$artifact->setChecksum('abc');
+		$artifact->setCreatedAt(1234);
+
+		$this->assertSame([
+			'id' => 10,
+			'parent_id' => 9,
+			'python_id' => 13,
+			'python_parent_id' => 12,
+			'checksum' => 'abc',
+		], $artifact->jsonPythonSerialize());
 	}
 
 	public function testCreateArtifactRejectsDotPathSegment(): void {

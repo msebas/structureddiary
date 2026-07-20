@@ -34,10 +34,6 @@ use OCP\AppFramework\Db\Entity;
  * @method void setCreatedAt(int $createdAt)
  * @method bool getDownloaded()
  * @method void setDownloaded(bool $downloaded)
- * @method int getDownloadFails()
- * @method void setDownloadFails(int $downloadFails)
- * @method int|null getDownloadLastFailAt()
- * @method void setDownloadLastFailAt(?int $downloadLastFailAt)
  */
 class AnalysisArtifact extends Entity implements JsonSerializable {
 	public const TYPE_JSON = 'JSON';
@@ -64,8 +60,6 @@ class AnalysisArtifact extends Entity implements JsonSerializable {
 	protected $checksum;
 	protected $createdAt;
 	protected $downloaded = false;
-	protected $downloadFails = 0;
-	protected $downloadLastFailAt;
 
 	public function __construct() {
 		$this->addType('parentId', 'integer');
@@ -81,8 +75,6 @@ class AnalysisArtifact extends Entity implements JsonSerializable {
 		$this->addType('checksum', 'string');
 		$this->addType('createdAt', 'integer');
 		$this->addType('downloaded', 'boolean');
-		$this->addType('downloadFails', 'integer');
-		$this->addType('downloadLastFailAt', 'integer');
 	}
 
 	/**
@@ -117,6 +109,19 @@ class AnalysisArtifact extends Entity implements JsonSerializable {
 			'size' => (int)$this->size,
 			'checksum' => $this->checksum,
 			'created_at' => (int)$this->createdAt,
+		];
+	}
+
+	/**
+	 * @return array{id: int|null, parent_id: int|null, python_id: int|null, python_parent_id: int|null, checksum: string|null}
+	 */
+	public function jsonPythonSerialize(): array {
+		return [
+			'id' => $this->id === null ? null : (int)$this->id,
+			'parent_id' => $this->parentId === null ? null : (int)$this->parentId,
+			'python_id' => $this->pythonFileId === null ? null : (int)$this->pythonFileId,
+			'python_parent_id' => $this->pythonParentId === null ? null : (int)$this->pythonParentId,
+			'checksum' => $this->checksum,
 		];
 	}
 }

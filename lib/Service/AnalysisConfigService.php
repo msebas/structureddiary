@@ -11,6 +11,7 @@ use OCP\IConfig;
 class AnalysisConfigService {
 	public const KEY_SERVICE_URL = 'analysis.service_url';
 	public const KEY_SERVICE_SECRET = 'analysis.service_secret';
+	public const KEY_NEXTCLOUD_API_TOKEN = 'analysis.nextcloud_api_token';
 	public const KEY_OUTPUT_BASE_FOLDER = 'analysis.output_base_folder';
 	public const DEFAULT_OUTPUT_BASE_FOLDER = '/StructuredDiary/Analyses';
 
@@ -26,6 +27,22 @@ class AnalysisConfigService {
 
 	public function getServiceSecret(): string {
 		return $this->appConfig->getValueString(Application::APP_ID, self::KEY_SERVICE_SECRET, '', true);
+	}
+
+	public function getOrCreateNextcloudApiToken(): string {
+		$token = $this->appConfig->getValueString(Application::APP_ID, self::KEY_NEXTCLOUD_API_TOKEN, '', true);
+		if ($token !== '') {
+			return $token;
+		}
+
+		$token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+		$this->appConfig->setValueString(Application::APP_ID, self::KEY_NEXTCLOUD_API_TOKEN, $token, true, true);
+
+		return $token;
+	}
+
+	public function getNextcloudApiToken(): string {
+		return $this->appConfig->getValueString(Application::APP_ID, self::KEY_NEXTCLOUD_API_TOKEN, '', true);
 	}
 
 	public function getOutputBaseFolder(): string {

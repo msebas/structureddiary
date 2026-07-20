@@ -11,7 +11,7 @@ use OCP\IURLGenerator;
 use PHPUnit\Framework\TestCase;
 
 final class AdminSettingsTest extends TestCase {
-	public function testGetFormPassesGeneratedAdminUrlsToTemplate(): void {
+	public function testGetFormPassesGeneratedAdminSaveUrlToTemplate(): void {
 		$config = $this->createMock(AnalysisConfigService::class);
 		$config->method('getSettings')->willReturn([
 			'service_url' => 'http://127.0.0.1:8790',

@@ -116,8 +116,6 @@ class AnalysisArtifactMapper extends QBMapper {
 		$artifact->setChecksum($checksum);
 		$artifact->setCreatedAt($this->getCurrentTimestamp());
 		$artifact->setDownloaded($downloaded);
-		$artifact->setDownloadFails(0);
-		$artifact->setDownloadLastFailAt(null);
 
 		return $this->insert($artifact);
 	}
@@ -157,18 +155,6 @@ class AnalysisArtifactMapper extends QBMapper {
 		$artifact->setSize($size);
 		$artifact->setChecksum($checksum);
 		$artifact->setDownloaded(true);
-		$artifact->setDownloadFails(0);
-		$artifact->setDownloadLastFailAt(null);
-
-		return $this->update($artifact);
-	}
-
-	/**
-	 * @throws Exception
-	 */
-	public function markDownloadFailed(AnalysisArtifact $artifact): AnalysisArtifact {
-		$artifact->setDownloadFails($artifact->getDownloadFails() + 1);
-		$artifact->setDownloadLastFailAt($this->getCurrentTimestamp());
 
 		return $this->update($artifact);
 	}

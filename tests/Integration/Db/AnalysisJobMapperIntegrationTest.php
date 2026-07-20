@@ -37,6 +37,7 @@ final class AnalysisJobMapperIntegrationTest extends IntegrationTestParentClass 
 			'includeTextAnalysis' => false,
 			'shifting_median_width' => 9,
 			'plot_std_error' => true,
+			'show_single_data_points' => false,
 		]);
 
 		$this->assertGreaterThan(0, $job->getId());
@@ -51,18 +52,15 @@ final class AnalysisJobMapperIntegrationTest extends IntegrationTestParentClass 
 			'includeTextAnalysis' => false,
 			'shifting_median_width' => 9,
 			'plot_std_error' => true,
+			'show_single_data_points' => false,
 		], $job->getParameters());
 		$this->assertNotNull($job->getToken());
 		$this->assertSame($job->getId(), $this->jobMapper->getJobByUuid($job->getUuid())->getId());
 
-		$started = $this->jobMapper->updateDraftJob($job, null, null, null, null, null, null, AnalysisJob::STATUS_READY_QUEUE);
-		$this->assertSame(AnalysisJob::STATUS_READY_QUEUE, $started->getStatus());
+		$started = $this->jobMapper->updateDraftJob($job, null, null, null, null, null, null, AnalysisJob::STATUS_SUBMITTED);
+		$this->assertSame(AnalysisJob::STATUS_SUBMITTED, $started->getStatus());
 
-		$queued = $this->jobMapper->markQueued($started, '123');
-		$this->assertSame(AnalysisJob::STATUS_QUEUED, $queued->getStatus());
-		$this->assertSame('123', $queued->getPythonJobId());
-
-		$canceled = $this->jobMapper->requestCancel($queued);
+		$canceled = $this->jobMapper->requestCancel($started);
 		$this->assertSame(AnalysisJob::STATUS_CANCEL_REQUESTED, $canceled->getStatus());
 
 		$jobCanceled = $this->jobMapper->updateFromPython($canceled, AnalysisJob::STATUS_JOB_CANCELED, null, 'canceled', null);

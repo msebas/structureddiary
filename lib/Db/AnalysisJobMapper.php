@@ -16,11 +16,23 @@ use OCP\IURLGenerator;
 use Sabre\DAV\UUIDUtil;
 
 class AnalysisJobMapper extends QBMapper {
+	/** @var list<string> */
+	private const COLUMNS = [
+		'id', 'diary_id', 'uuid', 'created_by', 'created_at', 'updated_at',
+		'data_from', 'data_until', 'started_at', 'finished_at', 'title',
+		'language', 'analysis_type', 'status', 'progress', 'output_types',
+		'parameters_json', 'llm_url', 'llm_header', 'python_job_id', 'token',
+		'storage_path', 'manifest_path', 'status_message', 'error_message',
+		'cancel_requested_at', 'artifacts_downloaded', 'python_deleted',
+	];
 	private const PYTHON_UPDATE_TRANSITIONS = [
-		AnalysisJob::STATUS_QUEUED => [AnalysisJob::STATUS_LOAD_DATA],
-		AnalysisJob::STATUS_LOAD_DATA => [AnalysisJob::STATUS_RUNNING, AnalysisJob::STATUS_JOB_FAILED],
-		AnalysisJob::STATUS_RUNNING => [AnalysisJob::STATUS_RESTART, AnalysisJob::STATUS_JOB_FAILED, AnalysisJob::STATUS_JOB_COMPLETED],
-		AnalysisJob::STATUS_RESTART => [AnalysisJob::STATUS_RUNNING],
+		AnalysisJob::STATUS_SUBMITTED => [AnalysisJob::STATUS_READY_QUEUE, AnalysisJob::STATUS_QUEUED, AnalysisJob::STATUS_LOAD_DATA, AnalysisJob::STATUS_RUNNING, AnalysisJob::STATUS_RESTART, AnalysisJob::STATUS_WORKER_UPLOAD, AnalysisJob::STATUS_JOB_FAILED, AnalysisJob::STATUS_JOB_COMPLETED],
+		AnalysisJob::STATUS_READY_QUEUE => [AnalysisJob::STATUS_QUEUED, AnalysisJob::STATUS_LOAD_DATA, AnalysisJob::STATUS_RUNNING, AnalysisJob::STATUS_RESTART, AnalysisJob::STATUS_WORKER_UPLOAD, AnalysisJob::STATUS_JOB_FAILED, AnalysisJob::STATUS_JOB_COMPLETED],
+		AnalysisJob::STATUS_QUEUED => [AnalysisJob::STATUS_LOAD_DATA, AnalysisJob::STATUS_RUNNING, AnalysisJob::STATUS_RESTART, AnalysisJob::STATUS_WORKER_UPLOAD, AnalysisJob::STATUS_JOB_FAILED, AnalysisJob::STATUS_JOB_COMPLETED],
+		AnalysisJob::STATUS_LOAD_DATA => [AnalysisJob::STATUS_RUNNING, AnalysisJob::STATUS_RESTART, AnalysisJob::STATUS_WORKER_UPLOAD, AnalysisJob::STATUS_JOB_FAILED, AnalysisJob::STATUS_JOB_COMPLETED],
+		AnalysisJob::STATUS_RUNNING => [AnalysisJob::STATUS_RESTART, AnalysisJob::STATUS_WORKER_UPLOAD, AnalysisJob::STATUS_JOB_FAILED, AnalysisJob::STATUS_JOB_COMPLETED],
+		AnalysisJob::STATUS_WORKER_UPLOAD => [AnalysisJob::STATUS_JOB_FAILED, AnalysisJob::STATUS_JOB_COMPLETED],
+		AnalysisJob::STATUS_RESTART => [AnalysisJob::STATUS_RUNNING, AnalysisJob::STATUS_WORKER_UPLOAD, AnalysisJob::STATUS_JOB_FAILED, AnalysisJob::STATUS_JOB_COMPLETED],
 		AnalysisJob::STATUS_CANCEL_REQUESTED => [AnalysisJob::STATUS_JOB_CANCELED],
 	];
 
@@ -40,7 +52,7 @@ class AnalysisJobMapper extends QBMapper {
 	 */
 	public function getJob(int $id): AnalysisJob {
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('*')
+		$qb->select(...self::COLUMNS)
 			->from($this->getTableName())
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
 			->setMaxResults(1);
@@ -59,7 +71,7 @@ class AnalysisJobMapper extends QBMapper {
 			throw new DoesNotExistException('Analysis job not found.');
 		}
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('*')
+		$qb->select(...self::COLUMNS)
 			->from($this->getTableName())
 			->where($qb->expr()->eq('uuid', $qb->createNamedParameter($uuid, IQueryBuilder::PARAM_STR)))
 			->setMaxResults(1);
@@ -74,7 +86,7 @@ class AnalysisJobMapper extends QBMapper {
 	public function getJobsForUser(string $userId, ?int $changedSince = null): array {
 		$qb = $this->db->getQueryBuilder();
 		$expr = $qb->expr();
-		$qb->select('j.*')
+		$qb->select(...array_map(static fn (string $column): string => 'j.' . $column, self::COLUMNS))
 			->from($this->getTableName(), 'j')
 			->innerJoin('j', TableNames::DIARIES, 'd', $expr->eq('j.diary_id', 'd.id'))
 			->leftJoin(
@@ -164,7 +176,7 @@ class AnalysisJobMapper extends QBMapper {
 		$job->setTitle($title);
 		$job->setLanguage($this->normalizeLanguage($language));
 		$job->setAnalysisType(AnalysisJob::TYPE_STANDARD);
-		$job->setStatus($start ? AnalysisJob::STATUS_READY_QUEUE : AnalysisJob::STATUS_DRAFT);
+		$job->setStatus($start ? AnalysisJob::STATUS_SUBMITTED : AnalysisJob::STATUS_DRAFT);
 		$job->setProgress(0.0);
 		$job->setOutputTypes(json_encode($this->normalizeOutputTypes($outputTypes), JSON_THROW_ON_ERROR));
 		$job->setParametersJson(json_encode($this->normalizeParameters($parameters), JSON_THROW_ON_ERROR));
@@ -178,11 +190,7 @@ class AnalysisJobMapper extends QBMapper {
 		$job->setErrorMessage(null);
 		$job->setCancelRequestedAt(null);
 		$job->setArtifactsDownloaded(false);
-		$job->setArtifactsDownloadFails(0);
-		$job->setArtifactsDownloadLastFailAt(null);
 		$job->setPythonDeleted(false);
-		$job->setPythonDeletedFails(0);
-		$job->setPythonDeletedLastFailAt(null);
 
 		$inserted = $this->insert($job);
 		$diary = $this->diaryMapper->getDiary($diaryId);
@@ -235,10 +243,10 @@ class AnalysisJobMapper extends QBMapper {
 			$job->setParametersJson(json_encode($this->normalizeParameters($parameters), JSON_THROW_ON_ERROR));
 		}
 		if ($status !== null) {
-			if ($status !== AnalysisJob::STATUS_READY_QUEUE) {
-				throw new InvalidArgumentException('Draft jobs can only be started with READY_QUEUE.');
+			if ($status !== AnalysisJob::STATUS_SUBMITTED) {
+				throw new InvalidArgumentException('Draft jobs can only be started with SUBMITTED.');
 			}
-			$job->setStatus(AnalysisJob::STATUS_READY_QUEUE);
+			$job->setStatus(AnalysisJob::STATUS_SUBMITTED);
 		}
 		$job->setUpdatedAt($this->getCurrentTimestamp());
 
@@ -263,6 +271,7 @@ class AnalysisJobMapper extends QBMapper {
 		}
 
 		if (!in_array($job->getStatus(), [
+			AnalysisJob::STATUS_SUBMITTED,
 			AnalysisJob::STATUS_READY_QUEUE,
 			AnalysisJob::STATUS_QUEUED,
 			AnalysisJob::STATUS_LOAD_DATA,
@@ -292,50 +301,67 @@ class AnalysisJobMapper extends QBMapper {
 	}
 
 	/**
-	 * @throws Exception
-	 */
-	public function markQueued(AnalysisJob $job, string $pythonJobId): AnalysisJob {
-		if ($job->getStatus() !== AnalysisJob::STATUS_READY_QUEUE) {
-			throw new InvalidArgumentException('Only READY_QUEUE jobs can be queued.');
-		}
-		$pythonJobId = trim($pythonJobId);
-		if ($pythonJobId === '') {
-			throw new InvalidArgumentException('Python job id is required.');
-		}
-		$job->setPythonJobId($pythonJobId);
-		$job->setStatus(AnalysisJob::STATUS_QUEUED);
-		$job->setStartedAt($this->getCurrentTimestamp());
-		$job->setUpdatedAt($this->getCurrentTimestamp());
-
-		return $this->decorateStorageUrl($this->update($job));
-	}
-
-	/**
 	 * @return list<AnalysisJob>
 	 * @throws Exception
 	 */
-	public function getJobsByStatuses(array $statuses, ?int $limit = null): array {
-		$normalized = array_values(array_filter(array_map(static fn (mixed $status): string => (string)$status, $statuses)));
-		if ($normalized === []) {
-			return [];
-		}
-
+	public function getJobsForPython(?int $changedSince = null): array {
 		$qb = $this->db->getQueryBuilder();
-		$or = null;
-		foreach ($normalized as $index => $status) {
-			$condition = $qb->expr()->eq('status', $qb->createNamedParameter($status, IQueryBuilder::PARAM_STR, ':status' . $index));
-			$or = $or === null ? $condition : $qb->expr()->orX($or, $condition);
+		$expr = $qb->expr();
+		$statuses = [
+			AnalysisJob::STATUS_SUBMITTED,
+			AnalysisJob::STATUS_READY_QUEUE,
+			AnalysisJob::STATUS_QUEUED,
+			AnalysisJob::STATUS_LOAD_DATA,
+			AnalysisJob::STATUS_RUNNING,
+			AnalysisJob::STATUS_WORKER_UPLOAD,
+			AnalysisJob::STATUS_RESTART,
+			AnalysisJob::STATUS_CANCEL_REQUESTED,
+			AnalysisJob::STATUS_JOB_CANCELED,
+			AnalysisJob::STATUS_JOB_FAILED,
+			AnalysisJob::STATUS_JOB_COMPLETED,
+		];
+		$statusConditions = [];
+		foreach ($statuses as $index => $status) {
+			$statusConditions[] = $expr->eq('status', $qb->createNamedParameter($status, IQueryBuilder::PARAM_STR, ':python_status' . $index));
 		}
-		$qb->select('*')
+		$qb->select(...self::COLUMNS)
 			->from($this->getTableName())
-			->where($or)
+			->where($expr->orX(...$statusConditions))
 			->orderBy('updated_at', 'ASC')
 			->addOrderBy('id', 'ASC');
-		if ($limit !== null) {
-			$qb->setMaxResults(max(1, $limit));
+
+		if ($changedSince !== null) {
+			$qb->andWhere($expr->gte('updated_at', $qb->createNamedParameter($changedSince, IQueryBuilder::PARAM_INT)));
 		}
 
 		return array_map(fn (AnalysisJob $job): AnalysisJob => $this->decorateStorageUrl($job), $this->findEntities($qb));
+	}
+
+	/**
+	 * @param list<string> $statuses
+	 * @return list<AnalysisJob>
+	 * @throws Exception
+	 */
+	public function getJobsByStatuses(array $statuses, int $limit = 50): array {
+		if ($statuses === []) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$conditions = [];
+		foreach ($statuses as $index => $status) {
+			$conditions[] = $qb->expr()->eq('status', $qb->createNamedParameter($status, IQueryBuilder::PARAM_STR, ':status' . $index));
+		}
+		$qb->select(...self::COLUMNS)
+			->from($this->getTableName())
+			->where($qb->expr()->orX(...$conditions))
+			->orderBy('updated_at', 'ASC')
+			->addOrderBy('id', 'ASC')
+			->setMaxResults(max(1, $limit));
+
+		/** @var list<AnalysisJob> $jobs */
+		$jobs = $this->findEntities($qb);
+
+		return array_map(fn (AnalysisJob $job): AnalysisJob => $this->decorateStorageUrl($job), $jobs);
 	}
 
 	/**
@@ -380,6 +406,9 @@ class AnalysisJobMapper extends QBMapper {
 			}
 			$this->assertPythonTransition($job->getStatus(), $status);
 			$job->setStatus($status);
+			if ($status === AnalysisJob::STATUS_QUEUED && $job->getStartedAt() === null) {
+				$job->setStartedAt($this->getCurrentTimestamp());
+			}
 			if (in_array($status, [AnalysisJob::STATUS_JOB_FAILED, AnalysisJob::STATUS_JOB_COMPLETED, AnalysisJob::STATUS_JOB_CANCELED], true)) {
 				$job->setFinishedAt($this->getCurrentTimestamp());
 				if ($status === AnalysisJob::STATUS_JOB_COMPLETED) {
@@ -463,6 +492,7 @@ class AnalysisJobMapper extends QBMapper {
 			'includeTextAnalysis' => array_key_exists('includeTextAnalysis', $parameters) ? (bool)$parameters['includeTextAnalysis'] : true,
 			'shifting_median_width' => array_key_exists('shifting_median_width', $parameters) ? max(1, (int)$parameters['shifting_median_width']) : 11,
 			'plot_std_error' => array_key_exists('plot_std_error', $parameters) ? (bool)$parameters['plot_std_error'] : false,
+			'show_single_data_points' => array_key_exists('show_single_data_points', $parameters) ? (bool)$parameters['show_single_data_points'] : true,
 		];
 	}
 
@@ -505,7 +535,7 @@ class AnalysisJobMapper extends QBMapper {
 
 	private function decorateStorageUrl(AnalysisJob $job): AnalysisJob {
 		$filesBase = rtrim($this->urlGenerator->linkTo('files', ''), '/');
-		$job->setStorageUrl($this->urlGenerator->getAbsoluteURL("index.php/" . $filesBase . '/files/0?' . http_build_query([
+		$job->setStorageUrl($this->urlGenerator->getAbsoluteURL('/index.php' . $filesBase . '/files/0?' . http_build_query([
 			'dir' => $job->getStoragePath(),
 		])));
 

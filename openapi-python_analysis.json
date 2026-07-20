@@ -21,6 +21,66 @@
             }
         },
         "schemas": {
+            "AnalysisArtifact": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "parent_id",
+                    "job_id",
+                    "artifact_type",
+                    "mime_type",
+                    "file_name",
+                    "file_path",
+                    "file_id",
+                    "size",
+                    "checksum",
+                    "created_at"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "parent_id": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "job_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "artifact_type": {
+                        "type": "string"
+                    },
+                    "mime_type": {
+                        "type": "string"
+                    },
+                    "file_name": {
+                        "type": "string"
+                    },
+                    "file_path": {
+                        "type": "string"
+                    },
+                    "file_id": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "size": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "checksum": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                }
+            },
             "AnalysisExportAnswer": {
                 "type": "object",
                 "required": [
@@ -410,11 +470,263 @@
                         "type": "string"
                     }
                 }
+            },
+            "PythonAnalysisJob": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "diary_id",
+                    "created_by",
+                    "created_at",
+                    "updated_at",
+                    "data_from",
+                    "data_until",
+                    "started_at",
+                    "finished_at",
+                    "title",
+                    "language",
+                    "analysis_type",
+                    "status",
+                    "progress",
+                    "output_types",
+                    "parameters",
+                    "storage_url",
+                    "status_message",
+                    "error_message",
+                    "cancel_requested_at",
+                    "uuid",
+                    "job_token"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "diary_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "created_by": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "updated_at": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "data_from": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "data_until": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "started_at": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "finished_at": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "analysis_type": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "progress": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "output_types": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object"
+                        }
+                    },
+                    "storage_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status_message": {
+                        "type": "string"
+                    },
+                    "error_message": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "cancel_requested_at": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "job_token": {
+                        "type": "string"
+                    }
+                }
             }
         }
     },
     "paths": {
-        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/jobs/healthcheck": {
+        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/service/jobs/poll": {
+            "get": {
+                "operationId": "python_analysis-poll",
+                "summary": "Poll analysis jobs for the analysis service",
+                "tags": [
+                    "python_analysis"
+                ],
+                "security": [
+                    {},
+                    {
+                        "bearer_auth": []
+                    },
+                    {
+                        "basic_auth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "apiVersion",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "v1"
+                            ],
+                            "default": "v1"
+                        }
+                    },
+                    {
+                        "name": "changedSince",
+                        "in": "query",
+                        "schema": {
+                            "nullable": true,
+                            "default": null,
+                            "oneOf": [
+                                {
+                                    "type": "integer",
+                                    "format": "int64"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "longPollTimeout",
+                        "in": "query",
+                        "schema": {
+                            "nullable": true,
+                            "default": null,
+                            "oneOf": [
+                                {
+                                    "type": "integer",
+                                    "format": "int64"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "wait",
+                        "in": "query",
+                        "schema": {
+                            "nullable": true,
+                            "default": null,
+                            "oneOf": [
+                                {
+                                    "type": "integer",
+                                    "format": "int64"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "x-structureddiary-nextcloud-api-token",
+                        "in": "header",
+                        "description": "API token registered for this Nextcloud instance",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "OCS-APIRequest",
+                        "in": "header",
+                        "description": "Required to be true for the API request to pass",
+                        "required": true,
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Analysis jobs returned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/PythonAnalysisJob"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/service/jobs/healthcheck": {
             "get": {
                 "operationId": "python_analysis-healthcheck",
                 "summary": "Check analysis service access",
@@ -496,7 +808,7 @@
                 }
             }
         },
-        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/jobs/{id}/status": {
+        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/service/jobs/{uuid}/status": {
             "patch": {
                 "operationId": "python_analysis-update-status",
                 "summary": "Update analysis job status from the analysis service",
@@ -559,7 +871,7 @@
                         }
                     },
                     {
-                        "name": "id",
+                        "name": "uuid",
                         "in": "path",
                         "description": "",
                         "required": true,
@@ -628,7 +940,7 @@
                 }
             }
         },
-        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/jobs/{id}/diary": {
+        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/service/jobs/{uuid}/diary": {
             "get": {
                 "operationId": "python_analysis-diary",
                 "summary": "Export analysis diary metadata",
@@ -658,7 +970,7 @@
                         }
                     },
                     {
-                        "name": "id",
+                        "name": "uuid",
                         "in": "path",
                         "description": "",
                         "required": true,
@@ -707,7 +1019,7 @@
                 }
             }
         },
-        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/jobs/{id}/entries": {
+        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/service/jobs/{uuid}/entries": {
             "get": {
                 "operationId": "python_analysis-entries",
                 "summary": "Export analysis entries",
@@ -737,7 +1049,7 @@
                         }
                     },
                     {
-                        "name": "id",
+                        "name": "uuid",
                         "in": "path",
                         "description": "",
                         "required": true,
@@ -788,6 +1100,507 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/AnalysisExportEntries"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/service/jobs/{uuid}/artifacts/create": {
+            "post": {
+                "operationId": "python_analysis-create-artifacts",
+                "summary": "Create the complete artifact list for an analysis job",
+                "tags": [
+                    "python_analysis"
+                ],
+                "security": [
+                    {},
+                    {
+                        "bearer_auth": []
+                    },
+                    {
+                        "basic_auth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "artifacts": {
+                                        "type": "array",
+                                        "nullable": true,
+                                        "default": null,
+                                        "items": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "apiVersion",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "v1"
+                            ],
+                            "default": "v1"
+                        }
+                    },
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "x-structureddiary-job-token",
+                        "in": "header",
+                        "description": "Token assigned to the analysis job",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "x-structureddiary-job-uuid",
+                        "in": "header",
+                        "description": "UUID assigned by Nextcloud to the analysis job",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "OCS-APIRequest",
+                        "in": "header",
+                        "description": "Required to be true for the API request to pass",
+                        "required": true,
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Analysis artifacts created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "required": [
+                                                            "id",
+                                                            "parent_id",
+                                                            "python_id",
+                                                            "python_parent_id",
+                                                            "checksum"
+                                                        ],
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "format": "int64",
+                                                                "nullable": true
+                                                            },
+                                                            "parent_id": {
+                                                                "type": "integer",
+                                                                "format": "int64",
+                                                                "nullable": true
+                                                            },
+                                                            "python_id": {
+                                                                "type": "integer",
+                                                                "format": "int64",
+                                                                "nullable": true
+                                                            },
+                                                            "python_parent_id": {
+                                                                "type": "integer",
+                                                                "format": "int64",
+                                                                "nullable": true
+                                                            },
+                                                            "checksum": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/service/jobs/{uuid}/artifacts": {
+            "get": {
+                "operationId": "python_analysis-get-artifacts",
+                "summary": "List analysis job artifacts for the analysis service",
+                "tags": [
+                    "python_analysis"
+                ],
+                "security": [
+                    {},
+                    {
+                        "bearer_auth": []
+                    },
+                    {
+                        "basic_auth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "apiVersion",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "v1"
+                            ],
+                            "default": "v1"
+                        }
+                    },
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "x-structureddiary-job-token",
+                        "in": "header",
+                        "description": "Token assigned to the analysis job",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "x-structureddiary-job-uuid",
+                        "in": "header",
+                        "description": "UUID assigned by Nextcloud to the analysis job",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "OCS-APIRequest",
+                        "in": "header",
+                        "description": "Required to be true for the API request to pass",
+                        "required": true,
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Analysis artifacts returned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "required": [
+                                                            "id",
+                                                            "parent_id",
+                                                            "python_id",
+                                                            "python_parent_id",
+                                                            "checksum"
+                                                        ],
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "format": "int64",
+                                                                "nullable": true
+                                                            },
+                                                            "parent_id": {
+                                                                "type": "integer",
+                                                                "format": "int64",
+                                                                "nullable": true
+                                                            },
+                                                            "python_id": {
+                                                                "type": "integer",
+                                                                "format": "int64",
+                                                                "nullable": true
+                                                            },
+                                                            "python_parent_id": {
+                                                                "type": "integer",
+                                                                "format": "int64",
+                                                                "nullable": true
+                                                            },
+                                                            "checksum": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/service/jobs/{uuid}/finalize": {
+            "post": {
+                "operationId": "python_analysis-finalize",
+                "summary": "Finalize a terminal analysis job after its artifacts have been uploaded",
+                "tags": [
+                    "python_analysis"
+                ],
+                "security": [
+                    {},
+                    {
+                        "bearer_auth": []
+                    },
+                    {
+                        "basic_auth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "apiVersion",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "v1"
+                            ],
+                            "default": "v1"
+                        }
+                    },
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "x-structureddiary-job-token",
+                        "in": "header",
+                        "description": "Token assigned to the analysis job",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "x-structureddiary-job-uuid",
+                        "in": "header",
+                        "description": "UUID assigned by Nextcloud to the analysis job",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "OCS-APIRequest",
+                        "in": "header",
+                        "description": "Required to be true for the API request to pass",
+                        "required": true,
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Analysis job finalization checked",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {
+                                                    "$ref": "#/components/schemas/AnalysisJob"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ocs/v2.php/apps/structureddiary/api/{apiVersion}/service/jobs/{uuid}/artifacts/upload/{artifactId}": {
+            "post": {
+                "operationId": "python_analysis-upload-artifact",
+                "summary": "Upload one analysis artifact file",
+                "tags": [
+                    "python_analysis"
+                ],
+                "security": [
+                    {},
+                    {
+                        "bearer_auth": []
+                    },
+                    {
+                        "basic_auth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "apiVersion",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "v1"
+                            ],
+                            "default": "v1"
+                        }
+                    },
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "artifactId",
+                        "in": "path",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    },
+                    {
+                        "name": "x-structureddiary-job-token",
+                        "in": "header",
+                        "description": "Token assigned to the analysis job",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "x-structureddiary-job-uuid",
+                        "in": "header",
+                        "description": "UUID assigned by Nextcloud to the analysis job",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "OCS-APIRequest",
+                        "in": "header",
+                        "description": "Required to be true for the API request to pass",
+                        "required": true,
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Analysis artifact uploaded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {
+                                                    "$ref": "#/components/schemas/AnalysisArtifact"
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -416,10 +416,17 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     async function pushWorkspaceRoute(location: {
         name: string,
         params?: Record<string, string | number | null | undefined>
+        query?: Record<string, string | number | null | undefined>
     }): Promise<void> {
+        const query = workspaceQueryForRoute(location.name)
+        for (const [key, value] of Object.entries(location.query ?? {})) {
+            if (value !== null && value !== undefined && value !== '') {
+                query[key] = String(value)
+            }
+        }
         await router.push({
             ...location,
-            query: workspaceQueryForRoute(location.name),
+            query,
         })
     }
 

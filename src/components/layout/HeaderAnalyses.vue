@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
-import { mdiCancel, mdiContentSave, mdiDeleteOutline, mdiPencil, mdiPlay, mdiPlus } from '@mdi/js'
+import { mdiCancel, mdiContentCopy, mdiContentSave, mdiDeleteOutline, mdiPencil, mdiPlay, mdiPlus } from '@mdi/js'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { analysisService } from '@/services'
@@ -29,7 +29,7 @@ watch(selectedJobId, async (jobId) => {
 	headerJob.value = jobs.find((job) => job.id === jobId) ?? null
 }, { immediate: true })
 
-function emitAction(action: 'start' | 'cancel' | 'delete' | 'edit'): void {
+function emitAction(action: 'start' | 'cancel' | 'delete' | 'edit' | 'draft'): void {
 	document.dispatchEvent(new CustomEvent('structured-diary-analysis-action', { detail: action }))
 }
 
@@ -89,6 +89,17 @@ function createDraft(): void {
 					<NcIconSvgWrapper :path="mdiPencil" />
 				</template>
 				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Edit analysis') }}</span>
+			</NcButton>
+			<NcButton
+				v-if="headerJob !== null && headerJob.status !== 'DRAFT'"
+				class="sd-mobile-icon-button"
+				variant="secondary"
+				:aria-label="t('structureddiary', 'Create draft from analysis')"
+				@click="emitAction('draft')">
+				<template #icon>
+					<NcIconSvgWrapper :path="mdiContentCopy" />
+				</template>
+				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Create draft') }}</span>
 			</NcButton>
 			<NcButton
 				v-if="canStartAnalysis(headerJob)"

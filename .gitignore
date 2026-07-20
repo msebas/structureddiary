@@ -20,3 +20,4 @@
 /src/css/default.css
 /structureddiary*.tar.gz
 /tests/bin/logs/
+/tests/bin/*.log

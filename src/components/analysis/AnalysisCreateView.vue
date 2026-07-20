@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import NcButton from '@nextcloud/vue/components/NcButton'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { analysisService } from '@/services'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
-import type { AnalysisOutputType } from '@/types/types'
+import type { AnalysisJob, AnalysisOutputType } from '@/types/types'
 import '@/css/workspace-card.css'
 import { t } from '@nextcloud/l10n'
 
 const store = useStructuredDiaryStore()
+const route = useRoute()
+const props = defineProps<{
+	sourceJob?: AnalysisJob | null
+}>()
 const submitting = ref(false)
 const submitError = ref<string | null>(null)
-const title = ref('Analysis')
-const includeTextAnalysis = ref(true)
-const language = ref('de-DE')
-const movingAverageWindow = ref(11)
-const showStandardDeviation = ref(false)
-const outputFormats = ref<AnalysisOutputType[]>(['JSON', 'HTML'])
+const title = ref(props.sourceJob?.title ?? 'Analysis')
+const includeTextAnalysis = ref(props.sourceJob?.parameters.includeTextAnalysis ?? true)
+const language = ref(props.sourceJob?.language ?? 'de-DE')
+const shiftingMedianWidth = ref(props.sourceJob?.parameters.shifting_median_width ?? 11)
+const plotStdError = ref(props.sourceJob?.parameters.plot_std_error ?? false)
+const showSingleDataPoints = ref(props.sourceJob?.parameters.show_single_data_points ?? true)
+const outputFormats = ref<AnalysisOutputType[]>(props.sourceJob?.output_types ?? ['JSON', 'HTML'])
 
 function dateInputValue(timestamp: number): string {
 	const date = new Date(timestamp * 1000)
@@ -30,11 +36,38 @@ function timestampFromDate(value: string, endOfDay: boolean): number {
 }
 
 const today = Math.floor(Date.now() / 1000)
-const from = ref(dateInputValue(store.selectedDiaryStats?.latest_entry_at ?? store.selectedDiaryStats?.first_entry_at ?? today))
+const from = ref(dateInputValue(props.sourceJob?.data_from ?? store.selectedDiaryStats?.latest_entry_at ?? store.selectedDiaryStats?.first_entry_at ?? today))
 const until = ref(dateInputValue(today))
 const dateRangeInvalid = computed(() => timestampFromDate(from.value, false) > timestampFromDate(until.value, true))
 const formatsInvalid = computed(() => outputFormats.value.length === 0)
 const formInvalid = computed(() => store.selectedDiaryId === null || dateRangeInvalid.value || formatsInvalid.value || submitting.value)
+
+function applySourceJob(sourceJob: AnalysisJob): void {
+	title.value = sourceJob.title
+	includeTextAnalysis.value = sourceJob.parameters.includeTextAnalysis ?? true
+	language.value = sourceJob.language
+	shiftingMedianWidth.value = sourceJob.parameters.shifting_median_width ?? 11
+	plotStdError.value = sourceJob.parameters.plot_std_error ?? false
+	showSingleDataPoints.value = sourceJob.parameters.show_single_data_points ?? true
+	outputFormats.value = [...sourceJob.output_types]
+	from.value = dateInputValue(sourceJob.data_from)
+	until.value = dateInputValue(today)
+}
+
+async function loadSourceJob(): Promise<void> {
+	if (props.sourceJob !== null && props.sourceJob !== undefined) {
+		applySourceJob(props.sourceJob)
+		return
+	}
+	const value = route.query.sourceJobId
+	const sourceJobId = typeof value === 'string' ? Number.parseInt(value, 10) : null
+	if (sourceJobId === null || Number.isNaN(sourceJobId)) return
+	const jobs = await analysisService.list().catch(() => [])
+	const sourceJob = jobs.find((item) => item.id === sourceJobId)
+	if (sourceJob !== undefined) {
+		applySourceJob(sourceJob)
+	}
+}
 
 function toggleFormat(format: AnalysisOutputType): void {
 	outputFormats.value = outputFormats.value.includes(format)
@@ -59,10 +92,12 @@ async function submit(start: boolean): Promise<void> {
 			outputFormats: outputFormats.value,
 			parameters: {
 				includeTextAnalysis: includeTextAnalysis.value,
-				movingAverageWindow: movingAverageWindow.value,
-				showStandardDeviation: showStandardDeviation.value,
+				shifting_median_width: shiftingMedianWidth.value,
+				plot_std_error: plotStdError.value,
+				show_single_data_points: showSingleDataPoints.value,
 			},
 		})
+		document.dispatchEvent(new CustomEvent('structured-diary-analysis-job-changed', { detail: { job } }))
 		await store.pushWorkspaceRoute({ name: 'analysis', params: { diaryId: job.diary_id, jobId: job.id } })
 	} catch (error) {
 		const message = error instanceof Error ? error.message : t('structureddiary', 'Analysis could not be created.')
@@ -85,6 +120,10 @@ async function onSubmit(event: SubmitEvent): Promise<void> {
 async function cancel(): Promise<void> {
 	await store.pushWorkspaceRoute({ name: 'analyses', params: { diaryId: store.selectedDiaryId } })
 }
+
+onMounted(() => {
+	void loadSourceJob()
+})
 </script>
 
 <template>
@@ -135,11 +174,15 @@ async function cancel(): Promise<void> {
 					</label>
 					<label :class="$style.field">
 						<span>{{ t('structureddiary', 'Moving average window') }}</span>
-						<input v-model.number="movingAverageWindow" :class="['nc-input-field__input', $style.input]" type="number" min="1" step="1">
+						<input v-model.number="shiftingMedianWidth" :class="['nc-input-field__input', $style.input]" type="number" min="1" step="1">
 					</label>
 					<label :class="$style.check">
-						<input v-model="showStandardDeviation" type="checkbox">
+						<input v-model="plotStdError" type="checkbox">
 						<span>{{ t('structureddiary', 'Show standard deviation in charts and tables') }}</span>
+					</label>
+					<label :class="$style.check">
+						<input v-model="showSingleDataPoints" type="checkbox">
+						<span>{{ t('structureddiary', 'Show single data points') }}</span>
 					</label>
 				</section>
 

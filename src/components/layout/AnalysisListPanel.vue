@@ -66,6 +66,10 @@ function notifyJobsRefreshed(): void {
 	}))
 }
 
+function handleJobChanged(): void {
+	void refresh(false)
+}
+
 async function refresh(changedOnly = false): Promise<void> {
 	if (store.selectedDiaryId === null) {
 		jobs.value = {}
@@ -75,7 +79,8 @@ async function refresh(changedOnly = false): Promise<void> {
 	loading.value = true
 	try {
 		const changedSince = changedOnly ? lastRefreshIso.value : null
-		const response = await analysisService.list(changedSince)
+		const longPollTimeout = changedOnly ? Math.min(pollingSeconds.value, 30) : null
+		const response = await analysisService.list(changedSince, longPollTimeout)
 		if (!changedOnly) {
 			jobs.value = Object.fromEntries(response.map((job) => [job.id, job]))
 		} else {
@@ -156,11 +161,13 @@ watch(() => store.selectedDiaryId, () => {
 })
 
 onMounted(async () => {
+	document.addEventListener('structured-diary-analysis-job-changed', handleJobChanged)
 	await refresh(false)
 	schedulePolling()
 })
 
 onBeforeUnmount(() => {
+	document.removeEventListener('structured-diary-analysis-job-changed', handleJobChanged)
 	clearPollingTimer()
 	if (idleResetTimer !== null) {
 		clearTimeout(idleResetTimer)

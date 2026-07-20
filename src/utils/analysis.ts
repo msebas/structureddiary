@@ -3,6 +3,7 @@ import { t } from '@nextcloud/l10n'
 import type { AnalysisArtifact, AnalysisArtifactType, AnalysisJob, AnalysisJobStatus } from '@/types/types'
 
 export const activeAnalysisStatuses: AnalysisJobStatus[] = [
+	'SUBMITTED',
 	'READY_QUEUE',
 	'QUEUED',
 	'LOAD_DATA',
@@ -19,6 +20,7 @@ export const mutableAnalysisStatuses: AnalysisJobStatus[] = activeAnalysisStatus
 
 const statusLabels: Record<AnalysisJobStatus, string> = {
 	DRAFT: t('structureddiary', 'Draft'),
+	SUBMITTED: t('structureddiary', 'Submitted'),
 	READY_QUEUE: t('structureddiary', 'Waiting to start'),
 	QUEUED: t('structureddiary', 'Queued'),
 	LOAD_DATA: t('structureddiary', 'Loading data'),
@@ -56,7 +58,7 @@ export function canStartAnalysis(job: AnalysisJob | null | undefined): boolean {
 export function canCancelAnalysis(job: AnalysisJob | null | undefined): boolean {
 	return job !== null
 		&& job !== undefined
-		&& ['READY_QUEUE', 'QUEUED', 'LOAD_DATA', 'RUNNING', 'RESTART', 'JOB_FAILED', 'JOB_COMPLETED'].includes(job.status)
+		&& ['SUBMITTED', 'READY_QUEUE', 'QUEUED', 'LOAD_DATA', 'RUNNING', 'RESTART', 'JOB_FAILED', 'JOB_COMPLETED'].includes(job.status)
 }
 
 export function canDeleteAnalysis(job: AnalysisJob | null | undefined): boolean {

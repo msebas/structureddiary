@@ -2,6 +2,7 @@
 
 namespace OCA\Tests\StructuredDiary\Integration\TestUtil;
 
+use Doctrine\DBAL\Exception\TableNotFoundException;
 use PHPUnit\Framework\TestCase;
 use OC\DB\MigrationService;
 use OCA\StructuredDiary\Db\TableNames;
@@ -54,7 +55,11 @@ class IntegrationTestParentClass extends TestCase {
                  TableNames::ALARM_SOUNDS,
                  ] as $tableName) {
             if (in_array('oc_' . $tableName, $tables, true)) {
-                $schemaManager->dropTable('oc_' . $tableName);
+                try {
+                    $schemaManager->dropTable('oc_' . $tableName);
+                } catch (TableNotFoundException) {
+                    // A previous reset may have invalidated the table-list snapshot.
+                }
             }
         }
 

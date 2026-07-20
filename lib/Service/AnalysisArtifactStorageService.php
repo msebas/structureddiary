@@ -21,6 +21,9 @@ class AnalysisArtifactStorageService {
 	}
 
 	public function storeArtifactContent(AnalysisJob $job, AnalysisArtifact $artifact, string $content): AnalysisArtifact {
+		if ($artifact->getSize() > 0 && strlen($content) > $artifact->getSize()) {
+			throw new \RuntimeException('Uploaded artifact is larger than expected.');
+		}
 		$diary = $this->diaryMapper->getDiary($job->getDiaryId());
 		$userFolder = $this->rootFolder->getUserFolder($diary->getUserId());
 		$targetPath = ltrim($job->getStoragePath() . '/' . $artifact->getFilePath(), '/');

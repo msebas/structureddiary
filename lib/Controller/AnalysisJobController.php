@@ -9,11 +9,11 @@ use OCA\StructuredDiary\Db\AnalysisJob;
 use OCA\StructuredDiary\Db\AnalysisJobMapper;
 use OCA\StructuredDiary\Service\AnalysisArtifactArchiveService;
 use OCA\StructuredDiary\ResponseDefinitions;
-use OCA\StructuredDiary\Service\AnalysisJobProcessingService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataDisplayResponse;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\Response;
@@ -26,12 +26,14 @@ use Throwable;
  * @psalm-import-type StructuredDiaryAnalysisArtifact from ResponseDefinitions
  */
 class AnalysisJobController extends ApiOCSController {
+	private const LONG_POLL_MAX_TIMEOUT = 30;
+	private const LONG_POLL_CHECK_INTERVAL = 1;
+
 	public function __construct(
 		string $appName,
 		IRequest $request,
 		private AnalysisJobMapper $jobMapper,
 		private AnalysisArtifactMapper $artifactMapper,
-		private AnalysisJobProcessingService $processingService,
 		private AnalysisArtifactArchiveService $archiveService,
 		private ?string $userId,
 	) {
@@ -47,9 +49,24 @@ class AnalysisJobController extends ApiOCSController {
 	 */
 	#[NoAdminRequired]
 	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/jobs', requirements: ['apiVersion' => '(v1)'])]
-	public function index(null|int|string $changedSince = null): DataResponse {
+	public function index(null|int|string $changedSince = null, null|int|string $longPollTimeout = null, null|int|string $wait = null): DataResponse {
 		try {
-			return $this->respond($this->jobMapper->getJobsForUser($this->requireUser($this->userId), $this->parseChangedSince($changedSince)));
+			$userId = $this->requireUser($this->userId);
+			$changedSinceTimestamp = $this->parseChangedSince($changedSince);
+			$timeout = $this->parseLongPollTimeout($longPollTimeout ?? $wait);
+			$jobs = $this->jobMapper->getJobsForUser($userId, $changedSinceTimestamp);
+
+			if ($changedSinceTimestamp === null || $jobs !== [] || $timeout === 0) {
+				return $this->respond($jobs);
+			}
+
+			$deadline = $this->getCurrentTimestamp() + $timeout;
+			while ($jobs === [] && $this->getCurrentTimestamp() < $deadline) {
+				$this->waitBeforeNextLongPollCheck();
+				$jobs = $this->jobMapper->getJobsForUser($userId, $changedSinceTimestamp);
+			}
+
+			return $this->respond($jobs);
 		} catch (Throwable $e) {
 			return $this->respondError($e->getMessage());
 		}
@@ -67,6 +84,25 @@ class AnalysisJobController extends ApiOCSController {
 			throw new \InvalidArgumentException('changedSince must be an ISO timestamp or Unix timestamp.');
 		}
 		return $timestamp;
+	}
+
+	private function parseLongPollTimeout(null|int|string $longPollTimeout): int {
+		if ($longPollTimeout === null || $longPollTimeout === '') {
+			return 0;
+		}
+		if (!is_int($longPollTimeout) && !ctype_digit($longPollTimeout)) {
+			throw new \InvalidArgumentException('longPollTimeout must be a non-negative integer.');
+		}
+
+		return min((int)$longPollTimeout, self::LONG_POLL_MAX_TIMEOUT);
+	}
+
+	protected function getCurrentTimestamp(): int {
+		return time();
+	}
+
+	protected function waitBeforeNextLongPollCheck(): void {
+		sleep(self::LONG_POLL_CHECK_INTERVAL);
 	}
 
 	/**
@@ -102,10 +138,6 @@ class AnalysisJobController extends ApiOCSController {
 				$outputFormats,
 				$parameters,
 			);
-			if ($job->getStatus() === AnalysisJob::STATUS_READY_QUEUE) {
-				$job = $this->processingService->tryQueueJobEntity($job, true, AnalysisJobProcessingService::QUICK_QUEUE_TIMEOUT, false) ?? $job;
-			}
-
 			return $this->respond($job, Http::STATUS_CREATED);
 		} catch (Throwable $e) {
 			return $this->respondError($e->getMessage());
@@ -136,13 +168,10 @@ class AnalysisJobController extends ApiOCSController {
 		try {
 			$job = $this->jobMapper->getJobForUser($id, $this->requireUser($this->userId));
 			if ($status === AnalysisJob::STATUS_CANCEL_REQUESTED) {
-				return $this->respond($this->processingService->requestCancel($job));
+				return $this->respond($this->jobMapper->requestCancel($job));
 			}
 
 			$updated = $this->jobMapper->updateDraftJob($job, $fromTimestamp, $untilTimestamp, $title, $language, $outputFormats, $parameters, $status);
-			if ($updated->getStatus() === AnalysisJob::STATUS_READY_QUEUE) {
-				$updated = $this->processingService->tryQueueJobEntity($updated, true, AnalysisJobProcessingService::QUICK_QUEUE_TIMEOUT) ?? $updated;
-			}
 
 			return $this->respond($updated);
 		} catch (Throwable $e) {
@@ -194,6 +223,7 @@ class AnalysisJobController extends ApiOCSController {
 	 * 404: Analysis job artifacts not found
 	 */
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/jobs/{id}/artifacts/download', requirements: ['apiVersion' => '(v1)'])]
 	public function downloadArtifacts(int $id): Response|DataResponse {
 		return $this->downloadArtifactSelection($id, null, true);
@@ -208,6 +238,7 @@ class AnalysisJobController extends ApiOCSController {
 	 * 404: Analysis job artifacts not found
 	 */
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/jobs/{id}/artifacts/download/{artifactType}', requirements: ['apiVersion' => '(v1)', 'artifactType' => '[A-Za-z_]+'])]
 	public function downloadArtifactsByType(int $id, string $artifactType): Response|DataResponse {
 		return $this->downloadArtifactSelection($id, $artifactType, false);
@@ -222,6 +253,7 @@ class AnalysisJobController extends ApiOCSController {
 	 * 404: Analysis job artifact not found
 	 */
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/jobs/{id}/artifacts/{artifactId}/content', requirements: ['apiVersion' => '(v1)'])]
 	public function artifactContent(int $id, int $artifactId): Response|DataResponse {
 		try {

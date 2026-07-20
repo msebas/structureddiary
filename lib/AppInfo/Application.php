@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\StructuredDiary\AppInfo;
 
-use OCA\StructuredDiary\Cron\AnalysisJobCron;
+use OCA\StructuredDiary\Cron\AnalysisJobFinalizationCron;
 use OCA\StructuredDiary\Settings\AdminSection;
 use OCA\StructuredDiary\Settings\AdminSettings;
 use OCP\AppFramework\App;
@@ -26,12 +26,12 @@ class Application extends App implements IBootstrap {
 	}
 
 	public function boot(IBootContext $context): void {
-		$context->injectFn(function (IManager $settingsManager, IJobList $jobList): void {
+		$context->injectFn(function (IJobList $jobList): void {
+			$jobList->add(AnalysisJobFinalizationCron::class);
+		});
+		$context->injectFn(function (IManager $settingsManager): void {
 			$settingsManager->registerSection(IManager::SETTINGS_ADMIN, AdminSection::class);
 			$settingsManager->registerSetting(IManager::SETTINGS_ADMIN, AdminSettings::class);
-			if (!$jobList->has(AnalysisJobCron::class, null)) {
-				$jobList->add(AnalysisJobCron::class);
-			}
 		});
 	}
 }

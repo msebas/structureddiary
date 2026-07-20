@@ -51,7 +51,56 @@ final class AnalysisJobMapperTest extends TestCase {
 		$this->assertSame(12.5, $result->getProgress());
 		$this->assertSame('loading', $result->getStatusMessage());
 		$this->assertSame(1234, $result->getUpdatedAt());
-		$this->assertSame('https://cloud.example/apps/files/files/0?dir=%2FStructuredDiary%2FAnalyses%2Freport-42', $result->getStorageUrl());
+		$this->assertSame('https://cloud.example/index.php/apps/files/files/0?dir=%2FStructuredDiary%2FAnalyses%2Freport-42', $result->getStorageUrl());
+	}
+
+	public function testUpdateFromPythonAcceptsSubmittedToReadyQueueTransition(): void {
+		$job = $this->job(AnalysisJob::STATUS_SUBMITTED);
+		$mapper = $this->mapper(['update', 'getCurrentTimestamp']);
+		$mapper->method('getCurrentTimestamp')->willReturn(1234);
+		$mapper->expects($this->once())
+			->method('update')
+			->willReturnCallback(static fn (AnalysisJob $updated): AnalysisJob => $updated);
+
+		$result = $mapper->updateFromPython($job, AnalysisJob::STATUS_READY_QUEUE, null, 'ready for worker queue', null);
+
+		$this->assertSame(AnalysisJob::STATUS_READY_QUEUE, $result->getStatus());
+		$this->assertNull($result->getStartedAt());
+		$this->assertSame(1234, $result->getUpdatedAt());
+		$this->assertSame('ready for worker queue', $result->getStatusMessage());
+	}
+
+	public function testPythonUpdateTransitionsIncludeEveryReachableLifecycleState(): void {
+		$reflection = new \ReflectionClass(AnalysisJobMapper::class);
+		$actualTransitions = $reflection->getReflectionConstant('PYTHON_UPDATE_TRANSITIONS')?->getValue();
+		$this->assertIsArray($actualTransitions);
+
+		$expectedTransitions = [];
+		foreach ($actualTransitions as $from => $nextStatuses) {
+			$reachable = [];
+			$pending = $nextStatuses;
+			while ($pending !== []) {
+				$status = array_pop($pending);
+				if ($status === $from || isset($reachable[$status])) {
+					continue;
+				}
+				$reachable[$status] = true;
+				foreach ($actualTransitions[$status] ?? [] as $nextStatus) {
+					$pending[] = $nextStatus;
+				}
+			}
+			$expectedTransitions[$from] = array_keys($reachable);
+			sort($expectedTransitions[$from]);
+		}
+
+		foreach ($actualTransitions as &$nextStatuses) {
+			sort($nextStatuses);
+		}
+		unset($nextStatuses);
+		ksort($expectedTransitions);
+		ksort($actualTransitions);
+
+		$this->assertSame($expectedTransitions, $actualTransitions);
 	}
 
 	public function testUpdateFromPythonClampsNegativeProgressFromService(): void {
@@ -89,6 +138,25 @@ final class AnalysisJobMapperTest extends TestCase {
 
 		$this->assertSame(AnalysisJob::STATUS_JOB_CANCELED, $result->getStatus());
 		$this->assertSame(1234, $result->getFinishedAt());
+	}
+
+	public function testUpdateFromPythonAcceptsWorkerUploadBeforeTerminalStatus(): void {
+		$mapper = $this->mapper(['update', 'getCurrentTimestamp']);
+		$mapper->method('getCurrentTimestamp')->willReturn(1234);
+		$mapper->expects($this->exactly(2))
+			->method('update')
+			->willReturnCallback(static fn (AnalysisJob $updated): AnalysisJob => $updated);
+
+		$workerUpload = $mapper->updateFromPython($this->job(AnalysisJob::STATUS_RUNNING), AnalysisJob::STATUS_WORKER_UPLOAD, 99.0, 'uploading artifacts', null);
+		$this->assertSame(AnalysisJob::STATUS_WORKER_UPLOAD, $workerUpload->getStatus());
+		$this->assertSame(99.0, $workerUpload->getProgress());
+		$this->assertNull($workerUpload->getFinishedAt());
+
+		$completed = $mapper->updateFromPython($workerUpload, AnalysisJob::STATUS_JOB_COMPLETED, null, 'completed', null);
+
+		$this->assertSame(AnalysisJob::STATUS_JOB_COMPLETED, $completed->getStatus());
+		$this->assertSame(1234, $completed->getFinishedAt());
+		$this->assertSame(100.0, $completed->getProgress());
 	}
 
 	public function testRequestCancelWhileCollectingResultsMovesToPythonCleanupState(): void {
@@ -174,16 +242,6 @@ final class AnalysisJobMapperTest extends TestCase {
 		$this->expectExceptionMessage('Job is not loading data.');
 
 		$mapper->assertPythonAccess($job, 'secret', '11111111-2222-4333-8444-555555555555', true, 2100);
-	}
-
-	public function testMarkQueuedRejectsEmptyPythonJobId(): void {
-		$mapper = $this->mapper(['update']);
-		$mapper->expects($this->never())->method('update');
-
-		$this->expectException(\InvalidArgumentException::class);
-		$this->expectExceptionMessage('Python job id is required.');
-
-		$mapper->markQueued($this->job(AnalysisJob::STATUS_READY_QUEUE), '  ');
 	}
 
 	/**

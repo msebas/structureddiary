@@ -41,6 +41,47 @@ final class AnalysisConfigServiceTest extends TestCase {
 		(new AnalysisConfigService($appConfig, $config))->setServiceSecret(' secret ');
 	}
 
+	public function testGetOrCreateNextcloudApiTokenReusesStoredToken(): void {
+		$appConfig = $this->createMock(IAppConfig::class);
+		$config = $this->createMock(IConfig::class);
+		$appConfig->expects($this->once())
+			->method('getValueString')
+			->with(Application::APP_ID, AnalysisConfigService::KEY_NEXTCLOUD_API_TOKEN, '', true)
+			->willReturn('stored-token');
+		$appConfig->expects($this->never())->method('setValueString');
+
+		$this->assertSame('stored-token', (new AnalysisConfigService($appConfig, $config))->getOrCreateNextcloudApiToken());
+	}
+
+	public function testGetNextcloudApiTokenDoesNotCreateMissingToken(): void {
+		$appConfig = $this->createMock(IAppConfig::class);
+		$config = $this->createMock(IConfig::class);
+		$appConfig->expects($this->once())
+			->method('getValueString')
+			->with(Application::APP_ID, AnalysisConfigService::KEY_NEXTCLOUD_API_TOKEN, '', true)
+			->willReturn('');
+		$appConfig->expects($this->never())->method('setValueString');
+
+		$this->assertSame('', (new AnalysisConfigService($appConfig, $config))->getNextcloudApiToken());
+	}
+
+	public function testGetOrCreateNextcloudApiTokenStoresSensitiveGeneratedToken(): void {
+		$appConfig = $this->createMock(IAppConfig::class);
+		$config = $this->createMock(IConfig::class);
+		$appConfig->expects($this->once())->method('getValueString')->willReturn('');
+		$appConfig->expects($this->once())
+			->method('setValueString')
+			->with(
+				Application::APP_ID,
+				AnalysisConfigService::KEY_NEXTCLOUD_API_TOKEN,
+				$this->isType('string'),
+				true,
+				true,
+			);
+
+		$this->assertNotSame('', (new AnalysisConfigService($appConfig, $config))->getOrCreateNextcloudApiToken());
+	}
+
 	public function testSetOutputBaseFolderRejectsParentTraversal(): void {
 		$appConfig = $this->createMock(IAppConfig::class);
 		$config = $this->createMock(IConfig::class);

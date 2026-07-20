@@ -31,6 +31,7 @@ function mountNavigation(diaries: Diary[]) {
 			{ path: '/diaries', name: 'diaries', component: { template: '<div />' } },
 			{ path: '/diaries/:diaryId', name: 'diary', component: { template: '<div />' } },
 			{ path: '/questions/:diaryId', name: 'questions', component: { template: '<div />' } },
+			{ path: '/analyses/:diaryId(\\d+)?', name: 'analyses', component: { template: '<div />' } },
 		],
 	})
 
@@ -83,6 +84,8 @@ describe('StructuredDiaryNavigation', () => {
 
 		cy.contains('Management').click({ force: true })
 		cy.get('[data-cy="route-name"]').should('contain', 'diaries')
+		cy.contains('Analyse').click({ force: true })
+		cy.get('[data-cy="route-name"]').should('contain', 'analyses')
 		cy.contains('Entries').click({ force: true })
 		cy.get('[data-cy="route-name"]').should('contain', 'entriesAllDiaries')
 

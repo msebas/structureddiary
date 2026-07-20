@@ -45,16 +45,13 @@ class Version000003Date20260702120000 extends SimpleMigrationStep {
 			$table->addColumn('error_message', Types::TEXT, ['notnull' => false]);
 			$table->addColumn('cancel_requested_at', Types::BIGINT, ['notnull' => false]);
 			$table->addColumn('artifacts_downloaded', Types::BOOLEAN, ['notnull' => true, 'default' => false]);
-			$table->addColumn('artifacts_download_fails', Types::INTEGER, ['notnull' => true, 'default' => 0]);
-			$table->addColumn('artifacts_download_last_fail_at', Types::BIGINT, ['notnull' => false]);
 			$table->addColumn('python_deleted', Types::BOOLEAN, ['notnull' => true, 'default' => false]);
-			$table->addColumn('python_deleted_fails', Types::INTEGER, ['notnull' => true, 'default' => 0]);
-			$table->addColumn('python_deleted_last_fail_at', Types::BIGINT, ['notnull' => false]);
 			$table->setPrimaryKey(['id']);
 			$table->addIndex(['diary_id'], 'sd_analysis_job_diary_idx');
 			$table->addIndex(['created_by'], 'sd_analysis_job_user_idx');
 			$table->addIndex(['created_at'], 'sd_analysis_job_created_idx');
 			$table->addIndex(['status'], 'sd_analysis_job_status_idx');
+            $table->addIndex(['updated_at'], 'sd_analysis_job_updated_idx');
 			$table->addUniqueIndex(['token'], 'sd_analysis_job_token_unique');
 			$table->addUniqueIndex(['storage_path'], 'sd_analysis_job_path_unique');
 			$table->addUniqueIndex(['uuid'], 'sd_analysis_job_uuid_unique');
@@ -76,8 +73,6 @@ class Version000003Date20260702120000 extends SimpleMigrationStep {
 			$table->addColumn('checksum', Types::STRING, ['notnull' => false, 'length' => 128]);
 			$table->addColumn('created_at', Types::BIGINT, ['notnull' => true]);
 			$table->addColumn('downloaded', Types::BOOLEAN, ['notnull' => true, 'default' => false]);
-			$table->addColumn('download_fails', Types::INTEGER, ['notnull' => true, 'default' => 0]);
-			$table->addColumn('download_last_fail_at', Types::BIGINT, ['notnull' => false]);
 			$table->setPrimaryKey(['id']);
 			$table->addIndex(['parent_id'], 'sd_analysis_art_parent_idx');
 			$table->addIndex(['job_id'], 'sd_analysis_art_job_idx');

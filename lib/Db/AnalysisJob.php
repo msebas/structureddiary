@@ -60,25 +60,19 @@ use OCP\AppFramework\Db\Entity;
  * @method void setCancelRequestedAt(?int $cancelRequestedAt)
  * @method bool getArtifactsDownloaded()
  * @method void setArtifactsDownloaded(bool $artifactsDownloaded)
- * @method int getArtifactsDownloadFails()
- * @method void setArtifactsDownloadFails(int $artifactsDownloadFails)
- * @method int|null getArtifactsDownloadLastFailAt()
- * @method void setArtifactsDownloadLastFailAt(?int $artifactsDownloadLastFailAt)
  * @method bool getPythonDeleted()
  * @method void setPythonDeleted(bool $pythonDeleted)
- * @method int getPythonDeletedFails()
- * @method void setPythonDeletedFails(int $pythonDeletedFails)
- * @method int|null getPythonDeletedLastFailAt()
- * @method void setPythonDeletedLastFailAt(?int $pythonDeletedLastFailAt)
  */
 class AnalysisJob extends Entity implements JsonSerializable {
 	public const TYPE_STANDARD = 'standard';
 
 	public const STATUS_DRAFT = 'DRAFT';
+	public const STATUS_SUBMITTED = 'SUBMITTED';
 	public const STATUS_READY_QUEUE = 'READY_QUEUE';
 	public const STATUS_QUEUED = 'QUEUED';
 	public const STATUS_LOAD_DATA = 'LOAD_DATA';
 	public const STATUS_RUNNING = 'RUNNING';
+	public const STATUS_WORKER_UPLOAD = 'WORKER_UPLOAD';
 	public const STATUS_RESTART = 'RESTART';
 	public const STATUS_CANCEL_REQUESTED = 'CANCEL_REQUESTED';
 	public const STATUS_JOB_CANCELED = 'JOB_CANCELED';
@@ -119,11 +113,7 @@ class AnalysisJob extends Entity implements JsonSerializable {
 	protected $errorMessage;
 	protected $cancelRequestedAt;
 	protected $artifactsDownloaded = false;
-	protected $artifactsDownloadFails = 0;
-	protected $artifactsDownloadLastFailAt;
 	protected $pythonDeleted = false;
-	protected $pythonDeletedFails = 0;
-	protected $pythonDeletedLastFailAt;
 	private ?string $storageUrl = null;
 
 	public function __construct() {
@@ -153,11 +143,7 @@ class AnalysisJob extends Entity implements JsonSerializable {
 		$this->addType('errorMessage', 'string');
 		$this->addType('cancelRequestedAt', 'integer');
 		$this->addType('artifactsDownloaded', 'boolean');
-		$this->addType('artifactsDownloadFails', 'integer');
-		$this->addType('artifactsDownloadLastFailAt', 'integer');
 		$this->addType('pythonDeleted', 'boolean');
-		$this->addType('pythonDeletedFails', 'integer');
-		$this->addType('pythonDeletedLastFailAt', 'integer');
 	}
 
 	/**
@@ -166,10 +152,12 @@ class AnalysisJob extends Entity implements JsonSerializable {
 	public static function statuses(): array {
 		return [
 			self::STATUS_DRAFT,
+			self::STATUS_SUBMITTED,
 			self::STATUS_READY_QUEUE,
 			self::STATUS_QUEUED,
 			self::STATUS_LOAD_DATA,
 			self::STATUS_RUNNING,
+			self::STATUS_WORKER_UPLOAD,
 			self::STATUS_RESTART,
 			self::STATUS_CANCEL_REQUESTED,
 			self::STATUS_JOB_CANCELED,
