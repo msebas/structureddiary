@@ -17,6 +17,7 @@ use OCA\StructuredDiary\Service\AnalysisConfigService;
 use OCA\StructuredDiary\Service\AnalysisExportService;
 use OCA\StructuredDiary\Service\AnalysisJobFinalizationService;
 use OCP\IRequest;
+use OCP\IDBConnection;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 
@@ -114,6 +115,61 @@ final class PythonAnalysisControllerTest extends TestCase {
 		$this->assertSame(['error' => 'Invalid Nextcloud API token.'], $response->getData());
 	}
 
+	public function testPollLongPollsUntilChangedJobsAppear(): void {
+		$job = $this->job('11111111-2222-4333-8444-555555555555', AnalysisJob::STATUS_SUBMITTED);
+		$jobMapper = $this->createMock(AnalysisJobMapper::class);
+		$jobMapper->expects($this->exactly(2))->method('getJobsForPython')->with(1000)->willReturnOnConsecutiveCalls([], [$job]);
+		$controller = $this->pollingController($jobMapper, ['getCurrentTimestamp', 'waitBeforeNextLongPollCheck']);
+		$controller->expects($this->exactly(2))->method('getCurrentTimestamp')->willReturn(1000);
+		$controller->expects($this->once())->method('waitBeforeNextLongPollCheck');
+
+		$response = $controller->poll(1000, 30);
+
+		$this->assertSame(200, $response->getStatus());
+		$this->assertSame([$job->getUuid()], array_column($response->getData(), 'uuid'));
+	}
+
+	public function testPollReturnsEmptyListWhenLongPollTimeoutExpires(): void {
+		$jobMapper = $this->createMock(AnalysisJobMapper::class);
+		$jobMapper->expects($this->exactly(2))->method('getJobsForPython')->with(1000)->willReturn([]);
+		$controller = $this->pollingController($jobMapper, ['getCurrentTimestamp', 'waitBeforeNextLongPollCheck']);
+		$controller->expects($this->exactly(3))->method('getCurrentTimestamp')->willReturnOnConsecutiveCalls(1000, 1000, 1001);
+		$controller->expects($this->once())->method('waitBeforeNextLongPollCheck');
+
+		$response = $controller->poll(1000, 1);
+
+		$this->assertSame(200, $response->getStatus());
+		$this->assertSame([], $response->getData());
+	}
+
+	public function testPollAcceptsWaitAliasAndRejectsInvalidCursorOrTimeout(): void {
+		$jobMapper = $this->createMock(AnalysisJobMapper::class);
+		$jobMapper->expects($this->exactly(2))->method('getJobsForPython')->with(1000)->willReturn([]);
+		$controller = $this->pollingController($jobMapper, ['getCurrentTimestamp', 'waitBeforeNextLongPollCheck']);
+		$controller->expects($this->exactly(3))->method('getCurrentTimestamp')->willReturnOnConsecutiveCalls(1000, 1000, 1001);
+		$controller->expects($this->once())->method('waitBeforeNextLongPollCheck');
+		$this->assertSame([], $controller->poll(1000, null, 1)->getData());
+
+		$invalidMapper = $this->createMock(AnalysisJobMapper::class);
+		$invalidMapper->expects($this->never())->method('getJobsForPython');
+		$invalid = $this->pollingController($invalidMapper);
+		$this->assertSame(400, $invalid->poll('not-a-timestamp', 1)->getStatus());
+		$this->assertSame(400, $invalid->poll(1000, 'soon')->getStatus());
+	}
+
+	public function testRepeatedPollCursorRedeliversStableJobWithoutMutatingIt(): void {
+		$job = $this->job('11111111-2222-4333-8444-555555555555', AnalysisJob::STATUS_SUBMITTED);
+		$jobMapper = $this->createMock(AnalysisJobMapper::class);
+		$jobMapper->expects($this->exactly(2))->method('getJobsForPython')->with(1000)->willReturn([$job]);
+		$controller = $this->pollingController($jobMapper);
+
+		$first = $controller->poll(1000, 30);
+		$second = $controller->poll(1000, 30);
+
+		$this->assertSame($first->getData(), $second->getData());
+		$this->assertSame(AnalysisJob::STATUS_SUBMITTED, $job->getStatus());
+	}
+
 	public function testUpdateStatusWorkflowUsesJobUuidAndToken(): void {
 		$uuid = '11111111-2222-4333-8444-555555555555';
 		$job = $this->job($uuid, AnalysisJob::STATUS_QUEUED);
@@ -140,6 +196,7 @@ final class PythonAnalysisControllerTest extends TestCase {
 			$this->createMock(AnalysisArtifactStorageService::class),
 			$this->createMock(AnalysisConfigService::class),
 			$this->createMock(AnalysisJobFinalizationService::class),
+			$this->createMock(IDBConnection::class),
 		);
 
 		$response = $controller->updateStatus($uuid, AnalysisJob::STATUS_LOAD_DATA, 10.0, 'loading', null);
@@ -158,9 +215,8 @@ final class PythonAnalysisControllerTest extends TestCase {
 		$jobMapper = $this->createMock(AnalysisJobMapper::class);
 		$jobMapper->expects($this->once())->method('getJobByUuid')->with($uuid)->willReturn($job);
 		$jobMapper->expects($this->once())->method('assertPythonAccess')->with($job, 'job-token', $uuid, false, $this->isType('int'));
-		$jobMapper->expects($this->once())->method('update')->with($this->callback(static fn (AnalysisJob $updated): bool => $updated->getArtifactsDownloaded()));
+		$jobMapper->expects($this->once())->method('claimArtifactManifest')->with($job)->willReturn(true);
 		$artifactMapper = $this->createMock(AnalysisArtifactMapper::class);
-		$artifactMapper->expects($this->once())->method('getArtifactsForJob')->with(42)->willReturn([]);
 		$createCalls = 0;
 		$artifactMapper->expects($this->exactly(2))
 			->method('createFromPythonArtifact')
@@ -189,6 +245,46 @@ final class PythonAnalysisControllerTest extends TestCase {
 		], $response->getData());
 	}
 
+	public function testCreateArtifactsReturnsExistingManifestForDuplicateDelivery(): void {
+		$uuid = '11111111-2222-4333-8444-555555555555';
+		$job = $this->job($uuid, AnalysisJob::STATUS_JOB_COMPLETED);
+		$artifact = $this->artifact(11, 301, null);
+		$request = $this->request($uuid);
+		$jobMapper = $this->createMock(AnalysisJobMapper::class);
+		$jobMapper->expects($this->once())->method('getJobByUuid')->with($uuid)->willReturn($job);
+		$jobMapper->expects($this->once())->method('assertPythonAccess')->with($job, 'job-token', $uuid, false, $this->isType('int'));
+		$jobMapper->expects($this->once())->method('claimArtifactManifest')->with($job)->willReturn(false);
+		$artifactMapper = $this->createMock(AnalysisArtifactMapper::class);
+		$artifactMapper->expects($this->once())->method('getArtifactsForJob')->with(42)->willReturn([$artifact]);
+
+		$response = $this->controller($request, $jobMapper, $artifactMapper)->createArtifacts($uuid, []);
+
+		$this->assertSame(200, $response->getStatus());
+		$this->assertSame([['id' => 11, 'parent_id' => null, 'python_id' => 301, 'python_parent_id' => null, 'checksum' => null]], $response->getData());
+	}
+
+	public function testCreateArtifactsRollsBackManifestClaimWhenArtifactCreationFails(): void {
+		$uuid = '11111111-2222-4333-8444-555555555555';
+		$job = $this->job($uuid, AnalysisJob::STATUS_WORKER_UPLOAD);
+		$request = $this->request($uuid);
+		$jobMapper = $this->createMock(AnalysisJobMapper::class);
+		$jobMapper->method('getJobByUuid')->with($uuid)->willReturn($job);
+		$jobMapper->method('claimArtifactManifest')->with($job)->willReturn(true);
+		$artifactMapper = $this->createMock(AnalysisArtifactMapper::class);
+		$artifactMapper->method('createFromPythonArtifact')->willThrowException(new \InvalidArgumentException('invalid artifact'));
+		$db = $this->createMock(IDBConnection::class);
+		$db->expects($this->once())->method('beginTransaction');
+		$db->expects($this->never())->method('commit');
+		$db->expects($this->once())->method('rollBack');
+
+		$response = $this->controller($request, $jobMapper, $artifactMapper, null, null, null, $db)->createArtifacts($uuid, [
+			['id' => 1, 'output_type' => 'HTML', 'file_name' => 'report.html', 'file_path' => 'report.html'],
+		]);
+
+		$this->assertSame(400, $response->getStatus());
+		$this->assertSame(['error' => 'invalid artifact'], $response->getData());
+	}
+
 	public function testGetArtifactsReturnsPythonSerializedArtifacts(): void {
 		$uuid = '11111111-2222-4333-8444-555555555555';
 		$job = $this->job($uuid, AnalysisJob::STATUS_WORKER_UPLOAD);
@@ -215,9 +311,8 @@ final class PythonAnalysisControllerTest extends TestCase {
 		$jobMapper = $this->createMock(AnalysisJobMapper::class);
 		$jobMapper->expects($this->once())->method('getJobByUuid')->with($uuid)->willReturn($job);
 		$jobMapper->expects($this->once())->method('assertPythonAccess')->with($job, 'job-token', $uuid, false, $this->isType('int'));
-		$jobMapper->expects($this->once())->method('update')->with($job);
+		$jobMapper->expects($this->once())->method('claimArtifactManifest')->with($job)->willReturn(true);
 		$artifactMapper = $this->createMock(AnalysisArtifactMapper::class);
-		$artifactMapper->expects($this->once())->method('getArtifactsForJob')->with(42)->willReturn([]);
 
 		$response = $this->controller($request, $jobMapper, $artifactMapper)->createArtifacts($uuid, []);
 
@@ -290,6 +385,7 @@ final class PythonAnalysisControllerTest extends TestCase {
 		?AnalysisArtifactStorageService $storage = null,
 		?AnalysisConfigService $configService = null,
 		?AnalysisJobFinalizationService $finalizationService = null,
+		?IDBConnection $db = null,
 	): PythonAnalysisController {
 		return new PythonAnalysisController(
 			'structureddiary',
@@ -300,7 +396,37 @@ final class PythonAnalysisControllerTest extends TestCase {
 			$storage ?? $this->createMock(AnalysisArtifactStorageService::class),
 			$configService ?? $this->createMock(AnalysisConfigService::class),
 			$finalizationService ?? $this->createMock(AnalysisJobFinalizationService::class),
+			$db ?? $this->createMock(IDBConnection::class),
 		);
+	}
+
+	/**
+	 * @param list<string> $methods
+	 */
+	private function pollingController(AnalysisJobMapper $jobMapper, array $methods = []): PythonAnalysisController {
+		$request = $this->createMock(IRequest::class);
+		$request->method('getHeader')->with('x-structureddiary-nextcloud-api-token')->willReturn('nextcloud-token');
+		$config = $this->createMock(AnalysisConfigService::class);
+		$config->method('getNextcloudApiToken')->willReturn('nextcloud-token');
+		$constructorArgs = [
+			'structureddiary',
+			$request,
+			$jobMapper,
+			$this->createMock(AnalysisArtifactMapper::class),
+			$this->createMock(AnalysisExportService::class),
+			$this->createMock(AnalysisArtifactStorageService::class),
+			$config,
+			$this->createMock(AnalysisJobFinalizationService::class),
+			$this->createMock(IDBConnection::class),
+		];
+		if ($methods === []) {
+			return new PythonAnalysisController(...$constructorArgs);
+		}
+
+		return $this->getMockBuilder(PythonAnalysisController::class)
+			->setConstructorArgs($constructorArgs)
+			->onlyMethods($methods)
+			->getMock();
 	}
 
 	private function job(string $uuid, string $status): AnalysisJob {

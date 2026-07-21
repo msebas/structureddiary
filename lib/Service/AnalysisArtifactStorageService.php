@@ -24,6 +24,14 @@ class AnalysisArtifactStorageService {
 		if ($artifact->getSize() > 0 && strlen($content) > $artifact->getSize()) {
 			throw new \RuntimeException('Uploaded artifact is larger than expected.');
 		}
+		$checksum = hash('sha256', $content);
+		if ($artifact->getDownloaded()) {
+			if ($artifact->getChecksum() !== null && !hash_equals($artifact->getChecksum(), $checksum)) {
+				throw new \RuntimeException('Uploaded artifact checksum does not match the existing artifact.');
+			}
+
+			return $artifact;
+		}
 		$diary = $this->diaryMapper->getDiary($job->getDiaryId());
 		$userFolder = $this->rootFolder->getUserFolder($diary->getUserId());
 		$targetPath = ltrim($job->getStoragePath() . '/' . $artifact->getFilePath(), '/');
@@ -31,7 +39,6 @@ class AnalysisArtifactStorageService {
 		$this->rotateExistingFile($userFolder, $targetPath);
 		$file = $userFolder->newFile($targetPath, $content);
 		$file->touch($artifact->getCreatedAt());
-		$checksum = hash('sha256', $content);
 		if ($artifact->getChecksum() !== null && $artifact->getChecksum() !== '' && !hash_equals($artifact->getChecksum(), $checksum)) {
 			$file->delete();
 			throw new \RuntimeException('Downloaded artifact checksum does not match.');

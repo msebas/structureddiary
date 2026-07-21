@@ -380,27 +380,103 @@ class AnalysisJobMapper extends QBMapper {
 	 * @throws Exception
 	 */
 	public function finishCleanup(AnalysisJob $job): AnalysisJob {
-		$target = match ($job->getStatus()) {
+		$expectedStatus = $job->getStatus();
+		$target = match ($expectedStatus) {
 			AnalysisJob::STATUS_JOB_CANCELED => AnalysisJob::STATUS_CANCELED,
 			AnalysisJob::STATUS_JOB_FAILED => AnalysisJob::STATUS_FAILED,
 			AnalysisJob::STATUS_JOB_COMPLETED => AnalysisJob::STATUS_COMPLETED,
 			default => throw new InvalidArgumentException('Job is not ready for cleanup finalization.'),
 		};
-		$job->setStatus($target);
-		$job->setPythonDeleted(true);
-		$job->setUpdatedAt($this->getCurrentTimestamp());
-		if ($job->getFinishedAt() === null) {
-			$job->setFinishedAt($this->getCurrentTimestamp());
-		}
+		$now = $this->getCurrentTimestamp();
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('status', $qb->createNamedParameter($target, IQueryBuilder::PARAM_STR))
+			->set('updated_at', $qb->createNamedParameter($now, IQueryBuilder::PARAM_INT))
+			->set('finished_at', $qb->createNamedParameter($job->getFinishedAt() ?? $now, IQueryBuilder::PARAM_INT))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($job->getId(), IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('status', $qb->createNamedParameter($expectedStatus, IQueryBuilder::PARAM_STR)));
+		$qb->executeStatement();
 
-		return $this->decorateStorageUrl($this->update($job));
+		return $this->getJob($job->getId());
+	}
+
+    /**
+     * @throws Exception
+     */
+    public function finishPythonDelete(AnalysisJob $job): AnalysisJob {
+        $this->assertPythonCanDelete($job);
+        $expectedStatus = $job->getStatus();
+        $now = $this->getCurrentTimestamp();
+        $qb = $this->db->getQueryBuilder();
+        $qb->update($this->getTableName())
+            ->set('python_deleted', $qb->createNamedParameter(true, IQueryBuilder::PARAM_BOOL))
+            ->set('updated_at', $qb->createNamedParameter($now, IQueryBuilder::PARAM_INT))
+            ->where($qb->expr()->eq('id', $qb->createNamedParameter($job->getId(), IQueryBuilder::PARAM_INT)))
+            ->andWhere($qb->expr()->eq('status', $qb->createNamedParameter($expectedStatus, IQueryBuilder::PARAM_STR)));
+        $qb->executeStatement();
+
+        return $this->getJob($job->getId());
+    }
+
+    /**
+     * @return list<AnalysisJob>
+     * @throws Exception
+     */
+    public function getJobsForPythonToDelete(?int $changedSince = null): array {
+        $qb = $this->db->getQueryBuilder();
+        $expr = $qb->expr();
+        $statuses = [
+            AnalysisJob::STATUS_CANCELED,
+            AnalysisJob::STATUS_FAILED,
+            AnalysisJob::STATUS_COMPLETED,
+        ];
+        $statusConditions = [];
+        foreach ($statuses as $index => $status) {
+            $statusConditions[] = $expr->eq('status', $qb->createNamedParameter($status, IQueryBuilder::PARAM_STR, ':python_status' . $index));
+        }
+        $qb->select(...self::COLUMNS)
+            ->from($this->getTableName())
+            ->where($expr->orX(...$statusConditions))
+            ->where($expr->eq("python_deleted", $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT)))
+            ->orderBy('updated_at', 'ASC')
+            ->addOrderBy('id', 'ASC');
+
+        if ($changedSince !== null) {
+            $qb->andWhere($expr->gte('updated_at', $qb->createNamedParameter($changedSince, IQueryBuilder::PARAM_INT)));
+        }
+
+        return array_map(fn (AnalysisJob $job): AnalysisJob => $job->getUuid(), $this->findEntities($qb));
+    }
+
+	/**
+	 * Atomically reserve the artifact manifest for a job. The caller must keep
+	 * the surrounding database transaction open until every artifact is stored.
+	 *
+	 * @throws Exception
+	 */
+	public function claimArtifactManifest(AnalysisJob $job): bool {
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('artifacts_downloaded', $qb->createNamedParameter(true, IQueryBuilder::PARAM_BOOL))
+			->set('updated_at', $qb->createNamedParameter($this->getCurrentTimestamp(), IQueryBuilder::PARAM_INT))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($job->getId(), IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('artifacts_downloaded', $qb->createNamedParameter(false, IQueryBuilder::PARAM_BOOL)));
+
+		return $qb->executeStatement() === 1;
 	}
 
 	/**
 	 * @throws Exception
 	 */
 	public function updateFromPython(AnalysisJob $job, ?string $status, ?float $progress, ?string $statusMessage, ?string $errorMessage): AnalysisJob {
-		if ($status !== null && $status !== $job->getStatus()) {
+		$statusChanges = $status !== null && $status !== $job->getStatus();
+		if (!$statusChanges && $job->isTerminalWebStatus()) {
+			throw new InvalidArgumentException('Finalized jobs cannot be updated by the analysis service.');
+		}
+		if (!$statusChanges && $progress !== null && $progress < $job->getProgress()) {
+			throw new InvalidArgumentException('Progress cannot decrease without a status change.');
+		}
+		if ($statusChanges) {
 			if ($job->getStatus() === AnalysisJob::STATUS_CANCEL_REQUESTED && in_array($status, [AnalysisJob::STATUS_JOB_FAILED, AnalysisJob::STATUS_JOB_COMPLETED], true)) {
 				$status = AnalysisJob::STATUS_JOB_CANCELED;
 			}
@@ -509,14 +585,23 @@ class AnalysisJobMapper extends QBMapper {
 		return max(0.0, min(100.0, $progress));
 	}
 
-	private function assertPythonTransition(string $from, string $to): void {
-		if (!in_array($to, AnalysisJob::statuses(), true)) {
-			throw new InvalidArgumentException('Unsupported job status.');
-		}
-		if (!in_array($to, self::PYTHON_UPDATE_TRANSITIONS[$from] ?? [], true)) {
-			throw new InvalidArgumentException('Invalid Python job status transition.');
-		}
-	}
+    private function assertPythonTransition(string $from, string $to): void {
+        if (!in_array($to, AnalysisJob::statuses(), true)) {
+            throw new InvalidArgumentException('Unsupported job status.');
+        }
+        if (!in_array($to, self::PYTHON_UPDATE_TRANSITIONS[$from] ?? [], true)) {
+            throw new InvalidArgumentException('Invalid Python job status transition.');
+        }
+    }
+
+    private function assertPythonCanDelete(AnalysisJob $job): void {
+        if ($job->getPythonDeleted()) {
+            throw new InvalidArgumentException('Job was already marked as deleted.');
+        }
+        if (!in_array($job->getStatus(), AnalysisJob::terminalWebStatuses(), true)) {
+            throw new InvalidArgumentException('Invalid Python job status for deletion.');
+        }
+    }
 
 	private function createToken(): string {
 		return rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');

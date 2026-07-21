@@ -185,6 +185,54 @@ final class AnalysisJobMapperTest extends TestCase {
 		$this->assertSame(100.0, $result->getProgress());
 	}
 
+	public function testUpdateFromPythonRejectsProgressDecreaseWithoutStateChange(): void {
+		$job = $this->job(AnalysisJob::STATUS_RUNNING);
+		$job->setProgress(50.0);
+		$mapper = $this->mapper(['update']);
+		$mapper->expects($this->never())->method('update');
+
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('Progress cannot decrease without a status change.');
+
+		$mapper->updateFromPython($job, null, 49.0, null, null);
+	}
+
+	public function testUpdateFromPythonAllowsProgressDecreaseWhenStateChanges(): void {
+		$job = $this->job(AnalysisJob::STATUS_RUNNING);
+		$job->setProgress(50.0);
+		$mapper = $this->mapper(['update']);
+		$mapper->expects($this->once())->method('update')->willReturnCallback(static fn (AnalysisJob $updated): AnalysisJob => $updated);
+
+		$result = $mapper->updateFromPython($job, AnalysisJob::STATUS_RESTART, 10.0, null, null);
+
+		$this->assertSame(AnalysisJob::STATUS_RESTART, $result->getStatus());
+		$this->assertSame(10.0, $result->getProgress());
+	}
+
+	/**
+	 * @dataProvider finalizedStatuses
+	 */
+	public function testUpdateFromPythonRejectsMetadataUpdatesAfterFinalization(string $status): void {
+		$mapper = $this->mapper(['update']);
+		$mapper->expects($this->never())->method('update');
+
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('Finalized jobs cannot be updated by the analysis service.');
+
+		$mapper->updateFromPython($this->job($status), null, 100.0, 'stale callback', null);
+	}
+
+	/**
+	 * @return list<array{string}>
+	 */
+	public static function finalizedStatuses(): array {
+		return [
+			[AnalysisJob::STATUS_CANCELED],
+			[AnalysisJob::STATUS_FAILED],
+			[AnalysisJob::STATUS_COMPLETED],
+		];
+	}
+
 	public function testAssertPythonAccessRequiresMatchingTokenLoadDataAndFreshUpdate(): void {
 		$mapper = new AnalysisJobMapper($this->db, $this->diaryMapper, $this->configService, $this->urlGenerator);
 		$job = $this->job(AnalysisJob::STATUS_LOAD_DATA);

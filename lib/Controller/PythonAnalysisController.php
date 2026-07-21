@@ -23,6 +23,7 @@ use OCP\AppFramework\Http\Attribute\RequestHeader;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use OCP\IDBConnection;
 use Throwable;
 
 	/**
@@ -49,6 +50,7 @@ class PythonAnalysisController extends ApiOCSController {
 		private AnalysisArtifactStorageService $artifactStorage,
 		private AnalysisConfigService $configService,
 		private AnalysisJobFinalizationService $finalizationService,
+		private IDBConnection $db,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -88,6 +90,28 @@ class PythonAnalysisController extends ApiOCSController {
 		}
 	}
 
+    /**
+     * Lists analysis jobs for the analysis service that can be deleted
+     *
+     * @return DataResponse<Http::STATUS_OK, list<string>, array{}>
+     *
+     * 200: Analysis jobs returned
+     */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    #[PublicPage]
+    #[RequestHeader(name: 'x-structureddiary-nextcloud-api-token', description: 'API token registered for this Nextcloud instance')]
+    #[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/service/jobs/to_delete', requirements: ['apiVersion' => '(v1)'])]
+    public function toDelete(): DataResponse {
+        try {
+            $this->assertNextcloudApiToken($this->request->getHeader('x-structureddiary-nextcloud-api-token'));
+            $job_uuids = $this->jobMapper->getJobsForPythonToDelete();
+            return $this->respond($job_uuids);
+        } catch (Throwable $e) {
+            return $this->respondError($e->getMessage(), Http::STATUS_BAD_REQUEST);
+        }
+    }
+
 	/**
 	 * Check analysis service access
 	 *
@@ -114,36 +138,63 @@ class PythonAnalysisController extends ApiOCSController {
 		}
 	}
 
-	/**
-	 * Update analysis job status from the analysis service
-	 *
-	 * @return DataResponse<Http::STATUS_OK, StructuredDiaryAnalysisJob, array{}>
-	 *
-	 * 200: Analysis job status updated
-	 */
-	#[NoAdminRequired]
-	#[NoCSRFRequired]
-	#[PublicPage]
-	#[RequestHeader(name: 'x-structureddiary-job-token', description: 'Token assigned to the analysis job')]
-	#[RequestHeader(name: 'x-structureddiary-job-uuid', description: 'UUID assigned by Nextcloud to the analysis job')]
-	#[ApiRoute(verb: 'PATCH', url: '/api/{apiVersion}/service/jobs/{uuid}/status', requirements: ['apiVersion' => '(v1)'])]
-	public function updateStatus(
-		string $uuid,
-		?string $status = null,
-		?float $progress = null,
-		?string $statusMessage = null,
-		?string $errorMessage = null,
-	): DataResponse {
-		try {
-			$job = $this->jobMapper->getJobByUuid($uuid);
-			$this->jobMapper->assertPythonAccess($job, $this->request->getHeader('x-structureddiary-job-token'), $this->request->getHeader('x-structureddiary-job-uuid'), false, time());
-			$updated = $this->jobMapper->updateFromPython($job, $status, $progress, $statusMessage, $errorMessage);
+    /**
+     * Update analysis job status from the analysis service
+     *
+     * @return DataResponse<Http::STATUS_OK, StructuredDiaryAnalysisJob, array{}>
+     *
+     * 200: Analysis job status updated
+     */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    #[PublicPage]
+    #[RequestHeader(name: 'x-structureddiary-job-token', description: 'Token assigned to the analysis job')]
+    #[RequestHeader(name: 'x-structureddiary-job-uuid', description: 'UUID assigned by Nextcloud to the analysis job')]
+    #[ApiRoute(verb: 'PATCH', url: '/api/{apiVersion}/service/jobs/{uuid}/status', requirements: ['apiVersion' => '(v1)'])]
+    public function updateStatus(
+        string $uuid,
+        ?string $status = null,
+        ?float $progress = null,
+        ?string $statusMessage = null,
+        ?string $errorMessage = null,
+    ): DataResponse {
+        try {
+            $job = $this->jobMapper->getJobByUuid($uuid);
+            $this->jobMapper->assertPythonAccess($job, $this->request->getHeader('x-structureddiary-job-token'), $this->request->getHeader('x-structureddiary-job-uuid'), false, time());
+            $updated = $this->jobMapper->updateFromPython($job, $status, $progress, $statusMessage, $errorMessage);
 
-			return $this->respond($updated);
-		} catch (Throwable $e) {
-			return $this->respondError($e->getMessage(), Http::STATUS_BAD_REQUEST);
-		}
-	}
+            return $this->respond($updated);
+        } catch (Throwable $e) {
+            return $this->respondError($e->getMessage(), Http::STATUS_BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Notify the NC instance that python service has deleted stored files after finalization was successfully
+     *
+     * @return DataResponse<Http::STATUS_OK, StructuredDiaryAnalysisJob, array{}>
+     *
+     * 200: Analysis job status updated
+     */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    #[PublicPage]
+    #[RequestHeader(name: 'x-structureddiary-job-token', description: 'Token assigned to the analysis job')]
+    #[RequestHeader(name: 'x-structureddiary-job-uuid', description: 'UUID assigned by Nextcloud to the analysis job')]
+    #[ApiRoute(verb: 'PATCH', url: '/api/{apiVersion}/service/jobs/{uuid}/set_deleted', requirements: ['apiVersion' => '(v1)'])]
+    public function setDeleted(
+        string $uuid
+    ): DataResponse {
+        try {
+            $job = $this->jobMapper->getJobByUuid($uuid);
+            $this->jobMapper->assertPythonAccess($job, $this->request->getHeader('x-structureddiary-job-token'), $this->request->getHeader('x-structureddiary-job-uuid'), false, time());
+            $this->jobMapper->finishPythonDelete($job);
+            $updated = $this->jobMapper->getJobByUuid($uuid);
+            return $this->respond($updated);
+        } catch (Throwable $e) {
+            return $this->respondError($e->getMessage(), Http::STATUS_BAD_REQUEST);
+        }
+    }
 
 	/**
 	 * Export analysis diary metadata
@@ -197,8 +248,9 @@ class PythonAnalysisController extends ApiOCSController {
 	 * Create the complete artifact list for an analysis job
 	 *
 	 * @param list<array<string, mixed>>|null $artifacts
-	 * @return DataResponse<Http::STATUS_CREATED, list<array{id: int|null, parent_id: int|null, python_id: int|null, python_parent_id: int|null, checksum: string|null}>, array{}>
+	 * @return DataResponse<Http::STATUS_OK|Http::STATUS_CREATED, list<array{id: int|null, parent_id: int|null, python_id: int|null, python_parent_id: int|null, checksum: string|null}>, array{}>
 	 *
+	 * 200: Existing analysis artifacts returned
 	 * 201: Analysis artifacts created
 	 */
 	#[NoAdminRequired]
@@ -208,20 +260,28 @@ class PythonAnalysisController extends ApiOCSController {
 	#[RequestHeader(name: 'x-structureddiary-job-uuid', description: 'UUID assigned by Nextcloud to the analysis job')]
 	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/service/jobs/{uuid}/artifacts/create', requirements: ['apiVersion' => '(v1)'])]
 	public function createArtifacts(string $uuid, ?array $artifacts = null): DataResponse {
+		$transactionOpen = false;
 		try {
+			$this->db->beginTransaction();
+			$transactionOpen = true;
 			$job = $this->jobMapper->getJobByUuid($uuid);
 			$this->assertArtifactWriteAccess($job, $this->request->getHeader('x-structureddiary-job-token'), $this->request->getHeader('x-structureddiary-job-uuid'));
-			if ($this->artifactMapper->getArtifactsForJob($job->getId()) !== []) {
-				throw new \InvalidArgumentException('Artifact list already exists for this job.');
+			if (!$this->jobMapper->claimArtifactManifest($job)) {
+				$existing = $this->artifactMapper->getArtifactsForJob($job->getId());
+				$this->db->commit();
+				$transactionOpen = false;
+				return $this->respond(array_map(static fn (AnalysisArtifact $artifact): array => $artifact->jsonPythonSerialize(), $existing));
 			}
 
 			$created = $this->createArtifactsInParentOrder($job, $this->normalizeArtifactPayloads($artifacts));
-			$job->setArtifactsDownloaded(true);
-			$job->setUpdatedAt(time());
-			$this->jobMapper->update($job);
+			$this->db->commit();
+			$transactionOpen = false;
 
 			return $this->respond(array_map(static fn (AnalysisArtifact $artifact): array => $artifact->jsonPythonSerialize(), $created), Http::STATUS_CREATED);
 		} catch (Throwable $e) {
+			if ($transactionOpen) {
+				$this->db->rollBack();
+			}
 			return $this->respondError($e->getMessage(), Http::STATUS_BAD_REQUEST);
 		}
 	}

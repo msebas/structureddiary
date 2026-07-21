@@ -61,6 +61,55 @@ final class AnalysisJobFinalizationServiceTest extends TestCase {
 		$this->assertSame($job, $this->service()->finalize($job));
 	}
 
+	/**
+	 * @dataProvider nonFinalizableStatuses
+	 */
+	public function testFinalizeDoesNotInspectOrChangeNonTerminalPythonState(string $status): void {
+		$job = $this->job($status);
+		$this->jobMapper->expects($this->never())->method('finishCleanup');
+		$this->artifactMapper->expects($this->never())->method('getArtifactsForJob');
+
+		$this->assertSame($job, $this->service()->finalize($job));
+	}
+
+	/**
+	 * @return list<array{string}>
+	 */
+	public static function nonFinalizableStatuses(): array {
+		return array_map(static fn (string $status): array => [$status], [
+			AnalysisJob::STATUS_DRAFT,
+			AnalysisJob::STATUS_SUBMITTED,
+			AnalysisJob::STATUS_READY_QUEUE,
+			AnalysisJob::STATUS_QUEUED,
+			AnalysisJob::STATUS_LOAD_DATA,
+			AnalysisJob::STATUS_RUNNING,
+			AnalysisJob::STATUS_RESTART,
+			AnalysisJob::STATUS_WORKER_UPLOAD,
+			AnalysisJob::STATUS_CANCEL_REQUESTED,
+			AnalysisJob::STATUS_CANCELED,
+			AnalysisJob::STATUS_FAILED,
+			AnalysisJob::STATUS_COMPLETED,
+		]);
+	}
+
+	public function testFinalizeKeepsFailedJobRetryableUntilManifestIsConfirmed(): void {
+		$job = $this->job(AnalysisJob::STATUS_JOB_FAILED);
+		$job->setArtifactsDownloaded(false);
+		$this->jobMapper->expects($this->never())->method('finishCleanup');
+		$this->artifactMapper->expects($this->never())->method('getArtifactsForJob');
+
+		$this->assertSame($job, $this->service()->finalize($job));
+	}
+
+	public function testFinalizeAllowsTerminalJobWithConfirmedEmptyArtifactList(): void {
+		$job = $this->job(AnalysisJob::STATUS_JOB_COMPLETED);
+		$job->setArtifactsDownloaded(true);
+		$this->artifactMapper->expects($this->once())->method('getArtifactsForJob')->with(42)->willReturn([]);
+		$this->jobMapper->expects($this->once())->method('finishCleanup')->with($job)->willReturn($job);
+
+		$this->assertSame($job, $this->service()->finalize($job));
+	}
+
 	public function testFinalizePendingChecksAllTerminalJobs(): void {
 		$canceled = $this->job(AnalysisJob::STATUS_JOB_CANCELED);
 		$completed = $this->job(AnalysisJob::STATUS_JOB_COMPLETED);
@@ -77,6 +126,19 @@ final class AnalysisJobFinalizationServiceTest extends TestCase {
 		$this->artifactMapper->expects($this->never())->method('getArtifactsForJob');
 
 		$this->service()->finalizePending();
+	}
+
+	public function testFinalizePendingPassesExplicitLimitToMapper(): void {
+		$this->jobMapper->expects($this->once())
+			->method('getJobsByStatuses')
+			->with([
+				AnalysisJob::STATUS_JOB_CANCELED,
+				AnalysisJob::STATUS_JOB_FAILED,
+				AnalysisJob::STATUS_JOB_COMPLETED,
+			], 3)
+			->willReturn([]);
+
+		$this->service()->finalizePending(3);
 	}
 
 	private function service(): AnalysisJobFinalizationService {
