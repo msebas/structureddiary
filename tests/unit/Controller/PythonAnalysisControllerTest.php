@@ -39,7 +39,9 @@ final class PythonAnalysisControllerTest extends TestCase {
 		return [
 			['healthcheck'],
 			['poll'],
+			['toDelete'],
 			['updateStatus'],
+			['setDeleted'],
 			['diary'],
 			['entries'],
 			['createArtifacts'],
@@ -66,8 +68,10 @@ final class PythonAnalysisControllerTest extends TestCase {
 	public static function pythonServiceRoutes(): array {
 		return [
 			['poll', '/api/{apiVersion}/service/jobs/poll'],
+			['toDelete', '/api/{apiVersion}/service/jobs/to_delete'],
 			['healthcheck', '/api/{apiVersion}/service/jobs/healthcheck'],
 			['updateStatus', '/api/{apiVersion}/service/jobs/{uuid}/status'],
+			['setDeleted', '/api/{apiVersion}/service/jobs/{uuid}/set_deleted'],
 			['diary', '/api/{apiVersion}/service/jobs/{uuid}/diary'],
 			['entries', '/api/{apiVersion}/service/jobs/{uuid}/entries'],
 			['createArtifacts', '/api/{apiVersion}/service/jobs/{uuid}/artifacts/create'],
@@ -113,6 +117,29 @@ final class PythonAnalysisControllerTest extends TestCase {
 
 		$this->assertSame(400, $response->getStatus());
 		$this->assertSame(['error' => 'Invalid Nextcloud API token.'], $response->getData());
+	}
+
+	public function testToDeleteReturnsOnlyJobUuidsForRegisteredNextcloudToken(): void {
+		$request = $this->createMock(IRequest::class);
+		$request->method('getHeader')->with('x-structureddiary-nextcloud-api-token')->willReturn('nextcloud-token');
+		$jobMapper = $this->createMock(AnalysisJobMapper::class);
+		$jobMapper->expects($this->once())
+			->method('getJobsForPythonToDelete')
+			->willReturn([
+				'11111111-2222-4333-8444-555555555555',
+				'66666666-7777-4888-8999-aaaaaaaaaaaa',
+			]);
+		$configService = $this->createMock(AnalysisConfigService::class);
+		$configService->method('getNextcloudApiToken')->willReturn('nextcloud-token');
+
+		$response = $this->controller($request, $jobMapper, $this->createMock(AnalysisArtifactMapper::class), null, $configService)
+			->toDelete();
+
+		$this->assertSame(200, $response->getStatus());
+		$this->assertSame([
+			'11111111-2222-4333-8444-555555555555',
+			'66666666-7777-4888-8999-aaaaaaaaaaaa',
+		], $response->getData());
 	}
 
 	public function testPollLongPollsUntilChangedJobsAppear(): void {

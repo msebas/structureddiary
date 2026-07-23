@@ -73,6 +73,33 @@ final class AnalysisJobMapperIntegrationTest extends IntegrationTestParentClass 
 		$this->jobMapper->getJob($terminal->getId());
 	}
 
+	public function testGetJobsForPythonToDeleteReturnsOnlyUnacknowledgedTerminalJobUuids(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+		$completed = $this->jobMapper->createJob($diary->getId(), 'alice', 1000, 2000, 'Completed', 'en', false);
+		$failed = $this->jobMapper->createJob($diary->getId(), 'alice', 1000, 2000, 'Failed', 'en', false);
+		$canceled = $this->jobMapper->createJob($diary->getId(), 'alice', 1000, 2000, 'Canceled', 'en', false);
+		$acknowledged = $this->jobMapper->createJob($diary->getId(), 'alice', 1000, 2000, 'Acknowledged', 'en', false);
+		$draft = $this->jobMapper->createJob($diary->getId(), 'alice', 1000, 2000, 'Draft', 'en', false);
+
+		foreach ([
+			[$completed, AnalysisJob::STATUS_COMPLETED, false],
+			[$failed, AnalysisJob::STATUS_FAILED, false],
+			[$canceled, AnalysisJob::STATUS_CANCELED, false],
+			[$acknowledged, AnalysisJob::STATUS_COMPLETED, true],
+		] as [$job, $status, $pythonDeleted]) {
+			$job->setStatus($status);
+			$job->setPythonDeleted($pythonDeleted);
+			$this->jobMapper->update($job);
+		}
+
+		$this->assertSame([
+			$completed->getUuid(),
+			$failed->getUuid(),
+			$canceled->getUuid(),
+		], $this->jobMapper->getJobsForPythonToDelete());
+		$this->assertNotContains($draft->getUuid(), $this->jobMapper->getJobsForPythonToDelete());
+	}
+
 	public function testDiaryDeleteCascadesAnalysisJobsAndArtifacts(): void {
 		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
 		$job = $this->jobMapper->createJob($diary->getId(), 'alice', 1000, 2000, 'Report', 'en', false);

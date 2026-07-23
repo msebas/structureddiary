@@ -16,7 +16,8 @@ bash tests/bin/test_analysis_service_integration.sh
 `ANALYSIS_SERVICE_IMAGE` when needed. Every run creates a new bind-mounted
 execution directory, starts a new service container, and prints the retained
 directory path after the container is removed. Set `ANALYSIS_SERVICE_WORK_DIR`
-to choose that directory explicitly.
+to choose that directory explicitly. If the `ANALYSIS_SERVICE_SECRET` is not 
+set a random one is generated.
 
 The default callback URL is `http://nextcloud_integration_tests`, which is the
 Docker-network alias of the PHP integration-test container. Override
@@ -46,9 +47,10 @@ LOCALAI_API_KEY
    `RUNNING`, `WORKER_UPLOAD`, and `JOB_COMPLETED`.
 6. Verify that the service creates the artifact manifest, uploads at least a
    JSON and HTML artifact, and calls the service finalization endpoint.
-7. Poll the user API until the job is `COMPLETED`; verify `python_deleted` is
-   set and every artifact has a Nextcloud file ID, checksum, and downloaded
-   flag.
+7. Poll the user API until the job is `COMPLETED`; verify every artifact has a
+   Nextcloud file ID, checksum, and downloaded flag. The service's cleanup
+   acknowledgement is intentionally not asserted until its deletion workflow is
+   implemented.
 8. Assert that each recorded artifact has a Nextcloud file ID, checksum, and
    uploaded flag.
 

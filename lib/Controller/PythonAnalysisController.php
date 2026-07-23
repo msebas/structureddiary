@@ -105,8 +105,8 @@ class PythonAnalysisController extends ApiOCSController {
     public function toDelete(): DataResponse {
         try {
             $this->assertNextcloudApiToken($this->request->getHeader('x-structureddiary-nextcloud-api-token'));
-            $job_uuids = $this->jobMapper->getJobsForPythonToDelete();
-            return $this->respond($job_uuids);
+            $jobUuids = $this->jobMapper->getJobsForPythonToDelete();
+            return $this->respond($jobUuids);
         } catch (Throwable $e) {
             return $this->respondError($e->getMessage(), Http::STATUS_BAD_REQUEST);
         }

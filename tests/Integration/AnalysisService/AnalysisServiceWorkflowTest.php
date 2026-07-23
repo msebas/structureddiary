@@ -19,6 +19,7 @@ use OCA\StructuredDiary\Service\AnalysisServiceClient;
 use OCA\Tests\StructuredDiary\Integration\TestUtil\IntegrationTestParentClass;
 use OCP\AppFramework\Http;
 use OCP\IRequest;
+use OCP\IUserManager;
 
 /**
  * This is a guard for the real Python service workflow described in README.md.
@@ -35,6 +36,7 @@ final class AnalysisServiceWorkflowTest extends IntegrationTestParentClass {
 	private EntryMapper $entryMapper;
 	private AnswerMapper $answerMapper;
 	private AnalysisConfigService $configService;
+	private IUserManager $userManager;
 
 	protected function setUp(): void {
 		if (getenv('ANALYSIS_SERVICE_SYSTEM_TEST') !== '1') {
@@ -49,6 +51,7 @@ final class AnalysisServiceWorkflowTest extends IntegrationTestParentClass {
 		$this->entryMapper = self::$container->get(EntryMapper::class);
 		$this->answerMapper = self::$container->get(AnswerMapper::class);
 		$this->configService = self::$container->get(AnalysisConfigService::class);
+		$this->userManager = self::$container->get(IUserManager::class);
 	}
 
 	public function testRealAnalysisServiceWorkflowIsExplicitlyEnabled(): void {
@@ -57,13 +60,15 @@ final class AnalysisServiceWorkflowTest extends IntegrationTestParentClass {
 		$this->registerNextcloudInstance($serviceUrl, $serviceSecret);
 
 		$now = time();
-		$diary = $this->diaryMapper->createDiary('analysis-test', 'Analysis service integration', 'Numeric-only system-test diary');
+		$userId = 'analysis-system-test-' . bin2hex(random_bytes(6));
+		$this->assertNotFalse($this->userManager->createUser($userId, bin2hex(random_bytes(16))));
+		$diary = $this->diaryMapper->createDiary($userId, 'Analysis service integration', 'Numeric-only system-test diary');
 		$question = $this->questionMapper->createQuestion($diary->getId(), 'Mood', 'How is your mood?', QuestionTypes::RATING, 1.0, 5.0, null, true, '');
 		$entry = $this->entryMapper->createEntry($diary->getId(), $now, 'System test entry');
 		$this->answerMapper->createAnswer($diary->getId(), $entry->getId(), $question->getId(), null, 4.0);
 		$job = $this->jobMapper->createJob(
 			$diary->getId(),
-			'analysis-test',
+			$userId,
 			$now - 60,
 			$now + 60,
 			'Analysis service system test',
@@ -77,7 +82,6 @@ final class AnalysisServiceWorkflowTest extends IntegrationTestParentClass {
 		$artifacts = $this->artifactMapper->getArtifactsForJob($completed->getId());
 
 		$this->assertSame(AnalysisJob::STATUS_COMPLETED, $completed->getStatus());
-		$this->assertTrue($completed->getPythonDeleted());
 		$this->assertNotEmpty($artifacts);
 		$this->assertContains('JSON', array_map(static fn ($artifact): string => $artifact->getArtifactType(), $artifacts));
 		$this->assertContains('HTML', array_map(static fn ($artifact): string => $artifact->getArtifactType(), $artifacts));

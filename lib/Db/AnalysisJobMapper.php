@@ -419,7 +419,7 @@ class AnalysisJobMapper extends QBMapper {
     }
 
     /**
-     * @return list<AnalysisJob>
+     * @return list<string>
      * @throws Exception
      */
     public function getJobsForPythonToDelete(?int $changedSince = null): array {
@@ -436,8 +436,7 @@ class AnalysisJobMapper extends QBMapper {
         }
         $qb->select(...self::COLUMNS)
             ->from($this->getTableName())
-            ->where($expr->orX(...$statusConditions))
-            ->where($expr->eq("python_deleted", $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT)))
+            ->where($expr->andX($expr->orX(...$statusConditions), $expr->eq("python_deleted", $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT))))
             ->orderBy('updated_at', 'ASC')
             ->addOrderBy('id', 'ASC');
 
@@ -445,7 +444,7 @@ class AnalysisJobMapper extends QBMapper {
             $qb->andWhere($expr->gte('updated_at', $qb->createNamedParameter($changedSince, IQueryBuilder::PARAM_INT)));
         }
 
-        return array_map(fn (AnalysisJob $job): AnalysisJob => $job->getUuid(), $this->findEntities($qb));
+        return array_map(static fn (AnalysisJob $job): string => $job->getUuid(), $this->findEntities($qb));
     }
 
 	/**

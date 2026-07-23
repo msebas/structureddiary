@@ -2,7 +2,6 @@
 
 namespace OCA\Tests\StructuredDiary\Integration\TestUtil;
 
-use Doctrine\DBAL\Exception\TableNotFoundException;
 use PHPUnit\Framework\TestCase;
 use OC\DB\MigrationService;
 use OCA\StructuredDiary\Db\TableNames;
@@ -41,27 +40,7 @@ class IntegrationTestParentClass extends TestCase {
     protected function resetDatabase(): void {
         $this->assertIntegrationDatabaseOptIn();
 
-        $schemaManager = self::$connection->createSchemaManager();
-        $tables = $schemaManager->listTableNames();
-
-        foreach ([
-                 TableNames::ANALYSIS_ARTIFACTS,
-                 TableNames::ANALYSIS_JOBS,
-                 TableNames::ANSWERS,
-                 TableNames::QUESTIONS,
-                 TableNames::ENTRIES,
-                 TableNames::DIARY_SHARES,
-                 TableNames::DIARIES,
-                 TableNames::ALARM_SOUNDS,
-                 ] as $tableName) {
-            if (in_array('oc_' . $tableName, $tables, true)) {
-                try {
-                    $schemaManager->dropTable('oc_' . $tableName);
-                } catch (TableNotFoundException) {
-                    // A previous reset may have invalidated the table-list snapshot.
-                }
-            }
-        }
+		$this->dropStructuredDiaryTables();
 
         $qb = self::$db->getQueryBuilder();
         $qb->delete('migrations')
@@ -76,16 +55,46 @@ class IntegrationTestParentClass extends TestCase {
         $migrationService->migrate('latest');
     }
 
-    protected function assertIntegrationDatabaseOptIn(): void {
-        if (getenv('INTEGRATION_TEST_DB') === '1') {
-            return;
-        }
+	protected function assertIntegrationDatabaseOptIn(): void {
+		if (getenv('INTEGRATION_TEST_DB') === '1') {
+			return;
+		}
 
-        throw new \RuntimeException(
-            'Refusing to reset Structured Diary tables without INTEGRATION_TEST_DB=1. ' .
-            'Run integration tests only against a disposable integration-test database.'
-        );
-    }
+		throw new \RuntimeException(
+			'Refusing to reset Structured Diary tables without INTEGRATION_TEST_DB=1. ' .
+			'Run integration tests only against a disposable integration-test database.'
+		);
+	}
+
+	private function dropStructuredDiaryTables(): void {
+		$foreignKeySql = match (self::$connection->getDatabasePlatform()->getName()) {
+			'mysql', 'mariadb' => ['SET FOREIGN_KEY_CHECKS = 0', 'SET FOREIGN_KEY_CHECKS = 1'],
+			'sqlite' => ['PRAGMA foreign_keys = OFF', 'PRAGMA foreign_keys = ON'],
+			default => [null, null],
+		};
+		if ($foreignKeySql[0] !== null) {
+			self::$connection->executeStatement($foreignKeySql[0]);
+		}
+
+		try {
+			foreach ([
+				TableNames::ANALYSIS_ARTIFACTS,
+				TableNames::ANALYSIS_JOBS,
+				TableNames::ANSWERS,
+				TableNames::QUESTIONS,
+				TableNames::ENTRIES,
+				TableNames::DIARY_SHARES,
+				TableNames::DIARIES,
+				TableNames::ALARM_SOUNDS,
+			] as $tableName) {
+				self::$connection->executeStatement('DROP TABLE IF EXISTS ' . self::$connection->quoteIdentifier('oc_' . $tableName));
+			}
+		} finally {
+			if ($foreignKeySql[1] !== null) {
+				self::$connection->executeStatement($foreignKeySql[1]);
+			}
+		}
+	}
 
     protected function writeGeneratedFixture(string $relativePath, mixed $data): string {
         if (str_contains($relativePath, '..')) {

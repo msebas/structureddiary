@@ -1,0 +1,19 @@
+services:
+  analysis-service:
+    image: ${ANALYSIS_SERVICE_IMAGE:-structureddiary-analysis:local}
+    volumes:
+      - ${ANALYSIS_SERVICE_WORK_DIR:?The system-test runner must provide a new execution directory}:/var/lib/structureddiary-analysis:Z
+    environment:
+      SERVICE_SECRET: ${ANALYSIS_SERVICE_SECRET:?Set ANALYSIS_SERVICE_SECRET for the analysis service}
+      LOCALAI_BASE_URL: ${LOCALAI_BASE_URL:-}
+      LOCALAI_MODEL: ${LOCALAI_MODEL:-}
+      LOCALAI_API_KEY: ${LOCALAI_API_KEY:-}
+    networks:
+      nextcloud-system-test:
+        aliases:
+          - structureddiary-analysis-integration
+
+networks:
+  nextcloud-system-test:
+    name: ${NEXTCLOUD_DOCKER_NETWORK:-master_default}
+    external: true
