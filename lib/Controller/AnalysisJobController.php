@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\StructuredDiary\Controller;
 
 use OCA\StructuredDiary\Db\AnalysisArtifactMapper;
+use OCA\StructuredDiary\Db\AnalysisArtifact;
 use OCA\StructuredDiary\Db\AnalysisJob;
 use OCA\StructuredDiary\Db\AnalysisJobMapper;
 use OCA\StructuredDiary\Service\AnalysisArtifactArchiveService;
@@ -125,6 +126,9 @@ class AnalysisJobController extends ApiOCSController {
 		bool $start = false,
 		?array $outputFormats = null,
 		?array $parameters = null,
+		?string $analysisType = null,
+		?string $llmUrl = null,
+		?string $llmHeader = null,
 	): DataResponse {
 		try {
 			$job = $this->jobMapper->createJob(
@@ -137,6 +141,9 @@ class AnalysisJobController extends ApiOCSController {
 				$start,
 				$outputFormats,
 				$parameters,
+				$analysisType,
+				$llmUrl,
+				$llmHeader,
 			);
 			return $this->respond($job, Http::STATUS_CREATED);
 		} catch (Throwable $e) {
@@ -215,6 +222,33 @@ class AnalysisJobController extends ApiOCSController {
 	}
 
 	/**
+	 * Return the settings required to copy one analysis job
+	 *
+	 * The LLM header is intentionally not part of the normal job representation.
+	 *
+	 * @return DataResponse<Http::STATUS_OK, array<string, mixed>, array{}>|DataResponse<Http::STATUS_NOT_FOUND, array{error: string}, array{}>
+	 */
+	#[NoAdminRequired]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/jobs/{id}/copy-settings', requirements: ['apiVersion' => '(v1)'])]
+	public function copySettings(int $id): DataResponse {
+		try {
+			$job = $this->jobMapper->getJobForUser($id, $this->requireUser($this->userId));
+			return $this->respond([
+				'data_from' => $job->getDataFrom(),
+				'title' => $job->getTitle(),
+				'language' => $job->getLanguage(),
+				'analysis_type' => $job->getAnalysisType(),
+				'output_types' => $job->getOutputTypeList(),
+				'parameters' => $job->getParameters(),
+				'llm_url' => $job->getLlmUrl(),
+				'llm_header' => $job->getLlmHeader(),
+			]);
+		} catch (Throwable $e) {
+			return $this->respondError($e->getMessage(), Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	/**
 	 * Download all analysis job artifacts as ZIP
 	 *
 	 * @return Response<Http::STATUS_OK, array{}>|DataResponse<Http::STATUS_NOT_FOUND, array{error: string}, array{}>
@@ -255,9 +289,13 @@ class AnalysisJobController extends ApiOCSController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/jobs/{id}/artifacts/{artifactId}/content', requirements: ['apiVersion' => '(v1)'])]
-	public function artifactContent(int $id, int $artifactId): Response|DataResponse {
+	public function artifactContent(int $id, int $artifactId, null|int|string $download = null): Response|DataResponse {
 		try {
 			$artifact = $this->archiveService->buildInlineArtifact($id, $artifactId, $this->requireUser($this->userId));
+			if ((string)$download === '1') {
+				return new DataDownloadResponse($artifact['content'], $artifact['filename'], $artifact['contentType']);
+			}
+
 			return new DataDisplayResponse($artifact['content'], Http::STATUS_OK, [
 				'Content-Disposition' => 'inline; filename="' . str_replace(['"', '\\'], ['\\"', '\\\\'], $artifact['filename']) . '"',
 				'Content-Type' => $artifact['contentType'],
@@ -265,6 +303,120 @@ class AnalysisJobController extends ApiOCSController {
 		} catch (Throwable $e) {
 			return $this->respondError($e->getMessage(), Http::STATUS_NOT_FOUND);
 		}
+	}
+
+	/**
+	 * Serve an analysis report inside Nextcloud
+	 *
+	 * @return Response<Http::STATUS_OK, array{}>|DataResponse<Http::STATUS_NOT_FOUND, array{error: string}, array{}>
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	#[ApiRoute(verb: 'GET', url: '/api/{apiVersion}/jobs/{id}/artifacts/{artifactId}/integrated-view', requirements: ['apiVersion' => '(v1)'])]
+	public function integratedArtifactView(int $id, int $artifactId): Response|DataResponse {
+		try {
+			$artifact = $this->archiveService->buildInlineArtifact($id, $artifactId, $this->requireUser($this->userId));
+			if (!str_starts_with(strtolower($artifact['contentType']), 'text/html')) {
+				throw new \RuntimeException('Only HTML artifacts can be shown as an integrated report.');
+			}
+
+			return new DataDisplayResponse(
+				$this->integrateReport($artifact['content'], $artifactId, $this->artifactMapper->getArtifactsForJob($id)),
+				Http::STATUS_OK,
+				[
+					'Content-Type' => 'text/html; charset=utf-8',
+					// Scripts are deliberately disabled for now. A future interactive-report
+					// policy can add hash-pinned scripts here without changing the route.
+					'Content-Security-Policy' => "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
+				],
+			);
+		} catch (Throwable $e) {
+			return $this->respondError($e->getMessage(), Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	/**
+	 * @param list<AnalysisArtifact> $artifacts
+	 */
+	private function integrateReport(string $html, int $currentArtifactId, array $artifacts): string {
+		$current = null;
+		$byPath = [];
+		foreach ($artifacts as $artifact) {
+			if ($artifact->getId() === $currentArtifactId) {
+				$current = $artifact;
+			}
+			$byPath[$this->normalizeReportPath($artifact->getFilePath())] = $artifact;
+		}
+		if ($current === null) {
+			throw new \RuntimeException('Artifact not found.');
+		}
+
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors(true);
+		try {
+			$document->loadHTML('<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+			$xpath = new \DOMXPath($document);
+			foreach ($xpath->query('//script|//base|//iframe|//object|//embed|//form|//meta[@http-equiv]') ?: [] as $element) {
+				$element->parentNode?->removeChild($element);
+			}
+			foreach ($xpath->query('//*') ?: [] as $element) {
+				foreach (iterator_to_array($element->attributes ?? []) as $attribute) {
+					if (str_starts_with(strtolower($attribute->name), 'on') || strtolower($attribute->name) === 'srcset') {
+						$element->removeAttribute($attribute->name);
+					}
+				}
+			}
+			$this->rewriteReportUrls($xpath, $current, $byPath);
+			return $document->saveHTML() ?: '';
+		} finally {
+			libxml_clear_errors();
+			libxml_use_internal_errors($previous);
+		}
+	}
+
+	/**
+	 * @param array<string, AnalysisArtifact> $byPath
+	 */
+	private function rewriteReportUrls(\DOMXPath $xpath, AnalysisArtifact $current, array $byPath): void {
+		foreach ([['//a[@href]', 'href', true], ['//img[@src]', 'src', false], ['//link[@href]', 'href', false]] as [$query, $attribute, $isNavigation]) {
+			foreach ($xpath->query($query) ?: [] as $element) {
+				$value = $element->getAttribute($attribute);
+				if (str_starts_with($value, '#')) {
+					continue;
+				}
+				$target = $byPath[$this->resolveReportPath($current->getFilePath(), $value)] ?? null;
+				if ($target === null) {
+					$element->removeAttribute($attribute);
+					continue;
+				}
+				$endpoint = $isNavigation && $target->getArtifactType() === AnalysisArtifact::TYPE_HTML
+					? 'integrated-view'
+					: 'content';
+				$element->setAttribute($attribute, '../' . $target->getId() . '/' . $endpoint);
+			}
+		}
+	}
+
+	private function resolveReportPath(string $currentPath, string $reference): string {
+		$path = parse_url($reference, PHP_URL_PATH);
+		if (!is_string($path) || $path === '' || preg_match('#^[a-z][a-z0-9+.-]*:#i', $reference) === 1 || str_starts_with($reference, '//')) {
+			return '';
+		}
+		$directory = str_contains($currentPath, '/') ? substr($currentPath, 0, (int)strrpos($currentPath, '/') + 1) : '';
+		return $this->normalizeReportPath($directory . $path);
+	}
+
+	private function normalizeReportPath(string $path): string {
+		$parts = [];
+		foreach (explode('/', ltrim($path, '/')) as $part) {
+			if ($part === '' || $part === '.') continue;
+			if ($part === '..') {
+				array_pop($parts);
+				continue;
+			}
+			$parts[] = $part;
+		}
+		return implode('/', $parts);
 	}
 
 	private function downloadArtifactSelection(int $id, ?string $artifactType, bool $forceZip): Response|DataResponse {

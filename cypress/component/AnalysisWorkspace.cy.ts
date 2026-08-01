@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter, RouterView, useRouter } from 'vue-router'
 import AnalysisCreateView from '@/components/analysis/AnalysisCreateView.vue'
 import AnalysisDetailView from '@/components/analysis/AnalysisDetailView.vue'
+import HeaderAnalyses from '@/components/layout/HeaderAnalyses.vue'
 import AnalysisListPanel from '@/components/layout/AnalysisListPanel.vue'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
 import type { AnalysisJob } from '@/types/types'
@@ -123,6 +124,64 @@ describe('Analysis workspace', () => {
 		cy.get('[data-cy="route-name"]').should('contain', 'analysis')
 	})
 
+	it('copies the selected analysis into the create form and sets Until to today', () => {
+		const sourceJob: AnalysisJob = {
+			...completedJob,
+			title: 'Copied analysis',
+			data_from: 1704067200,
+			data_until: 1706745599,
+			language: 'en-GB',
+			analysis_type: 'custom',
+			llm_url: 'https://llm.example/v1/chat/completions',
+			output_types: ['PDF', 'XLSX'],
+			parameters: {
+				includeTextAnalysis: false,
+				shifting_median_width: 9,
+				plot_std_error: true,
+				show_single_data_points: false,
+			},
+		}
+		const copySettings = { ...sourceJob, llm_header: '{"Authorization":"Bearer secret"}' }
+		cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/copy-settings', copySettings).as('sourceJob')
+		cy.intercept('POST', '**/structureddiary/api/v1/jobs', (request) => {
+			expect(request.body).to.include({
+				diaryId: 5,
+				title: sourceJob.title,
+				language: sourceJob.language,
+				analysisType: sourceJob.analysis_type,
+				llmUrl: sourceJob.llm_url,
+				llmHeader: copySettings.llm_header,
+				start: true,
+			})
+			expect(request.body.fromTimestamp).to.eq(sourceJob.data_from)
+			expect(request.body.untilTimestamp).to.be.greaterThan(sourceJob.data_until)
+			expect(request.body.outputFormats).to.deep.eq(sourceJob.output_types)
+			expect(request.body.parameters).to.deep.eq(sourceJob.parameters)
+			request.reply({ ...sourceJob, id: 44, status: 'SUBMITTED' })
+		}).as('copyAnalysis')
+
+		mountWithRoutes('/analyses/5/new?sourceJobId=21', AnalysisCreateView)
+		cy.wait('@sourceJob')
+		cy.get('input[type="text"]').should('have.value', sourceJob.title)
+		cy.get('input[type="date"]').first().should('have.value', '2024-01-01')
+		cy.get('input[type="date"]').last().should('have.value', new Date().toISOString().slice(0, 10))
+		cy.contains('Create and start').click()
+		cy.wait('@copyAnalysis')
+	})
+
+	it('replaces Create analysis with Copy analysis only when an analysis is selected', () => {
+		cy.intercept('GET', '**/structureddiary/api/v1/jobs*', [completedJob]).as('selectedJob')
+		mountWithRoutes('/analyses/5/21', HeaderAnalyses)
+		cy.wait('@selectedJob')
+		cy.contains('Copy analysis').should('be.visible').click()
+		cy.get('[data-cy="route-name"]').should('contain', 'analysisCreate')
+
+		cy.intercept('GET', '**/structureddiary/api/v1/jobs*', []).as('noSelectedJob')
+		mountWithRoutes('/analyses/5', HeaderAnalyses)
+		cy.contains('Create analysis').should('not.exist')
+		cy.contains('Copy analysis').should('not.exist')
+	})
+
 	it('refreshes jobs through the analysis jobs API path', () => {
 		let requestCount = 0
 		cy.intercept('GET', '**/structureddiary/api/v1/jobs*', (request) => {
@@ -173,7 +232,7 @@ describe('Analysis workspace', () => {
 		cy.wait('@artifacts')
 	})
 
-	it('previews HTML artifacts through a sandboxed file-id link without rendering filenames as HTML', () => {
+	it('loads HTML through the backend integrated report view and downloads individual artifacts directly', () => {
 		cy.intercept('GET', '**/structureddiary/api/v1/jobs*', [completedJob]).as('analysisJobs')
 		cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/artifacts', [
 			{
@@ -190,18 +249,80 @@ describe('Analysis workspace', () => {
 				created_at: 1713520300,
 			},
 		]).as('artifacts')
+		cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/artifacts/301/integrated-view', {
+			statusCode: 200,
+			headers: { 'content-type': 'text/html' },
+			body: '<h1>Analysis report</h1>',
+		}).as('integratedView')
 
 		mountWithRoutes('/analyses/5/21', AnalysisDetailView)
 		cy.wait('@analysisJobs')
 		cy.wait('@artifacts')
+		cy.wait('@integratedView')
 		cy.get('iframe')
 			.should('have.attr', 'sandbox')
 			.and('contain', 'allow-same-origin')
-		cy.get('iframe').should('have.attr', 'src').and('match', /\/jobs\/21\/artifacts\/301\/content/)
-		cy.get('a[href*="/artifacts/download"]').its('length').should('be.gte', 2)
+			.and('not.contain', 'allow-scripts')
+		cy.get('iframe').should('have.attr', 'src').and('match', /\/jobs\/21\/artifacts\/301\/integrated-view/)
 		cy.get('button[aria-label="Show artifact list"]').click()
+		cy.get('a[href*="/artifacts/301/content?download=1"]').should('exist')
 		cy.contains('<img src=x onerror=alert(1)>report.html').should('exist')
 		cy.get('img[src="x"]').should('not.exist')
 		cy.get('body').should('not.contain', '/must/not/be/used')
+	})
+
+	it('previews PDF artifacts from a blob URL instead of embedding an OCS response', () => {
+		cy.intercept('GET', '**/structureddiary/api/v1/jobs*', [completedJob]).as('analysisJobs')
+		cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/artifacts', [
+			{
+				id: 302,
+				parent_id: null,
+				job_id: 21,
+				artifact_type: 'PDF',
+				mime_type: 'application/pdf',
+				file_name: 'report.pdf',
+				file_path: 'report.pdf',
+				file_id: 1002,
+				size: 2048,
+				checksum: null,
+				created_at: 1713520300,
+			},
+		]).as('artifacts')
+		cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/artifacts/302/content', {
+			statusCode: 200,
+			headers: { 'content-type': 'application/pdf' },
+			body: 'pdf-content',
+		}).as('pdfPreview')
+
+		mountWithRoutes('/analyses/5/21', AnalysisDetailView)
+		cy.wait('@analysisJobs')
+		cy.wait('@artifacts')
+		cy.wait('@pdfPreview')
+		cy.get('object[type="application/pdf"]').should('have.attr', 'data').and('match', /^blob:/)
+	})
+
+	it('loads a multi-page HTML report fixture through its integrated view', () => {
+		cy.fixture('analysis-report/report.html').then((report) => {
+			cy.fixture('analysis-report/questions/mood.html').then((mood) => {
+				cy.fixture('analysis-report/questions/energy.html').then((energy) => {
+					const artifacts = [
+						{ id: 301, parent_id: null, job_id: 21, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'report.html', file_path: 'report.html', file_id: 1001, size: report.length, checksum: null, created_at: 1713520300 },
+						{ id: 302, parent_id: 301, job_id: 21, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'mood.html', file_path: 'questions/mood.html', file_id: 1002, size: mood.length, checksum: null, created_at: 1713520300 },
+						{ id: 303, parent_id: 301, job_id: 21, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'energy.html', file_path: 'questions/energy.html', file_id: 1003, size: energy.length, checksum: null, created_at: 1713520300 },
+						{ id: 304, parent_id: 302, job_id: 21, artifact_type: 'PLOT', mime_type: 'image/svg+xml', file_name: 'mood.svg', file_path: 'plots/mood.svg', file_id: 1004, size: 100, checksum: null, created_at: 1713520300 },
+						{ id: 305, parent_id: 303, job_id: 21, artifact_type: 'PLOT', mime_type: 'image/svg+xml', file_name: 'energy.svg', file_path: 'plots/energy.svg', file_id: 1005, size: 100, checksum: null, created_at: 1713520300 },
+					]
+					cy.intercept('GET', '**/structureddiary/api/v1/jobs*', [completedJob]).as('analysisJobs')
+					cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/artifacts', artifacts).as('artifacts')
+					cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/artifacts/301/integrated-view', report).as('report')
+
+					mountWithRoutes('/analyses/5/21', AnalysisDetailView)
+					cy.wait('@analysisJobs')
+					cy.wait('@artifacts')
+					cy.wait('@report')
+					cy.get('iframe').should('have.attr', 'src').and('match', /\/jobs\/21\/artifacts\/301\/integrated-view/)
+				})
+			})
+		})
 	})
 })

@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { analysisService } from '@/services'
 import { useStructuredDiaryStore } from '@/stores/structuredDiary'
-import type { AnalysisJob, AnalysisOutputType } from '@/types/types'
+import type { AnalysisJob, AnalysisJobCopySettings, AnalysisOutputType } from '@/types/types'
 import '@/css/workspace-card.css'
 import { t } from '@nextcloud/l10n'
 
@@ -16,12 +16,16 @@ const props = defineProps<{
 const submitting = ref(false)
 const submitError = ref<string | null>(null)
 const title = ref(props.sourceJob?.title ?? 'Analysis')
+const analysisType = ref(props.sourceJob?.analysis_type ?? 'standard')
+const llmUrl = ref(props.sourceJob?.llm_url ?? null)
+const llmHeader = ref<string | null>(null)
 const includeTextAnalysis = ref(props.sourceJob?.parameters.includeTextAnalysis ?? true)
 const language = ref(props.sourceJob?.language ?? 'de-DE')
 const shiftingMedianWidth = ref(props.sourceJob?.parameters.shifting_median_width ?? 11)
 const plotStdError = ref(props.sourceJob?.parameters.plot_std_error ?? false)
 const showSingleDataPoints = ref(props.sourceJob?.parameters.show_single_data_points ?? true)
 const outputFormats = ref<AnalysisOutputType[]>(props.sourceJob?.output_types ?? ['JSON', 'HTML'])
+const copiedFrom = ref<{ date: string, timestamp: number } | null>(null)
 
 function dateInputValue(timestamp: number): string {
 	const date = new Date(timestamp * 1000)
@@ -42,31 +46,34 @@ const dateRangeInvalid = computed(() => timestampFromDate(from.value, false) > t
 const formatsInvalid = computed(() => outputFormats.value.length === 0)
 const formInvalid = computed(() => store.selectedDiaryId === null || dateRangeInvalid.value || formatsInvalid.value || submitting.value)
 
-function applySourceJob(sourceJob: AnalysisJob): void {
+function applySourceJob(sourceJob: AnalysisJobCopySettings): void {
 	title.value = sourceJob.title
+	analysisType.value = sourceJob.analysis_type
+	llmUrl.value = sourceJob.llm_url ?? null
+	llmHeader.value = sourceJob.llm_header ?? null
 	includeTextAnalysis.value = sourceJob.parameters.includeTextAnalysis ?? true
 	language.value = sourceJob.language
 	shiftingMedianWidth.value = sourceJob.parameters.shifting_median_width ?? 11
 	plotStdError.value = sourceJob.parameters.plot_std_error ?? false
 	showSingleDataPoints.value = sourceJob.parameters.show_single_data_points ?? true
 	outputFormats.value = [...sourceJob.output_types]
-	from.value = dateInputValue(sourceJob.data_from)
+	const sourceFromDate = dateInputValue(sourceJob.data_from)
+	from.value = sourceFromDate
+	copiedFrom.value = { date: sourceFromDate, timestamp: sourceJob.data_from }
 	until.value = dateInputValue(today)
 }
 
 async function loadSourceJob(): Promise<void> {
 	if (props.sourceJob !== null && props.sourceJob !== undefined) {
-		applySourceJob(props.sourceJob)
+		const sourceSettings = await analysisService.copySettings(props.sourceJob.id).catch(() => null)
+		if (sourceSettings !== null) applySourceJob(sourceSettings)
 		return
 	}
 	const value = route.query.sourceJobId
 	const sourceJobId = typeof value === 'string' ? Number.parseInt(value, 10) : null
 	if (sourceJobId === null || Number.isNaN(sourceJobId)) return
-	const jobs = await analysisService.list().catch(() => [])
-	const sourceJob = jobs.find((item) => item.id === sourceJobId)
-	if (sourceJob !== undefined) {
-		applySourceJob(sourceJob)
-	}
+	const sourceSettings = await analysisService.copySettings(sourceJobId).catch(() => null)
+	if (sourceSettings !== null) applySourceJob(sourceSettings)
 }
 
 function toggleFormat(format: AnalysisOutputType): void {
@@ -84,10 +91,15 @@ async function submit(start: boolean): Promise<void> {
 	try {
 		const job = await analysisService.create({
 			diaryId: store.selectedDiaryId,
-			fromTimestamp: timestampFromDate(from.value, false),
+			fromTimestamp: copiedFrom.value?.date === from.value
+				? copiedFrom.value.timestamp
+				: timestampFromDate(from.value, false),
 			untilTimestamp: timestampFromDate(until.value, true),
 			title: title.value.trim() || 'Analysis',
 			language: language.value,
+			analysisType: analysisType.value,
+			llmUrl: llmUrl.value,
+			llmHeader: llmHeader.value,
 			start,
 			outputFormats: outputFormats.value,
 			parameters: {

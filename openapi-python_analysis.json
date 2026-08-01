@@ -343,6 +343,7 @@
                     "title",
                     "language",
                     "analysis_type",
+                    "llm_url",
                     "status",
                     "progress",
                     "output_types",
@@ -398,6 +399,10 @@
                     },
                     "analysis_type": {
                         "type": "string"
+                    },
+                    "llm_url": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "status": {
                         "type": "string"
@@ -486,6 +491,8 @@
                     "title",
                     "language",
                     "analysis_type",
+                    "llm_url",
+                    "llm_header",
                     "status",
                     "progress",
                     "output_types",
@@ -543,6 +550,14 @@
                     },
                     "analysis_type": {
                         "type": "string"
+                    },
+                    "llm_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "llm_header": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "status": {
                         "type": "string"

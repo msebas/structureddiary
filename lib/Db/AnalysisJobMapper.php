@@ -152,6 +152,9 @@ class AnalysisJobMapper extends QBMapper {
 		bool $start,
 		?array $outputTypes = null,
 		?array $parameters = null,
+		?string $analysisType = null,
+		?string $llmUrl = null,
+		?string $llmHeader = null,
 	): AnalysisJob {
 		$this->diaryMapper->getDiaryForUser($diaryId, $createdBy, DiaryPermissions::ANALYZE);
 		$title = trim($title);
@@ -175,13 +178,13 @@ class AnalysisJobMapper extends QBMapper {
 		$job->setFinishedAt(null);
 		$job->setTitle($title);
 		$job->setLanguage($this->normalizeLanguage($language));
-		$job->setAnalysisType(AnalysisJob::TYPE_STANDARD);
+		$job->setAnalysisType(trim($analysisType ?? '') ?: AnalysisJob::TYPE_STANDARD);
 		$job->setStatus($start ? AnalysisJob::STATUS_SUBMITTED : AnalysisJob::STATUS_DRAFT);
 		$job->setProgress(0.0);
 		$job->setOutputTypes(json_encode($this->normalizeOutputTypes($outputTypes), JSON_THROW_ON_ERROR));
 		$job->setParametersJson(json_encode($this->normalizeParameters($parameters), JSON_THROW_ON_ERROR));
-		$job->setLlmUrl(null);
-		$job->setLlmHeader(null);
+		$job->setLlmUrl($llmUrl);
+		$job->setLlmHeader($llmHeader);
 		$job->setPythonJobId(null);
 		$job->setToken($token);
 		$job->setStoragePath($this->configService->getOutputBaseFolder() . '/.pending-' . $now . '-' . substr($token, 0, 16));

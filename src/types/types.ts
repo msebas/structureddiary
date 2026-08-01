@@ -236,6 +236,7 @@ export interface AnalysisJob {
     title: string
     language: string
     analysis_type: string
+	llm_url?: string | null
     status: AnalysisJobStatus
     progress: number
     output_types: AnalysisOutputType[]
@@ -246,12 +247,26 @@ export interface AnalysisJob {
     cancel_requested_at: number | null
 }
 
+export interface AnalysisJobCopySettings {
+	data_from: number
+	title: string
+	language: string
+	analysis_type: string
+	output_types: AnalysisOutputType[]
+	parameters: AnalysisJobParameters
+	llm_url: string | null
+	llm_header: string | null
+}
+
 export interface AnalysisJobCreatePayload {
     diaryId: number
     fromTimestamp: number
     untilTimestamp: number
     title: string
     language: string
+	analysisType?: string
+	llmUrl?: string | null
+	llmHeader?: string | null
     start?: boolean
     outputFormats: AnalysisOutputType[]
     parameters: AnalysisJobParameters

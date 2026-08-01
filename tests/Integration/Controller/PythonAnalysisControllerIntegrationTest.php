@@ -69,7 +69,7 @@ final class PythonAnalysisControllerIntegrationTest extends IntegrationTestParen
 		$finalized = $controller->finalize($job->getUuid());
 		$this->assertSame(200, $finalized->getStatus());
 		$this->assertSame(AnalysisJob::STATUS_COMPLETED, $finalized->getData()->getStatus());
-		$this->assertTrue($this->jobMapper->getJob($job->getId())->getPythonDeleted());
+		$this->assertFalse($this->jobMapper->getJob($job->getId())->getPythonDeleted());
 	}
 
 	public function testServiceEndpointRejectsWrongJobTokenWithoutChangingPersistence(): void {

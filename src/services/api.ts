@@ -9,6 +9,7 @@ import type {
 	AlarmSoundUpdatePayload,
 	AnalysisArtifact,
 	AnalysisJob,
+	AnalysisJobCopySettings,
 	AnalysisJobCreatePayload,
 	AnalysisJobUpdatePayload,
 	Diary,
@@ -386,6 +387,9 @@ export const analysisService = {
 	artifacts(id: number): Promise<AnalysisArtifact[]> {
 		return request(`jobs/${id}/artifacts`)
 	},
+	copySettings(id: number): Promise<AnalysisJobCopySettings> {
+		return request(`jobs/${id}/copy-settings`)
+	},
 	artifactDownloadUrl(id: number, artifactType?: string | null): string {
 		const path = artifactType == null || artifactType === ''
 			? `/apps/structureddiary/api/v1/jobs/${id}/artifacts/download`
@@ -394,5 +398,30 @@ export const analysisService = {
 	},
 	artifactContentUrl(id: number, artifactId: number): string {
 		return generateOcsUrl(`/apps/structureddiary/api/v1/jobs/${id}/artifacts/${artifactId}/content`)
+	},
+	artifactIntegratedViewUrl(id: number, artifactId: number): string {
+		return generateOcsUrl(`/apps/structureddiary/api/v1/jobs/${id}/artifacts/${artifactId}/integrated-view`)
+	},
+	artifactFileDownloadUrl(id: number, artifactId: number): string {
+		return `${this.artifactContentUrl(id, artifactId)}?download=1`
+	},
+	async artifactPreview(id: number, artifactId: number, type: 'HTML' | 'PDF'): Promise<string> {
+		const path = `jobs/${id}/artifacts/${artifactId}/content`
+		const response = await fetch(apiPath(path), {
+			headers: {
+				Accept: type === 'HTML' ? 'text/html' : 'application/pdf',
+				'OCS-APIRequest': 'true',
+			},
+			credentials: 'same-origin',
+		})
+		if (!response.ok) {
+			await handleError(path, undefined, response)
+		}
+
+		if (type === 'HTML') {
+			return response.text()
+		}
+
+		return URL.createObjectURL(await response.blob())
 	},
 }

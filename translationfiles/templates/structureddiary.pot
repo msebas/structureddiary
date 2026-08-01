@@ -962,6 +962,11 @@ msgstr ""
 msgid "Create analysis"
 msgstr ""
 
+#. TRANSLATORS nts/layout/HeaderAnalyses.vue:75
+#. TRANSLATORS nts/layout/HeaderAnalyses.vue:80
+msgid "Copy analysis"
+msgstr ""
+
 #. TRANSLATORS nts/layout/HeaderAnalyses.vue:86
 #. TRANSLATORS nts/layout/HeaderAnalyses.vue:91
 #: /app/specialVueFakeDummyForL10nScript.js:1767

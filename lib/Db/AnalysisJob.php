@@ -226,6 +226,7 @@ class AnalysisJob extends Entity implements JsonSerializable {
 			'title' => $this->title,
 			'language' => $this->language,
 			'analysis_type' => $this->analysisType,
+			'llm_url' => $this->llmUrl,
 			'status' => $this->status,
 			'progress' => (float)$this->progress,
 			'output_types' => $this->getOutputTypeList(),

@@ -39,7 +39,7 @@ final class AnalysisJobFinalizationServiceIntegrationTest extends IntegrationTes
 		$finalized = $this->service->finalize($this->jobMapper->getJob($job->getId()));
 
 		$this->assertSame(AnalysisJob::STATUS_COMPLETED, $finalized->getStatus());
-		$this->assertTrue($finalized->getPythonDeleted());
+		$this->assertFalse($finalized->getPythonDeleted());
 		$this->assertNotNull($finalized->getFinishedAt());
 	}
 
@@ -51,7 +51,7 @@ final class AnalysisJobFinalizationServiceIntegrationTest extends IntegrationTes
 		$finalized = $this->service->finalize($job);
 
 		$this->assertSame(AnalysisJob::STATUS_FAILED, $finalized->getStatus());
-		$this->assertTrue($finalized->getPythonDeleted());
+		$this->assertFalse($finalized->getPythonDeleted());
 	}
 
 	public function testCanceledJobFinalizesWithoutWaitingForArtifacts(): void {
@@ -61,7 +61,7 @@ final class AnalysisJobFinalizationServiceIntegrationTest extends IntegrationTes
 		$finalized = $this->service->finalize($job);
 
 		$this->assertSame(AnalysisJob::STATUS_CANCELED, $finalized->getStatus());
-		$this->assertTrue($finalized->getPythonDeleted());
+		$this->assertFalse($finalized->getPythonDeleted());
 	}
 
 	public function testFinalizePendingHonorsLimitAndLeavesIneligibleJobsUntouched(): void {

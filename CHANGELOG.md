@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.4]
+
+### Added
+
+- Added analysis-copy workflows that retain the source analysis type, output formats, parameters, original start timestamp, and optional LLM configuration.
+- Added a dedicated API endpoint for retrieving copyable analysis settings without exposing the LLM header in normal job lists.
+- Added direct downloads for individual artifacts and an integrated Nextcloud report view for HTML analysis results.
+- Added authenticated, report-local navigation for HTML reports: linked report pages are rendered as integrated views and linked images and stylesheets resolve to their matching analysis artifacts.
+- Added report fixtures and expanded Cypress, backend unit, and integration coverage for analysis copying, artifact handling, and integrated reports.
+
+### Changed
+
+- Reworked the analysis header so the selected analysis can be copied directly into a new analysis form.
+- Replaced the client-side `srcdoc` report transformation and message-based navigation with a backend-integrated report view.
+- Added Content Security Policy and iframe sandboxing for integrated reports; active report content is removed while report data, local styles, images, and navigation remain available.
+- Added DOM and libxml PHP extension requirements for server-side report integration.
+- Updated the OpenAPI specifications, translations, and app metadata for version `0.0.4`.
+
+### Fixed
+
+- Fixed analysis report navigation being blocked by Nextcloud's Content Security Policy.
+- Fixed report previews recursively embedding the Nextcloud application when an artifact response was misrouted.
+- Fixed integrated reports loading unauthenticated in an iframe by preserving the same origin needed for Nextcloud session cookies.
+- Fixed artifact links in the analysis detail view so they download the selected artifact rather than opening it inline.
+
 ## [0.0.3]
 
 ### Added

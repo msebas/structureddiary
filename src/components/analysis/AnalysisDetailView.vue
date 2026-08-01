@@ -12,7 +12,6 @@ import {
 	analysisStatusLabel,
 	analysisStatusTone,
 	artifactDisplayType,
-	artifactFileUrl,
 	canCancelAnalysis,
 	canDeleteAnalysis,
 	canStartAnalysis,
@@ -38,6 +37,9 @@ const selectedType = ref<AnalysisArtifactType | null>(null)
 const cancelDialogOpen = ref(false)
 const deleteDialogOpen = ref(false)
 const previewFailed = ref(false)
+const previewLoading = ref(false)
+const previewPdfUrl = ref<string | null>(null)
+const previewArtifactId = ref<number | null>(null)
 
 const selectedJobId = computed(() => {
 	const value = route.params.jobId
@@ -54,14 +56,42 @@ const hasDownloadedArtifacts = computed(() => artifacts.value.some((artifact) =>
 const selectedDownloadUrl = computed(() => job.value === null || selectedType.value === null || !selectedArtifacts.value.some((artifact) => artifact.file_id !== null) ? null : analysisService.artifactDownloadUrl(job.value.id, selectedType.value))
 const allDownloadUrl = computed(() => job.value === null || !hasDownloadedArtifacts.value ? null : analysisService.artifactDownloadUrl(job.value.id))
 const previewArtifact = computed(() => {
+	const selected = selectedArtifacts.value.find((artifact) => artifact.id === previewArtifactId.value && artifact.file_id !== null)
+	if (selected !== undefined) return selected
 	const preferred = selectedArtifacts.value.find((artifact) => artifact.file_id !== null && ['report.html', 'report.pdf'].includes(artifact.file_name))
 	return preferred ?? selectedArtifacts.value.find((artifact) => artifact.file_id !== null) ?? null
 })
-const previewUrl = computed(() => job.value === null || previewArtifact.value === null ? null : analysisService.artifactContentUrl(job.value.id, previewArtifact.value.id))
 const failureArtifacts = computed(() => artifacts.value.filter((artifact) => ['LOG', 'MARKDOWN', 'ERROR_LOG', 'ERROR_MARKDOWN', 'MANIFEST'].includes(artifact.artifact_type)))
 
-function fileUrl(artifact: AnalysisArtifact | null, download = false): string | null {
-	return artifact === null ? null : artifactFileUrl(artifact, download)
+function fileUrl(artifact: AnalysisArtifact | null): string | null {
+	return artifact === null || job.value === null ? null : analysisService.artifactFileDownloadUrl(job.value.id, artifact.id)
+}
+
+function clearPdfPreview(): void {
+	if (previewPdfUrl.value !== null) {
+		URL.revokeObjectURL(previewPdfUrl.value)
+		previewPdfUrl.value = null
+	}
+}
+
+async function loadPreview(): Promise<void> {
+	clearPdfPreview()
+	previewFailed.value = false
+	const artifact = previewArtifact.value
+	if (job.value === null || artifact === null || artifact.artifact_type !== 'PDF') {
+		return
+	}
+
+	previewLoading.value = true
+	try {
+		const preview = await analysisService.artifactPreview(job.value.id, artifact.id, artifact.artifact_type)
+		if (previewArtifact.value?.id !== artifact.id) return
+		previewPdfUrl.value = preview
+	} catch {
+		previewFailed.value = true
+	} finally {
+		previewLoading.value = false
+	}
 }
 
 function isTerminalStatus(status: AnalysisJob['status']): boolean {
@@ -119,6 +149,7 @@ async function loadArtifacts(): Promise<void> {
 	artifactError.value = null
 	try {
 		artifacts.value = await analysisService.artifacts(selectedJobId.value)
+		previewArtifactId.value = null
 		const errorType = artifacts.value.find((artifact) => ['ERROR_LOG', 'ERROR_MARKDOWN'].includes(artifact.artifact_type))
 		selectedType.value = errorType?.artifact_type ?? selectableArtifactTypes.value.find((type) => ['HTML', 'PDF'].includes(type)) ?? selectableArtifactTypes.value[0] ?? null
 	} catch (error) {
@@ -129,29 +160,24 @@ async function loadArtifacts(): Promise<void> {
 }
 
 async function startJob(): Promise<void> {
-	if (!canStartAnalysis(job.value)) return
+	if (job.value == null || !canStartAnalysis(job.value)) return
 	job.value = await analysisService.update(job.value.id, { status: 'SUBMITTED' })
 	document.dispatchEvent(new CustomEvent('structured-diary-analysis-job-changed', { detail: { job: job.value } }))
 }
 
 async function cancelJob(): Promise<void> {
-	if (!canCancelAnalysis(job.value)) return
+	if (job.value == null || !canCancelAnalysis(job.value)) return
 	job.value = await analysisService.update(job.value.id, { status: 'CANCEL_REQUESTED' })
 	document.dispatchEvent(new CustomEvent('structured-diary-analysis-job-changed', { detail: { job: job.value } }))
 	cancelDialogOpen.value = false
 }
 
 async function deleteJob(): Promise<void> {
-	if (!canDeleteAnalysis(job.value)) return
+	if (job.value == null || !canDeleteAnalysis(job.value)) return
 	const removed = await analysisService.remove(job.value.id)
 	document.dispatchEvent(new CustomEvent('structured-diary-analysis-job-changed', { detail: { job: removed, removed: true } }))
 	deleteDialogOpen.value = false
 	await store.pushWorkspaceRoute({ name: 'analyses', params: { diaryId: removed.diary_id } })
-}
-
-async function createDraftFromJob(): Promise<void> {
-	if (job.value === null) return
-	await store.pushWorkspaceRoute({ name: 'analysisCreate', params: { diaryId: job.value.diary_id }, query: { sourceJobId: String(job.value.id) } })
 }
 
 function handleHeaderAction(event: Event): void {
@@ -159,7 +185,6 @@ function handleHeaderAction(event: Event): void {
 	if (action === 'start') void startJob()
 	if (action === 'cancel' && canCancelAnalysis(job.value)) cancelDialogOpen.value = true
 	if (action === 'delete' && canDeleteAnalysis(job.value)) deleteDialogOpen.value = true
-	if (action === 'draft') void createDraftFromJob()
 }
 
 function handleJobsRefreshed(event: Event): void {
@@ -188,12 +213,17 @@ watch(selectedJobId, () => {
 	void loadJob()
 }, { immediate: true })
 
+watch(previewArtifact, () => {
+	void loadPreview()
+})
+
 onMounted(() => {
 	document.addEventListener('structured-diary-analysis-action', handleHeaderAction)
 	document.addEventListener('structured-diary-analysis-jobs-refreshed', handleJobsRefreshed)
 })
 
 onBeforeUnmount(() => {
+	clearPdfPreview()
 	document.removeEventListener('structured-diary-analysis-action', handleHeaderAction)
 	document.removeEventListener('structured-diary-analysis-jobs-refreshed', handleJobsRefreshed)
 })
@@ -255,7 +285,7 @@ onBeforeUnmount(() => {
 				<h3>{{ t('structureddiary', 'Failure details') }}</h3>
 				<p v-if="job.error_message">{{ job.error_message }}</p>
 				<p v-if="job.status_message">{{ job.status_message }}</p>
-				<a v-for="artifact in failureArtifacts" :key="artifact.id" :href="fileUrl(artifact, true) ?? undefined">{{ artifact.file_name }}</a>
+				<a v-for="artifact in failureArtifacts" :key="artifact.id" :href="fileUrl(artifact) ?? undefined">{{ artifact.file_name }}</a>
 			</section>
 
 			<section v-if="isTerminalStatus(job.status)" :class="$style.artifacts">
@@ -273,7 +303,7 @@ onBeforeUnmount(() => {
 						<template #icon><NcIconSvgWrapper :path="mdiDownload" /></template>
 						<span :class="$style.buttonText">{{ t('structureddiary', 'Type') }}</span>
 					</NcButton>
-					<NcButton v-if="previewUrl !== null && (previewArtifact?.artifact_type === 'HTML' || previewArtifact?.artifact_type === 'PDF')" :href="previewUrl" target="_blank" :aria-label="t('structureddiary', 'Open in new tab')" variant="secondary">
+					<NcButton v-if="previewArtifact !== null && (previewArtifact.artifact_type === 'HTML' || previewArtifact.artifact_type === 'PDF')" :href="previewArtifact.artifact_type === 'HTML' ? analysisService.artifactIntegratedViewUrl(job.id, previewArtifact.id) : analysisService.artifactContentUrl(job.id, previewArtifact.id)" target="_blank" :aria-label="t('structureddiary', 'Open in new tab')" variant="secondary">
 						<template #icon><NcIconSvgWrapper :path="mdiOpenInNew" /></template>
 					</NcButton>
 					<select v-model="selectedType" :disabled="selectableArtifactTypes.length <= 1" :class="['nc-input-field__input', $style.typeSelect]">
@@ -290,27 +320,28 @@ onBeforeUnmount(() => {
 					<div v-for="artifact in sortedArtifacts" :key="artifact.id" :class="[$style.artifactRow, artifact.parent_id !== null && $style.artifactChild]">
 						<span>{{ artifact.file_name }}</span>
 						<span>{{ formatBytes(artifact.size) }}</span>
-						<a :href="fileUrl(artifact, true) ?? undefined" :aria-disabled="fileUrl(artifact, true) === null">{{ t('structureddiary', 'Download') }}</a>
+						<a :href="fileUrl(artifact) ?? undefined" :aria-disabled="fileUrl(artifact) === null">{{ t('structureddiary', 'Download') }}</a>
 					</div>
 				</div>
 
 				<div v-if="!artifactsLoading && previewArtifact !== null" :class="$style.preview">
+					<div v-if="previewLoading" :class="$style.empty">{{ t('structureddiary', 'Loading results...') }}</div>
 					<iframe
-						v-if="previewArtifact?.artifact_type === 'HTML' && previewUrl !== null && !previewFailed"
-						:src="previewUrl ?? undefined"
-						sandbox="allow-same-origin allow-popups allow-downloads"
+						v-if="previewArtifact.artifact_type === 'HTML'"
+						:src="analysisService.artifactIntegratedViewUrl(job.id, previewArtifact.id)"
+						sandbox="allow-same-origin allow-downloads"
 						:title="previewArtifact.file_name"
 						@error="previewFailed = true" />
 					<object
-						v-else-if="previewArtifact?.artifact_type === 'PDF' && previewUrl !== null && !previewFailed"
-						:data="previewUrl ?? undefined"
+						v-else-if="previewArtifact.artifact_type === 'PDF' && previewPdfUrl !== null && !previewFailed"
+						:data="previewPdfUrl"
 						type="application/pdf"
 						:title="previewArtifact.file_name"
 						@error="previewFailed = true">
-						<a :href="fileUrl(previewArtifact, true) ?? undefined">{{ t('structureddiary', 'Download') }}</a>
+						<a :href="fileUrl(previewArtifact) ?? undefined">{{ t('structureddiary', 'Download') }}</a>
 					</object>
-					<p v-else>
-						<a :href="fileUrl(previewArtifact, true) ?? undefined">
+					<p v-else-if="!previewLoading">
+						<a :href="fileUrl(previewArtifact) ?? undefined">
 							{{ t('structureddiary', 'Download') }}<span v-if="previewArtifact !== null"> ({{ formatBytes(previewArtifact.size) }})</span>
 						</a>
 					</p>

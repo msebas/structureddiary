@@ -38,7 +38,7 @@ final class AnalysisJobMapperIntegrationTest extends IntegrationTestParentClass 
 			'shifting_median_width' => 9,
 			'plot_std_error' => true,
 			'show_single_data_points' => false,
-		]);
+		], 'custom', 'https://llm.example/v1/chat/completions', '{"Authorization":"Bearer secret"}');
 
 		$this->assertGreaterThan(0, $job->getId());
 		$this->assertMatchesRegularExpression('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $job->getUuid());
@@ -48,6 +48,9 @@ final class AnalysisJobMapperIntegrationTest extends IntegrationTestParentClass 
 		$this->assertStringContainsString('/apps/files/', $job->getStorageUrl());
 		$this->assertStringContainsString('dir=', $job->getStorageUrl());
 		$this->assertSame(['JSON', 'HTML'], $job->getOutputTypeList());
+		$this->assertSame('custom', $job->getAnalysisType());
+		$this->assertSame('https://llm.example/v1/chat/completions', $job->getLlmUrl());
+		$this->assertSame('{"Authorization":"Bearer secret"}', $job->getLlmHeader());
 		$this->assertSame([
 			'includeTextAnalysis' => false,
 			'shifting_median_width' => 9,

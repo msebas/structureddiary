@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
-import { mdiCancel, mdiContentCopy, mdiContentSave, mdiDeleteOutline, mdiPencil, mdiPlay, mdiPlus } from '@mdi/js'
+import { mdiCancel, mdiContentCopy, mdiContentSave, mdiDeleteOutline, mdiPencil, mdiPlay } from '@mdi/js'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { analysisService } from '@/services'
@@ -29,15 +29,15 @@ watch(selectedJobId, async (jobId) => {
 	headerJob.value = jobs.find((job) => job.id === jobId) ?? null
 }, { immediate: true })
 
-function emitAction(action: 'start' | 'cancel' | 'delete' | 'edit' | 'draft'): void {
+function emitAction(action: 'start' | 'cancel' | 'delete' | 'edit'): void {
 	document.dispatchEvent(new CustomEvent('structured-diary-analysis-action', { detail: action }))
 }
 
-async function createAnalysis(): Promise<void> {
-	if (store.selectedDiaryId === null) {
+async function copyAnalysis(): Promise<void> {
+	if (headerJob.value === null) {
 		return
 	}
-	await store.pushWorkspaceRoute({ name: 'analysisCreate', params: { diaryId: store.selectedDiaryId } })
+	await store.pushWorkspaceRoute({ name: 'analysisCreate', params: { diaryId: headerJob.value.diary_id }, query: { sourceJobId: String(headerJob.value.id) } })
 }
 
 function createDraft(): void {
@@ -70,14 +70,14 @@ function createDraft(): void {
 				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Save draft') }}</span>
 			</NcButton>
 			<NcButton
-				v-else-if="store.selectedDiaryCanAnalyze"
+				v-else-if="headerJob !== null && store.selectedDiaryCanAnalyze"
 				class="sd-mobile-icon-button sd-header-primary-action"
-				:aria-label="t('structureddiary', 'Create analysis')"
-				@click="createAnalysis()">
+				:aria-label="t('structureddiary', 'Copy analysis')"
+				@click="copyAnalysis()">
 				<template #icon>
-					<NcIconSvgWrapper :path="mdiPlus" />
+					<NcIconSvgWrapper :path="mdiContentCopy" />
 				</template>
-				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Create analysis') }}</span>
+				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Copy analysis') }}</span>
 			</NcButton>
 			<NcButton
 				v-if="headerJob?.status === 'DRAFT'"
@@ -89,17 +89,6 @@ function createDraft(): void {
 					<NcIconSvgWrapper :path="mdiPencil" />
 				</template>
 				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Edit analysis') }}</span>
-			</NcButton>
-			<NcButton
-				v-if="headerJob !== null && headerJob.status !== 'DRAFT'"
-				class="sd-mobile-icon-button"
-				variant="secondary"
-				:aria-label="t('structureddiary', 'Create draft from analysis')"
-				@click="emitAction('draft')">
-				<template #icon>
-					<NcIconSvgWrapper :path="mdiContentCopy" />
-				</template>
-				<span class="sd-mobile-icon-button-label">{{ t('structureddiary', 'Create draft') }}</span>
 			</NcButton>
 			<NcButton
 				v-if="canStartAnalysis(headerJob)"

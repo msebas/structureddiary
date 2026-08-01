@@ -983,6 +983,11 @@ msgstr "Entwurf speichern"
 msgid "Create analysis"
 msgstr "Analyse erstellen"
 
+#. TRANSLATORS nts/layout/HeaderAnalyses.vue:75
+#. TRANSLATORS nts/layout/HeaderAnalyses.vue:80
+msgid "Copy analysis"
+msgstr "Analyse kopieren"
+
 #. TRANSLATORS nts/layout/HeaderAnalyses.vue:86
 #. TRANSLATORS nts/layout/HeaderAnalyses.vue:91
 #: /app/specialVueFakeDummyForL10nScript.js:1767
