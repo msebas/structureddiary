@@ -10,6 +10,7 @@ use OCA\StructuredDiary\Db\AnalysisJobMapper;
 use OCA\StructuredDiary\Db\DiaryMapper;
 use OCA\StructuredDiary\Db\DiaryPermissions;
 use OCA\StructuredDiary\Db\DiaryShareMapper;
+use OCA\StructuredDiary\Service\AnalysisConfigService;
 use OCA\Tests\StructuredDiary\Integration\TestUtil\IntegrationTestParentClass;
 use OCP\AppFramework\Db\DoesNotExistException;
 
@@ -29,6 +30,7 @@ final class AnalysisJobMapperIntegrationTest extends IntegrationTestParentClass 
 		$this->shareMapper = self::$container->get(DiaryShareMapper::class);
 		$this->jobMapper = self::$container->get(AnalysisJobMapper::class);
 		$this->artifactMapper = self::$container->get(AnalysisArtifactMapper::class);
+		self::$container->get(AnalysisConfigService::class)->setOutputBaseFolder(AnalysisConfigService::DEFAULT_OUTPUT_BASE_FOLDER);
 	}
 
 	public function testCreateUpdateCancelAndDeleteJobPersistValues(): void {

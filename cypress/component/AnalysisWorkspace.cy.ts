@@ -249,16 +249,9 @@ describe('Analysis workspace', () => {
 				created_at: 1713520300,
 			},
 		]).as('artifacts')
-		cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/artifacts/301/integrated-view', {
-			statusCode: 200,
-			headers: { 'content-type': 'text/html' },
-			body: '<h1>Analysis report</h1>',
-		}).as('integratedView')
-
 		mountWithRoutes('/analyses/5/21', AnalysisDetailView)
 		cy.wait('@analysisJobs')
 		cy.wait('@artifacts')
-		cy.wait('@integratedView')
 		cy.get('iframe')
 			.should('have.attr', 'sandbox')
 			.and('contain', 'allow-same-origin')
@@ -301,28 +294,20 @@ describe('Analysis workspace', () => {
 		cy.get('object[type="application/pdf"]').should('have.attr', 'data').and('match', /^blob:/)
 	})
 
-	it('loads a multi-page HTML report fixture through its integrated view', () => {
-		cy.fixture('analysis-report/report.html').then((report) => {
-			cy.fixture('analysis-report/questions/mood.html').then((mood) => {
-				cy.fixture('analysis-report/questions/energy.html').then((energy) => {
-					const artifacts = [
-						{ id: 301, parent_id: null, job_id: 21, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'report.html', file_path: 'report.html', file_id: 1001, size: report.length, checksum: null, created_at: 1713520300 },
-						{ id: 302, parent_id: 301, job_id: 21, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'mood.html', file_path: 'questions/mood.html', file_id: 1002, size: mood.length, checksum: null, created_at: 1713520300 },
-						{ id: 303, parent_id: 301, job_id: 21, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'energy.html', file_path: 'questions/energy.html', file_id: 1003, size: energy.length, checksum: null, created_at: 1713520300 },
-						{ id: 304, parent_id: 302, job_id: 21, artifact_type: 'PLOT', mime_type: 'image/svg+xml', file_name: 'mood.svg', file_path: 'plots/mood.svg', file_id: 1004, size: 100, checksum: null, created_at: 1713520300 },
-						{ id: 305, parent_id: 303, job_id: 21, artifact_type: 'PLOT', mime_type: 'image/svg+xml', file_name: 'energy.svg', file_path: 'plots/energy.svg', file_id: 1005, size: 100, checksum: null, created_at: 1713520300 },
-					]
-					cy.intercept('GET', '**/structureddiary/api/v1/jobs*', [completedJob]).as('analysisJobs')
-					cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/artifacts', artifacts).as('artifacts')
-					cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/artifacts/301/integrated-view', report).as('report')
+	it('uses the integrated view URL for a multi-page HTML report', () => {
+		const artifacts = [
+			{ id: 301, parent_id: null, job_id: 21, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'report.html', file_path: 'report.html', file_id: 1001, size: 100, checksum: null, created_at: 1713520300 },
+			{ id: 302, parent_id: 301, job_id: 21, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'mood.html', file_path: 'questions/mood.html', file_id: 1002, size: 100, checksum: null, created_at: 1713520300 },
+			{ id: 303, parent_id: 301, job_id: 21, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'energy.html', file_path: 'questions/energy.html', file_id: 1003, size: 100, checksum: null, created_at: 1713520300 },
+			{ id: 304, parent_id: 302, job_id: 21, artifact_type: 'PLOT', mime_type: 'image/svg+xml', file_name: 'mood.svg', file_path: 'plots/mood.svg', file_id: 1004, size: 100, checksum: null, created_at: 1713520300 },
+			{ id: 305, parent_id: 303, job_id: 21, artifact_type: 'PLOT', mime_type: 'image/svg+xml', file_name: 'energy.svg', file_path: 'plots/energy.svg', file_id: 1005, size: 100, checksum: null, created_at: 1713520300 },
+		]
+		cy.intercept('GET', '**/structureddiary/api/v1/jobs*', [completedJob]).as('analysisJobs')
+		cy.intercept('GET', '**/structureddiary/api/v1/jobs/21/artifacts', artifacts).as('artifacts')
 
-					mountWithRoutes('/analyses/5/21', AnalysisDetailView)
-					cy.wait('@analysisJobs')
-					cy.wait('@artifacts')
-					cy.wait('@report')
-					cy.get('iframe').should('have.attr', 'src').and('match', /\/jobs\/21\/artifacts\/301\/integrated-view/)
-				})
-			})
-		})
+		mountWithRoutes('/analyses/5/21', AnalysisDetailView)
+		cy.wait('@analysisJobs')
+		cy.wait('@artifacts')
+		cy.get('iframe').should('have.attr', 'src').and('match', /\/jobs\/21\/artifacts\/301\/integrated-view/)
 	})
 })

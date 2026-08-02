@@ -1,6 +1,6 @@
 {
   "name": "structureddiary",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
@@ -25,31 +25,31 @@
   ],
   "dependencies": {
     "@mdi/js": "~7.4.47",
-    "@nextcloud/vue": "^9.6.0",
+    "@nextcloud/vue": "^9.9.0",
     "@nextcloud/router": "^3.1.0",
     "@nextcloud/l10n": "^3.4.1",
-    "@primeuix/themes": "^2.0.3",
-    "easymde": "^2.20.0",
-    "pinia": "^3.0.4",
-    "primevue": "^4.5.5",
-    "vite": "^7.3.2",
-    "vue": "^3.5.32",
+    "@primeuix/themes": "^3.0.0",
+    "easymde": "^2.21.0",
+    "pinia": "^4.0.2",
+    "primevue": "^5.0.0",
+    "vite": "^7.3.6",
+    "vue": "^3.5.40",
     "vue3-easymde": "^1.0.1",
-    "vue-router": "^5.0.6"
+    "vue-router": "^5.2.0"
   },
   "devDependencies": {
     "@nextcloud/browserslist-config": "^3.1.2",
-    "@nextcloud/e2e-test-server": "^0.4.0",
-    "@nextcloud/eslint-config": "^8.4.2",
-    "@nextcloud/stylelint-config": "^3.2.1",
-    "@nextcloud/vite-config": "^2.5.2",
+    "@nextcloud/e2e-test-server": "^0.5.0",
+    "@nextcloud/eslint-config": "^9.0.1",
+    "@nextcloud/stylelint-config": "^3.2.2",
+    "@nextcloud/vite-config": "^2.5.4",
     "@vue/tsconfig": "^0.9.1",
-    "cypress": "~15.14.0",
-    "cypress-split": "^1.24.31",
-    "cypress-visual-regression": "^5.3.0",
-    "cypress-vite": "^1.8.0",
+    "cypress": "~15.19.0",
+    "cypress-split": "^1.25.0",
+    "cypress-visual-regression": "^6.0.0",
+    "cypress-vite": "^1.10.2",
     "typescript": "^5.9.3",
-    "vite-plugin-node-polyfills": "^0.26.0"
+    "vite-plugin-node-polyfills": "^0.28.0"
   },
   "engines": {
     "node": "^24.0.0",
