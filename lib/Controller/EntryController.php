@@ -10,6 +10,7 @@ use OCA\StructuredDiary\Db\AnswerMapper;
 use OCA\StructuredDiary\Db\DiaryMapper;
 use OCA\StructuredDiary\Db\DiaryPermissions;
 use OCA\StructuredDiary\Db\EntryMapper;
+use OCA\StructuredDiary\Service\ClientMutationId;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -80,11 +81,17 @@ class EntryController extends ApiOCSController {
 	 */
 	#[NoAdminRequired]
 	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/diaries/{diaryId}/entries', requirements: ['apiVersion' => '(v1)'])]
-	public function create(int $diaryId, int $timestamp, ?string $title = null): DataResponse {
+	public function create(int $diaryId, int $timestamp, ?string $title = null, ?string $clientMutationId = null): DataResponse {
 		try {
 			$this->diaryMapper->getDiaryForUser($diaryId, $this->requireUser($this->userId), DiaryPermissions::WRITE);
 
-			return $this->respond($this->entryMapper->createEntry($diaryId, $timestamp, $title), 201);
+			$clientMutationId = ClientMutationId::normalize($clientMutationId);
+			$entry = $this->entryMapper->createEntry($diaryId, $timestamp, $title, $clientMutationId);
+			if ($clientMutationId !== null && ($entry->getDiaryId() !== $diaryId ||
+                    $entry->getTimestamp() !== $timestamp || $entry->getTitle() !== $title)) {
+				throw new \InvalidArgumentException('clientMutationId was already used for a different entry.');
+			}
+			return $this->respond($entry, 201);
 		} catch (Throwable $e) {
 			return $this->respondError($e->getMessage());
 		}
@@ -99,10 +106,20 @@ class EntryController extends ApiOCSController {
 	 */
 	#[NoAdminRequired]
 	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/entries/{id}', requirements: ['apiVersion' => '(v1)'])]
-	public function update(int $id, ?int $timestamp = null, ?string $title = null): DataResponse {
+	public function update(int $id, int $revisionCount, ?int $timestamp = null, ?string $title = null, ?string $clientMutationId = null): DataResponse {
 		try {
 			$entry = $this->entryMapper->getEntry($id);
 			$this->diaryMapper->getDiaryForUser($entry->getDiaryId(), $this->requireUser($this->userId), DiaryPermissions::WRITE);
+			$clientMutationId = ClientMutationId::normalize($clientMutationId);
+            if ($revisionCount !== $entry->getRevisionCount() + 1) {
+				if ($revisionCount === $entry->getRevisionCount() && $clientMutationId !== null &&
+                    $clientMutationId === $entry->getClientMutationId() &&
+                    ($timestamp === null || $timestamp === $entry->getTimestamp()) &&
+                    ($title === null || $title === $entry->getTitle()))
+                    return $this->respond($entry);
+                throw new \InvalidArgumentException('Concurrent update detected: The entry revision does not match and this update needs to be reviewed.');
+            }
+			$entry->setClientMutationId($clientMutationId);
 
 			return $this->respond($this->entryMapper->updateEntry($entry, $timestamp, $title));
 		} catch (Throwable $e) {

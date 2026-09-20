@@ -17,6 +17,8 @@ const diary: Diary = {
 	reminder_signal_first: 'bell',
 	reminder_signal_repeat: 'soft-bell',
 	entry_schedule: 86400,
+	revision_count: 1,
+	client_mutation_id: null,
 	access_level: 15,
 	is_owner: true,
 }
@@ -54,6 +56,8 @@ function mountDiaryEditView() {
 			reminder_signal_first: request.body.reminderSignalFirst,
 			reminder_signal_repeat: request.body.reminderSignalRepeat,
 			entry_schedule: request.body.entrySchedule,
+			revision_count: request.body.revisionCount,
+			client_mutation_id: request.body.clientMutationId,
 		})
 	}).as('updateDiary')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5', diary).as('diaryDetail')
@@ -131,6 +135,9 @@ describe('DiaryEditView', () => {
 			reminderCount: 4,
 			reminderDelay: 1800,
 			entrySchedule: 43200,
+			revisionCount: 2,
 		})
+		cy.get('@updateDiary').its('request.body.clientMutationId')
+			.should('match', /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
 	})
 })

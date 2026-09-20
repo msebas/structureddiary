@@ -18,6 +18,8 @@ function question(id: number, type: QuestionType, patch: Partial<Question> = {})
 		previous_version_id: null,
 		next_version_id: null,
 		...patch,
+		revision_count: patch.revision_count ?? 1,
+		client_mutation_id: patch.client_mutation_id ?? null,
 	}
 }
 
@@ -32,6 +34,8 @@ function answerBodyFor(questionId: number, textContent: string | null, numericCo
 		numeric_content: numericContent,
 		previous_version_id: null,
 		next_version_id: null,
+		revision_count: 1,
+		client_mutation_id: null,
 	}
 }
 
@@ -62,6 +66,8 @@ function installPartialSaveMocks(typeQuestion: Question): void {
 		reminder_signal_first: null,
 		reminder_signal_repeat: null,
 		entry_schedule: 86400,
+		revision_count: 1,
+		client_mutation_id: null,
 		access_level: 15,
 		is_owner: true,
 	}
@@ -100,9 +106,23 @@ function installPartialSaveMocks(typeQuestion: Question): void {
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions/active*', questions).as('partialActiveQuestions')
 	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions*', questions).as('partialQuestions')
 	cy.intercept('POST', '**/structureddiary/api/v1/diaries/5/entries', (request) => {
-		request.reply({ id: 80, diary_id: 5, timestamp: request.body.timestamp, title: request.body.title })
+		request.reply({
+			id: 80,
+			diary_id: 5,
+			timestamp: request.body.timestamp,
+			title: request.body.title,
+			revision_count: 1,
+			client_mutation_id: request.body.clientMutationId,
+		})
 	}).as('partialCreateEntry')
-	cy.intercept('GET', '**/structureddiary/api/v1/entries/80', { id: 80, diary_id: 5, timestamp: 1713520000, title: 'Partial entry' }).as('partialEntryDetail')
+	cy.intercept('GET', '**/structureddiary/api/v1/entries/80', {
+		id: 80,
+		diary_id: 5,
+		timestamp: 1713520000,
+		title: 'Partial entry',
+		revision_count: 1,
+		client_mutation_id: null,
+	}).as('partialEntryDetail')
 	cy.intercept('GET', '**/structureddiary/api/v1/entries/80/answers*', (request) => {
 		request.reply(successfulAnswers)
 	}).as('partialCreatedAnswers')

@@ -9,6 +9,8 @@ describe('EntryEditorForm', () => {
 			diary_id: 4,
 			timestamp: 1713517200,
 			title: 'Existing entry',
+			revision_count: 1,
+			client_mutation_id: null,
 		}
 		const questions: Question[] = [
 			{
@@ -27,6 +29,8 @@ describe('EntryEditorForm', () => {
 				template_text: 'Write a note',
 				previous_version_id: null,
 				next_version_id: null,
+				revision_count: 1,
+				client_mutation_id: null,
 			},
 			{
 				id: 18,
@@ -44,6 +48,8 @@ describe('EntryEditorForm', () => {
 				template_text: '',
 				previous_version_id: null,
 				next_version_id: null,
+				revision_count: 1,
+				client_mutation_id: null,
 			},
 		]
 		const answers: Answer[] = [
@@ -57,6 +63,8 @@ describe('EntryEditorForm', () => {
 				numeric_content: null,
 				previous_version_id: null,
 				next_version_id: null,
+				revision_count: 1,
+				client_mutation_id: null,
 			},
 		]
 
@@ -108,6 +116,8 @@ describe('EntryEditorForm', () => {
 				template_text: 'Write a note',
 				previous_version_id: null,
 				next_version_id: null,
+				revision_count: 1,
+				client_mutation_id: null,
 			},
 		]
 
@@ -148,6 +158,8 @@ describe('EntryEditorForm', () => {
 				template_text: '',
 				previous_version_id: null,
 				next_version_id: null,
+				revision_count: 1,
+				client_mutation_id: null,
 			},
 		]
 

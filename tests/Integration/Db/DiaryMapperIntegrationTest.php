@@ -36,6 +36,14 @@ final class DiaryMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->answerMapper = self::$container->get(AnswerMapper::class);
 	}
 
+	public function testCreateDiaryWithSameClientMutationIdReturnsOriginalDiary(): void {
+		$first = $this->diaryMapper->createDiary('alice', 'Diary', 'desc', false, 0, 3, 2700, '', '', 86400, null, 'diary-create-1');
+		$retry = $this->diaryMapper->createDiary('alice', 'Diary', 'desc', false, 0, 3, 2700, '', '', 86400, null, 'diary-create-1');
+
+		$this->assertSame($first->getId(), $retry->getId());
+		$this->assertSame('diary-create-1', $this->diaryMapper->getDiary($first->getId())->getClientMutationId());
+	}
+
 	public function testCreateAndFetchDiaryPersistsFieldsAndOwnerAccess(): void {
 		$created = $this->diaryMapper->createDiary('alice', 'Alice Diary', 'owned by alice', true, 36000, 4, 1800, 'bell', 'vibrate', 90000);
 

@@ -10,6 +10,7 @@ use OCA\StructuredDiary\Db\DiaryMapper;
 use OCA\StructuredDiary\Db\DiaryPermissions;
 use OCA\StructuredDiary\Db\QuestionMapper;
 use OCA\StructuredDiary\Db\QuestionTypes;
+use OCA\StructuredDiary\Service\ClientMutationId;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -161,7 +162,8 @@ class QuestionController extends ApiOCSController {
 		?float $maximum = null,
 		?array $choices = null,
 		bool $active = true,
-		string $templateText = ''
+		string $templateText = '',
+		?string $clientMutationId = null,
 	): DataResponse {
 		try {
 			$userId = $this->requireUser($this->userId);
@@ -174,9 +176,9 @@ class QuestionController extends ApiOCSController {
 			}
 			$targetLabel = $normalizedLabel ?? $normalizedDisplayText;
 			$targetDisplayText = $normalizedDisplayText ?? $normalizedLabel;
+			$clientMutationId = ClientMutationId::normalize($clientMutationId);
 
-			return $this->respond(
-				$this->questionMapper->createQuestion(
+			$question = $this->questionMapper->createQuestion(
 					$diaryId,
 					$targetLabel,
 					$targetDisplayText,
@@ -185,10 +187,18 @@ class QuestionController extends ApiOCSController {
 					$maximum,
 					$this->normalizeStringList($choices),
 					$active,
-					$templateText
-				),
-				201
-			);
+					$templateText,
+					$clientMutationId,
+				);
+			if ($clientMutationId !== null && ($question->getDiaryId() !== $diaryId ||
+                    $question->getLabel() !== $targetLabel || $question->getDisplayText() !== $targetDisplayText ||
+                    $question->getType() !== $type || $question->getMinimum() !== $minimum ||
+                    $question->getMaximum() !== $maximum ||
+                    $question->getChoices() !== $this->normalizeStringList($choices) ||
+                    $question->getActive() !== $active || $question->getTemplateText() !== $templateText)) {
+				throw new \InvalidArgumentException('clientMutationId was already used for a different question.');
+			}
+			return $this->respond($question, 201);
 		} catch (Throwable $e) {
 			return $this->respondError($e->getMessage());
 		}
@@ -206,6 +216,7 @@ class QuestionController extends ApiOCSController {
 	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/questions/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function update(
 		int $id,
+		int $revisionCount,
 		?string $label = null,
 		?string $displayText = null,
 		?string $type = null,
@@ -213,11 +224,30 @@ class QuestionController extends ApiOCSController {
 		?float $maximum = null,
 		?array $choices = null,
 		?bool $active = null,
-		?string $templateText = null
+		?string $templateText = null,
+		?string $clientMutationId = null,
 	): DataResponse {
 		try {
 			$userId = $this->requireUser($this->userId);
 			$question = $this->questionMapper->getQuestion($id);
+			$clientMutationId = ClientMutationId::normalize($clientMutationId);
+			if ($revisionCount !== $question->getRevisionCount() + 1) {
+				$chain = $this->questionMapper->getQuestionChain($id);
+				$current = $question;
+				foreach ($chain as $candidate) if ($candidate->getNextVersionId() === null) $current = $candidate;
+				if ($revisionCount === $current->getRevisionCount() && $clientMutationId !== null &&
+                    $clientMutationId === $current->getClientMutationId() &&
+                    ($label === null || trim($label) === $current->getLabel()) &&
+                    ($displayText === null || trim($displayText) === $current->getDisplayText()) &&
+                    ($type === null || $type === $current->getType()) &&
+                    ($minimum === null || $minimum === $current->getMinimum()) &&
+                    ($maximum === null || $maximum === $current->getMaximum()) &&
+                    ($choices === null || $this->normalizeStringList($choices) === $current->getChoices()) &&
+                    ($active === null || $active === $current->getActive()) &&
+                    ($templateText === null || $templateText === $current->getTemplateText()))
+                    return $this->respond($current);
+				throw new \InvalidArgumentException('Concurrent update detected: The question revision does not match and this update needs to be reviewed.');
+			}
 			$diary = $this->diaryMapper->getDiaryForUser($question->getDiaryId(), $userId, DiaryPermissions::MANAGE);
 			$this->diaryMapper->assertManageAccess($diary, $userId);
 			$targetLabel = $label === null ? null : trim($label);
@@ -238,7 +268,8 @@ class QuestionController extends ApiOCSController {
 					$maximum,
 					$this->normalizeStringList($choices),
 					$active,
-					$templateText
+					$templateText,
+					$clientMutationId,
 				)
 			);
 		} catch (Throwable $e) {

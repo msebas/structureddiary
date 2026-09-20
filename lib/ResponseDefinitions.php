@@ -17,6 +17,8 @@ namespace OCA\StructuredDiary;
  *   reminder_signal_first: string,
  *   reminder_signal_repeat: string,
  *   entry_schedule: int,
+ *   revision_count: int,
+ *   client_mutation_id: string|null,
  *   access_level: int,
  *   is_owner: bool
  * }
@@ -70,7 +72,9 @@ namespace OCA\StructuredDiary;
  *   id: int,
  *   diary_id: int,
  *   timestamp: int,
- *   title: string|null
+ *   title: string|null,
+ *   revision_count: int,
+ *   client_mutation_id: string|null
  * }
  *
  * @psalm-type StructuredDiaryQuestion = array{
@@ -88,7 +92,9 @@ namespace OCA\StructuredDiary;
  *   active: bool,
  *   template_text: string,
  *   previous_version_id: int|null,
- *   next_version_id: int|null
+ *   next_version_id: int|null,
+ *   revision_count: int,
+ *   client_mutation_id: string|null
  * }
  *
  * @psalm-type StructuredDiaryQuestionTypeDefinition = array{
@@ -105,7 +111,9 @@ namespace OCA\StructuredDiary;
  *   text_content: string|null,
  *   numeric_content: float|null,
  *   previous_version_id: int|null,
- *   next_version_id: int|null
+ *   next_version_id: int|null,
+ *   revision_count: int,
+ *   client_mutation_id: string|null,
  * }
  *
  * @psalm-type StructuredDiaryAnswerCount = array{

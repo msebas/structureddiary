@@ -36,6 +36,10 @@ use OCP\AppFramework\Db\Entity;
  * @method void setPreviousVersionId(?int $previousVersionId)
  * @method int|null getNextVersionId()
  * @method void setNextVersionId(?int $nextVersionId)
+ * @method string|null getClientMutationId()
+ * @method void setClientMutationId(?string $clientMutationId)
+ * @method int getRevisionCount()
+ * @method void setRevisionCount(int $revisionCount)
  */
 class Question extends Entity implements JsonSerializable {
 	public const TYPE_TEXT = QuestionTypes::TEXT;
@@ -61,6 +65,8 @@ class Question extends Entity implements JsonSerializable {
 	protected $templateText = '';
 	protected $previousVersionId;
 	protected $nextVersionId;
+	protected $clientMutationId;
+	protected $revisionCount = 1;
 
 	public function __construct() {
 		$this->addType('chainId', 'integer');
@@ -77,6 +83,8 @@ class Question extends Entity implements JsonSerializable {
 		$this->addType('templateText', 'string');
 		$this->addType('previousVersionId', 'integer');
 		$this->addType('nextVersionId', 'integer');
+		$this->addType('clientMutationId', 'string');
+		$this->addType('revisionCount', 'integer');
 	}
 
 	/**
@@ -113,6 +121,8 @@ class Question extends Entity implements JsonSerializable {
 			'template_text' => $this->templateText,
 			'previous_version_id' => $this->previousVersionId === null ? null : (int)$this->previousVersionId,
 			'next_version_id' => $this->nextVersionId === null ? null : (int)$this->nextVersionId,
+			'revision_count' => (int)$this->revisionCount,
+			'client_mutation_id' => $this->clientMutationId,
 		];
 	}
 }

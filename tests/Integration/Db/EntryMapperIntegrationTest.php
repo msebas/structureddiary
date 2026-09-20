@@ -23,12 +23,22 @@ final class EntryMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->entryMapper = self::$container->get(EntryMapper::class);
 	}
 
+	public function testCreateEntryWithSameClientMutationIdReturnsOriginalEntry(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+		$first = $this->entryMapper->createEntry($diary->getId(), 1713254400, 'day', 'entry-create-1');
+		$retry = $this->entryMapper->createEntry($diary->getId(), 1713254400, 'day', 'entry-create-1');
+
+		$this->assertSame($first->getId(), $retry->getId());
+		$this->assertSame('entry-create-1', $this->entryMapper->getEntry($first->getId())->getClientMutationId());
+	}
+
 	public function testCreateGetUpdateAndDeleteEntryPersistValues(): void {
 		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
 		$created = $this->entryMapper->createEntry($diary->getId(), 1713254400, null);
 
 		$this->assertGreaterThan(0, $created->getId());
 		$this->assertNull($created->getTitle());
+		$this->assertSame(1, $created->getRevisionCount());
 
 		$fetched = $this->entryMapper->getEntry($created->getId());
 		$this->assertSame($diary->getId(), $fetched->getDiaryId());
@@ -41,6 +51,7 @@ final class EntryMapperIntegrationTest extends IntegrationTestParentClass {
 		$persisted = $this->entryMapper->getEntry($created->getId());
 		$this->assertSame(1713340800, $persisted->getTimestamp());
 		$this->assertSame('Renamed', $persisted->getTitle());
+		$this->assertSame(2, $persisted->getRevisionCount());
 
 		$deleted = $this->entryMapper->deleteEntry($persisted);
 		$this->assertSame($created->getId(), $deleted->getId());

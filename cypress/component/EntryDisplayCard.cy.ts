@@ -10,6 +10,8 @@ describe('EntryDisplayCard', () => {
 			diary_id: 2,
 			timestamp: 1713517200,
 			title: 'Daily entry',
+			revision_count: 1,
+			client_mutation_id: null,
 		}
 		const questions: Question[] = [
 			{
@@ -28,6 +30,8 @@ describe('EntryDisplayCard', () => {
 				template_text: '',
 				previous_version_id: null,
 				next_version_id: null,
+				revision_count: 1,
+				client_mutation_id: null,
 			},
 			{
 				id: 11,
@@ -45,6 +49,8 @@ describe('EntryDisplayCard', () => {
 				template_text: '',
 				previous_version_id: null,
 				next_version_id: null,
+				revision_count: 1,
+				client_mutation_id: null,
 			},
 		]
 		const answers: Answer[] = [
@@ -58,6 +64,8 @@ describe('EntryDisplayCard', () => {
 				numeric_content: null,
 				previous_version_id: null,
 				next_version_id: null,
+				revision_count: 1,
+				client_mutation_id: null,
 			},
 			{
 				id: 21,
@@ -69,6 +77,8 @@ describe('EntryDisplayCard', () => {
 				numeric_content: 7,
 				previous_version_id: null,
 				next_version_id: null,
+				revision_count: 1,
+				client_mutation_id: null,
 			},
 		]
 

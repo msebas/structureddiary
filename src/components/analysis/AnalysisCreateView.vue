@@ -290,7 +290,7 @@ onMounted(() => {
 
 .error {
 	margin: 0;
-	color: var(--color-error);
+	color: var(--color-error-text);
 	font-weight: 700;
 }
 

@@ -74,6 +74,19 @@ class DiaryMapper extends QBMapper {
 		return $this->findEntity($qb);
 	}
 
+	/** @throws Exception */
+	public function findByClientMutationId(string $clientMutationId): ?Diary {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from($this->getTableName())
+			->where($qb->expr()->eq('client_mutation_id', $qb->createNamedParameter($clientMutationId)))
+			->setMaxResults(1);
+		try {
+			return $this->findEntity($qb);
+		} catch (DoesNotExistException) {
+			return null;
+		}
+	}
+
 	/**
 	 * @throws Exception
 	 * @throws DoesNotExistException
@@ -115,6 +128,7 @@ class DiaryMapper extends QBMapper {
 		string $reminderSignalRepeat = '',
 		int $entrySchedule = 86400,
 		?string $ownerUserId = null,
+		?string $clientMutationId = null,
 	): Diary {
 		$this->validateReminderSettings($reminderTime, $reminderCount, $reminderDelay, $entrySchedule);
 		$ownerUserId = $this->normalizeOwnerUserId($ownerUserId) ?? $userId;
@@ -129,7 +143,16 @@ class DiaryMapper extends QBMapper {
 		$diary->setReminderSignalFirst($reminderSignalFirst);
 		$diary->setReminderSignalRepeat($reminderSignalRepeat);
 		$diary->setEntrySchedule($entrySchedule);
-		$inserted = $this->insert($diary);
+		$diary->setClientMutationId($clientMutationId);
+		$diary->setRevisionCount(1);
+		try {
+			$inserted = $this->insert($diary);
+		} catch (Exception $e) {
+			if ($clientMutationId === null || ($existing = $this->findByClientMutationId($clientMutationId)) === null) {
+				throw $e;
+			}
+			return $existing;
+		}
 		if ($ownerUserId !== $userId) {
 			$this->ensureShare($inserted->getId(), $userId, DiaryPermissions::READ | DiaryPermissions::MANAGE);
 		}
@@ -160,6 +183,7 @@ class DiaryMapper extends QBMapper {
 		?string $reminderSignalFirst = null,
 		?string $reminderSignalRepeat = null,
 		?int $entrySchedule = null,
+		?string $clientMutationId = null,
 	): Diary {
 		$diary = $this->getDiaryForUser($id, $userId, DiaryPermissions::MANAGE);
 		$previousOwnerUserId = $diary->getUserId();
@@ -207,6 +231,8 @@ class DiaryMapper extends QBMapper {
 			$diary->setEntrySchedule($entrySchedule);
 		}
 
+		$diary->setClientMutationId($clientMutationId);
+		$diary->setRevisionCount($diary->getRevisionCount() + 1);
 		$updated = $this->update($diary);
 		if ($ownerChanged && $userId === $previousOwnerUserId) {
 			$this->ensureShare($updated->getId(), $previousOwnerUserId, DiaryPermissions::READ | DiaryPermissions::MANAGE);

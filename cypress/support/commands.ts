@@ -105,10 +105,19 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 		reminder_signal_first: 'bell',
 		reminder_signal_repeat: 'soft-bell',
 		entry_schedule: 86400,
+		revision_count: 1,
+		client_mutation_id: null,
 		access_level: 15,
 		is_owner: true,
 	}
-	const entries = [{ id: 7, diary_id: 5, timestamp: entryTimestamp, title: 'Morning check-in' }]
+	const entries = [{
+		id: 7,
+		diary_id: 5,
+		timestamp: entryTimestamp,
+		title: 'Morning check-in',
+		revision_count: 1,
+		client_mutation_id: null,
+	}]
 	const questions = [{
 		id: 17,
 		chain_id: 17,
@@ -125,6 +134,8 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 		template_text: 'Write a short note',
 		previous_version_id: null,
 		next_version_id: 18,
+		revision_count: 1,
+		client_mutation_id: null,
 	}]
 	const questionVersions = [
 		questions[0],
@@ -139,6 +150,7 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 			template_text: '',
 			previous_version_id: 17,
 			next_version_id: null,
+			revision_count: 2,
 		},
 	]
 	const answers = [{
@@ -151,6 +163,8 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 		numeric_content: null,
 		previous_version_id: null,
 		next_version_id: null,
+		revision_count: 1,
+		client_mutation_id: null,
 	}]
 	const answerHistory = [
 		{ ...answers[0], next_version_id: 12 },
@@ -164,6 +178,7 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 			numeric_content: null,
 			previous_version_id: 11,
 			next_version_id: null,
+			revision_count: 2,
 		},
 	]
 	const stats = {
@@ -231,6 +246,8 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 			reminder_signal_first: request.body.reminderSignalFirst,
 			reminder_signal_repeat: request.body.reminderSignalRepeat,
 			entry_schedule: request.body.entrySchedule,
+			revision_count: request.body.revisionCount,
+			client_mutation_id: request.body.clientMutationId,
 		})
 	}).as('updateDiary')
 	cy.intercept('DELETE', '**/structureddiary/api/v1/diaries/5', diary).as('deleteDiary')
@@ -273,6 +290,8 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 			reminder_signal_first: request.body.reminderSignalFirst,
 			reminder_signal_repeat: request.body.reminderSignalRepeat,
 			entry_schedule: request.body.entrySchedule,
+			revision_count: 1,
+			client_mutation_id: request.body.clientMutationId,
 		})
 	}).as('createDiary')
 
@@ -293,13 +312,22 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 			template_text: request.body.templateText,
 			previous_version_id: null,
 			next_version_id: null,
+			revision_count: 1,
+			client_mutation_id: request.body.clientMutationId,
 		}
 		structuredDiaryMockState!.createdQuestion = createdQuestion
 		request.reply(createdQuestion)
 	}).as('createQuestion')
 
 	cy.intercept('POST', '**/structureddiary/api/v1/diaries/5/entries', (request) => {
-		request.reply({ id: 8, diary_id: 5, timestamp: request.body.timestamp, title: request.body.title })
+		request.reply({
+			id: 8,
+			diary_id: 5,
+			timestamp: request.body.timestamp,
+			title: request.body.title,
+			revision_count: 1,
+			client_mutation_id: request.body.clientMutationId,
+		})
 	}).as('createEntry')
 
 	cy.intercept('POST', '**/structureddiary/api/v1/entries/8/answers', (request) => {
@@ -313,6 +341,8 @@ Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
 			numeric_content: request.body.numericContent ?? null,
 			previous_version_id: null,
 			next_version_id: null,
+			revision_count: 1,
+			client_mutation_id: request.body.clientMutationId,
 		}
 		createdEntryAnswers = [...createdEntryAnswers, answer]
 		request.reply(answer)

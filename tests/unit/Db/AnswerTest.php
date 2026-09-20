@@ -19,6 +19,7 @@ final class AnswerTest extends TestCase {
 		$answer->setNumericContent(7.5);
 		$answer->setPreviousVersionId(20);
 		$answer->setNextVersionId(22);
+		$answer->setClientMutationId('answer-create-1');
 
 		$this->assertSame([
 			'id' => 21,
@@ -30,6 +31,8 @@ final class AnswerTest extends TestCase {
 			'numeric_content' => 7.5,
 			'previous_version_id' => 20,
 			'next_version_id' => 22,
+			'revision_count' => 1,
+			'client_mutation_id' => 'answer-create-1',
 		], $answer->jsonSerialize());
 	}
 
@@ -55,6 +58,8 @@ final class AnswerTest extends TestCase {
 			'numeric_content' => null,
 			'previous_version_id' => null,
 			'next_version_id' => null,
+			'revision_count' => 1,
+			'client_mutation_id' => null,
 		], $answer->jsonSerialize());
 	}
 }

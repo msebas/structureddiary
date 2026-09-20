@@ -22,6 +22,7 @@ final class DiaryTest extends TestCase {
 		$diary->setReminderSignalFirst('bell');
 		$diary->setReminderSignalRepeat('vibrate');
 		$diary->setEntrySchedule(86400);
+		$diary->setClientMutationId('diary-create-1');
 		$diary->setAccessLevel(15);
 		$diary->setIsOwner(true);
 
@@ -37,7 +38,9 @@ final class DiaryTest extends TestCase {
 			'reminder_signal_first' => 'bell',
 			'reminder_signal_repeat' => 'vibrate',
 			'entry_schedule' => 86400,
+			'revision_count' => 1,
 			'access_level' => 15,
+			'client_mutation_id' => 'diary-create-1',
 			'is_owner' => true,
 		], $diary->jsonSerialize());
 	}

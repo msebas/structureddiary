@@ -42,8 +42,8 @@ const completedJob: AnalysisJob = {
 	output_types: ['JSON', 'HTML'],
 	parameters: {
 		includeTextAnalysis: true,
-		movingAverageWindow: 11,
-		showStandardDeviation: false,
+		shifting_median_width: 11,
+		plot_std_error: false,
 	},
 	storage_url: '/index.php/apps/files/?dir=/StructuredDiary/Analyses/weekly',
 	status_message: '',

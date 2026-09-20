@@ -22,6 +22,39 @@ use OCP\IRequest;
 use PHPUnit\Framework\TestCase;
 
 final class AnswerControllerTest extends TestCase {
+	public function testCreatePassesClientMutationIdAndReturnsExistingAnswerOnRetry(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$questionMapper = $this->createMock(QuestionMapper::class);
+		$answerMapper = $this->createMock(AnswerMapper::class);
+		$entry = new Entry();
+		$entry->setDiaryId(42);
+		$question = new Question();
+		$question->setDiaryId(42);
+		$question->setType(QuestionTypes::TEXT);
+		$question->setActive(true);
+		$question->setNextVersionId(null);
+		$answer = new Answer();
+		$answer->setDiaryId(42);
+		$answer->setEntryId(5);
+		$answer->setQuestionId(11);
+		$answer->setTextContent('saved');
+		$answer->setNumericContent(null);
+
+		$entryMapper->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->method('getDiaryForUser')->willReturn($this->createStub(Diary::class));
+		$questionMapper->method('getQuestion')->with(11)->willReturn($question);
+		$answerMapper->expects($this->once())->method('createAnswer')
+			->with(42, 5, 11, 'saved', null, 'answer-create-1')->willReturn($answer);
+		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, 'alice');
+
+		$response = $controller->create(5, 11, 'saved', null, ' answer-create-1 ');
+
+		$this->assertSame(Http::STATUS_CREATED, $response->getStatus());
+		$this->assertSame($answer, $response->getData());
+	}
+
 	public function testHistoryReturnsFullAnswerChain(): void {
 		$request = $this->createMock(IRequest::class);
 		$diaryMapper = $this->createMock(DiaryMapper::class);
@@ -265,7 +298,7 @@ final class AnswerControllerTest extends TestCase {
 			'alice',
 		);
 
-		$response = $controller->update(5, 'text');
+		$response = $controller->update(5, 2, 'text');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 		$this->assertSame(['error' => 'Diary not writable'], $response->getData());
@@ -304,7 +337,7 @@ final class AnswerControllerTest extends TestCase {
 			'alice',
 		);
 
-		$response = $controller->update(5, null, 2.0);
+		$response = $controller->update(5, 2, null, 2.0);
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 		$this->assertSame(['error' => 'Boolean answers must use numeric_content 0 or 1.'], $response->getData());
@@ -676,7 +709,7 @@ final class AnswerControllerTest extends TestCase {
 		$answerMapper->expects($this->once())->method('updateAnswer')->with($answer, 'updated', null)->willReturn($answer);
 
 		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, 'alice');
-		$response = $controller->update(5, 'updated');
+		$response = $controller->update(5, 2, 'updated');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($answer, $response->getData());
@@ -835,7 +868,7 @@ final class AnswerControllerTest extends TestCase {
 		$answerMapper->expects($this->never())->method('updateAnswer');
 
 		$controller = new AnswerController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $questionMapper, $answerMapper, null);
-		$response = $controller->update(5, 'text');
+		$response = $controller->update(5, 2, 'text');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 		$this->assertSame(['error' => 'Authentication required.'], $response->getData());

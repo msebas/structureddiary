@@ -2,6 +2,7 @@ import {computed, ref} from 'vue'
 import {defineStore} from 'pinia'
 import {answerService, ApiError, diaryService, entryService, questionService} from '@/services'
 import {compareDiaryLabel} from '@/utils/diary'
+import {createClientMutationId} from '@/utils/clientMutationId'
 import {isAnswerEmptyForQuestion} from '@/utils/format'
 import type {
     Answer,
@@ -58,6 +59,7 @@ export class EntryPartialSaveError extends Error {
 
 function cloneQuestionAsCreatePayload(question: Question): DuplicatedQuestionPayload {
     return {
+        clientMutationId: createClientMutationId(),
         label: question.label,
         displayText: question.display_text,
         type: question.type,
@@ -974,7 +976,12 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
                 return questionService.create(payload.diaryId, payload as QuestionCreatePayload)
             }
             const update = payload as QuestionUpdatePayload
-            return questionService.update(update.questionId, update)
+            const current = questionById.value[update.questionId]
+            return questionService.update(update.questionId, {
+                ...update,
+                revisionCount: current.revision_count + 1,
+                clientMutationId: createClientMutationId(),
+            })
         })
 
         if (selectedDiaryId.value !== null) {
@@ -1030,7 +1037,12 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
     async function saveAnswer(entryId: number, payload: AnswerCreatePayload | AnswerUpdatePayload, currentAnswerId?: number | null): Promise<Answer> {
         const saved = await runTask(async () => {
             if (currentAnswerId) {
-                return answerService.update(currentAnswerId, payload as AnswerUpdatePayload)
+                const current = Object.values(answersByEntryByQuestion.value[entryId] ?? {}).find((answer) => answer.id === currentAnswerId)
+                return answerService.update(currentAnswerId, {
+                    ...(payload as AnswerUpdatePayload),
+                    revisionCount: (current?.revision_count ?? 1) + 1,
+                    clientMutationId: createClientMutationId(),
+                })
             }
             return answerService.create(entryId, payload as AnswerCreatePayload)
         })
@@ -1087,7 +1099,12 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             ? existingEntry
             : await runTask(async () => {
                 if (payload.entryId != null) {
-                    return entryService.update(payload.entryId, {title: payload.title, timestamp: payload.timestamp})
+                    return entryService.update(payload.entryId, {
+                        title: payload.title,
+                        timestamp: payload.timestamp,
+                        revisionCount: (existingEntry?.revision_count ?? 1) + 1,
+                        clientMutationId: createClientMutationId(),
+                    })
                 }
                 return entryService.create(payload.diaryId, {title: payload.title, timestamp: payload.timestamp})
             })
@@ -1185,7 +1202,12 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
             if (payload.diaryId == null) {
                 return diaryService.create(payload.diary as DiaryCreatePayload)
             }
-            return diaryService.update(payload.diaryId, payload.diary as DiaryUpdatePayload)
+            const current = diaries.value[payload.diaryId]
+            return diaryService.update(payload.diaryId, {
+                ...(payload.diary as DiaryUpdatePayload),
+                revisionCount: current.revision_count + 1,
+                clientMutationId: createClientMutationId(),
+            })
         })
         diaries.value[savedDiary.id] = savedDiary
         payload.diaryId = savedDiary.id
@@ -1238,7 +1260,11 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
                     const currentQuestion = questionById.value[questionId]
                     retainedQuestionIds.add(questionId)
                     if (questionChanged(currentQuestion, question)) {
-                        promises.push(questionService.update(questionId, question as QuestionUpdatePayload))
+                        promises.push(questionService.update(questionId, {
+                            ...(question as QuestionUpdatePayload),
+                            revisionCount: currentQuestion.revision_count + 1,
+                            clientMutationId: createClientMutationId(),
+                        }))
                     } else if (currentQuestion != null) {
                         promises.push(Promise.resolve(currentQuestion))
                     }
@@ -1257,9 +1283,16 @@ export const useStructuredDiaryStore = defineStore('structuredDiary', () => {
 
             // We do not delete removed questions, because this would dropt the corresponding answers. We only disable them.
             for (const questionId of questionIdsByDiary.value[payload.diaryId]) {
-                if (!retainedQuestionIds.has(questionId) && questionById.value[questionId]?.active !== false) {
-                    questionById.value[questionId].active = false
-                    promises.push(questionService.update(questionId, {active: false} as QuestionUpdatePayload))
+                if (!retainedQuestionIds.has(questionId) && questionById.value[questionId]?.active) {
+                    const currentQuestion = questionById.value[questionId]
+                    currentQuestion.active = false
+                    promises.push(questionService.update(questionId, {
+                        questionId,
+                        chainId: currentQuestion.chain_id,
+                        active: false,
+                        revisionCount: currentQuestion.revision_count + 1,
+                        clientMutationId: createClientMutationId(),
+                    }))
                 }
             }
 

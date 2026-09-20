@@ -1,3 +1,5 @@
+const entryClientMutationIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 function assertReachable(element: Cypress.Chainable<JQuery<HTMLElement>>, label: string): void {
 	element.scrollIntoView({ block: 'center', inline: 'center' }).should('be.visible').then(($element) => {
 		const bounds = $element[0].getBoundingClientRect()
@@ -27,12 +29,19 @@ describe('Structured diary entry flow', () => {
 		assertReachable(cy.contains('#structured-diary-entry-edit-form footer button', 'Save'), 'create entry lower save')
 		cy.contains('#structured-diary-entry-edit-form footer button', 'Save').click()
 
+		let entryClientMutationId = ''
 		cy.wait('@createEntry').its('request.body').should('deep.include', {
 			title: 'Evening reflection',
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(entryClientMutationIdPattern)
+			entryClientMutationId = body.clientMutationId
 		})
 		cy.wait('@createAnswer').its('request.body').should('deep.include', {
 			questionId: 17,
 			textContent: 'Productive day',
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(entryClientMutationIdPattern)
+			expect(body.clientMutationId).not.to.equal(entryClientMutationId)
 		})
 	})
 
@@ -145,7 +154,14 @@ describe('Structured diary entry flow', () => {
 	it('creates multiple answer versions when an existing answer changes repeatedly', () => {
 		cy.mockStructuredDiaryBootstrap()
 
-		const entry = { id: 7, diary_id: 5, timestamp: 1713517200, title: 'Morning check-in' }
+		const entry = {
+			id: 7,
+			diary_id: 5,
+			timestamp: 1713517200,
+			title: 'Morning check-in',
+			revision_count: 1,
+			client_mutation_id: null,
+		}
 		const firstAnswer = {
 			id: 11,
 			diary_id: 5,
@@ -156,9 +172,11 @@ describe('Structured diary entry flow', () => {
 			numeric_content: null,
 			previous_version_id: null,
 			next_version_id: null,
+			revision_count: 1,
+			client_mutation_id: null,
 		}
-		let currentAnswer = firstAnswer
-		const history = [firstAnswer]
+		let currentAnswer: Record<string, unknown> = firstAnswer
+		const history: Record<string, unknown>[] = [firstAnswer]
 
 		cy.intercept('PUT', '**/structureddiary/api/v1/entries/7', (request) => {
 			request.reply({ ...entry, title: request.body.title, timestamp: request.body.timestamp })
@@ -175,6 +193,8 @@ describe('Structured diary entry flow', () => {
 				text_content: request.body.textContent,
 				previous_version_id: 11,
 				next_version_id: null,
+				revision_count: request.body.revisionCount,
+				client_mutation_id: request.body.clientMutationId,
 			}
 			history.push(currentAnswer)
 			request.reply(currentAnswer)
@@ -188,6 +208,8 @@ describe('Structured diary entry flow', () => {
 				text_content: request.body.textContent,
 				previous_version_id: 12,
 				next_version_id: null,
+				revision_count: request.body.revisionCount,
+				client_mutation_id: request.body.clientMutationId,
 			}
 			history.push(currentAnswer)
 			request.reply(currentAnswer)
@@ -209,9 +231,14 @@ describe('Structured diary entry flow', () => {
 		assertReachable(cy.contains('#structured-diary-entry-edit-form footer button', 'Cancel'), 'edit entry lower cancel')
 		assertReachable(cy.contains('#structured-diary-entry-edit-form footer button', 'Save'), 'edit entry lower save')
 		cy.contains('#structured-diary-entry-edit-form footer button', 'Save').click()
+		let firstClientMutationId = ''
 		cy.wait('@updateAnswerFirst').its('request.body').should('deep.include', {
 			questionId: 17,
 			textContent: 'Feeling better now.',
+			revisionCount: 2,
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(entryClientMutationIdPattern)
+			firstClientMutationId = body.clientMutationId
 		})
 
 		cy.visitStructuredDiary('entries/5/7/edit')
@@ -226,6 +253,10 @@ describe('Structured diary entry flow', () => {
 		cy.wait('@updateAnswerSecond').its('request.body').should('deep.include', {
 			questionId: 17,
 			textContent: 'Feeling excellent.',
+			revisionCount: 3,
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(entryClientMutationIdPattern)
+			expect(body.clientMutationId).not.to.equal(firstClientMutationId)
 		})
 
 		cy.visitStructuredDiary('entries/5/7')

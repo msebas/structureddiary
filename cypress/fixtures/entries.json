@@ -3,6 +3,8 @@
 		"id": 7,
 		"diary_id": 5,
 		"timestamp": 1713517200,
-		"title": "Morning check-in"
+		"title": "Morning check-in",
+		"client_mutation_id": null,
+		"revision_count": 1
 	}
 ]

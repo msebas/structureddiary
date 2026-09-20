@@ -30,6 +30,15 @@ final class QuestionMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->answerMapper = self::$container->get(AnswerMapper::class);
 	}
 
+	public function testCreateQuestionWithSameClientMutationIdReturnsOriginalQuestion(): void {
+		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
+		$first = $this->questionMapper->createQuestion($diary->getId(), 'Mood', 'Mood', QuestionTypes::TEXT, null, null, null, true, '', 'question-create-1');
+		$retry = $this->questionMapper->createQuestion($diary->getId(), 'Mood', 'Mood', QuestionTypes::TEXT, null, null, null, true, '', 'question-create-1');
+
+		$this->assertSame($first->getId(), $retry->getId());
+		$this->assertSame('question-create-1', $this->questionMapper->getQuestion($first->getId())->getClientMutationId());
+	}
+
 	public function testCreateFetchAndGetCurrentQuestionsReturnOnlyCurrentVersions(): void {
 		$diary = $this->diaryMapper->createDiary('alice', 'Diary', 'desc');
 		$entry = $this->entryMapper->createEntry($diary->getId(), 1713254400, 'day');
@@ -48,6 +57,7 @@ final class QuestionMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->assertSame($questionANext->getChainId(), $questionA->getChainId());
 		$this->assertSame($questionB->getDiaryQuestionOrder(), $questionB->getId());
 		$this->assertSame($questionANext->getDiaryQuestionOrder(), $questionA->getDiaryQuestionOrder());
+		$this->assertSame(2, $questionANext->getRevisionCount());
 		$this->assertSame([$questionANext->getId(), $questionB->getId()], array_map(static fn ($question) => $question->getId(), $current));
 	}
 

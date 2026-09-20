@@ -14,6 +14,7 @@ use OCA\StructuredDiary\Db\EntryMapper;
 use OCA\StructuredDiary\Db\Question;
 use OCA\StructuredDiary\Db\QuestionMapper;
 use OCA\StructuredDiary\Db\QuestionTypeValidator;
+use OCA\StructuredDiary\Service\ClientMutationId;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -107,18 +108,20 @@ class AnswerController extends ApiOCSController {
 	 */
 	#[NoAdminRequired]
 	#[ApiRoute(verb: 'POST', url: '/api/{apiVersion}/entries/{entryId}/answers', requirements: ['apiVersion' => '(v1)'])]
-	public function create(int $entryId, int $questionId, ?string $textContent = null, ?float $numericContent = null): DataResponse {
+	public function create(int $entryId, int $questionId, ?string $textContent = null, ?float $numericContent = null, ?string $clientMutationId = null): DataResponse {
 		try {
 			$entry = $this->entryMapper->getEntry($entryId);
 			$this->diaryMapper->getDiaryForUser($entry->getDiaryId(), $this->requireUser($this->userId), DiaryPermissions::WRITE);
 			$question = $this->questionMapper->getQuestion($questionId);
 			$this->assertQuestionMatchesEntry($question, $entry->getDiaryId());
 			QuestionTypeValidator::validateAnswerPayload($question, $textContent, $numericContent);
+			$clientMutationId = ClientMutationId::normalize($clientMutationId);
 
-			return $this->respond(
-				$this->answerMapper->createAnswer($entry->getDiaryId(), $entryId, $questionId, $textContent, $numericContent),
-				201
-			);
+			$answer = $this->answerMapper->createAnswer($entry->getDiaryId(), $entryId, $questionId, $textContent, $numericContent, $clientMutationId);
+			if ($clientMutationId !== null && ($answer->getDiaryId() !== $entry->getDiaryId() || $answer->getEntryId() !== $entryId || $answer->getQuestionId() !== $questionId || $answer->getTextContent() !== $textContent || $answer->getNumericContent() !== $numericContent)) {
+				throw new \InvalidArgumentException('clientMutationId was already used for a different answer.');
+			}
+			return $this->respond($answer, 201);
 		} catch (Throwable $e) {
 			return $this->respondError($e->getMessage());
 		}
@@ -133,16 +136,27 @@ class AnswerController extends ApiOCSController {
 	 */
 	#[NoAdminRequired]
 	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/answers/{id}', requirements: ['apiVersion' => '(v1)'])]
-	public function update(int $id, ?string $textContent = null, ?float $numericContent = null): DataResponse {
+	public function update(int $id, int $revisionCount, ?string $textContent = null, ?float $numericContent = null, ?string $clientMutationId = null): DataResponse {
 		try {
 			/** @var Answer $answer */
 			$answer = $this->answerMapper->getAnswer($id);
+			$clientMutationId = ClientMutationId::normalize($clientMutationId);
+			if ($revisionCount !== $answer->getRevisionCount() + 1) {
+				$chain = $this->answerMapper->getAnswerChainForEntryQuestion($answer->getEntryId(), $answer->getQuestionId());
+				$current = $chain[array_key_last($chain)] ?? $answer;
+				if ($revisionCount === $current->getRevisionCount() && $clientMutationId !== null &&
+                    $clientMutationId === $current->getClientMutationId() &&
+                    $textContent === $current->getTextContent() &&
+                    $numericContent === $current->getNumericContent())
+                    return $this->respond($current);
+				throw new \InvalidArgumentException('Concurrent update detected: The answer revision does not match and this update needs to be reviewed.');
+			}
 			$this->diaryMapper->getDiaryForUser($answer->getDiaryId(), $this->requireUser($this->userId), DiaryPermissions::WRITE);
 			/** @var Question $question */
 			$question = $this->questionMapper->getQuestion($answer->getQuestionId());
 			QuestionTypeValidator::validateAnswerPayload($question, $textContent, $numericContent);
 
-			return $this->respond($this->answerMapper->updateAnswer($answer, $textContent, $numericContent));
+			return $this->respond($this->answerMapper->updateAnswer($answer, $textContent, $numericContent, $clientMutationId));
 		} catch (Throwable $e) {
 			return $this->respondError($e->getMessage());
 		}

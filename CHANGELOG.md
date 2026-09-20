@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added direct downloads for individual artifacts and an integrated Nextcloud report view for HTML analysis results.
 - Added authenticated, report-local navigation for HTML reports: linked report pages are rendered as integrated views and linked images and stylesheets resolve to their matching analysis artifacts.
 - Added report fixtures and expanded Cypress, backend unit, and integration coverage for analysis copying, artifact handling, and integrated reports.
+- Added optional client mutation IDs for idempotent Diary, Entry, Question, and Answer creation and updates.
+- Added revision counters and optimistic-concurrency checks for Diary, Entry, Question, and Answer updates.
+- Added migration backfilling for legacy Question and Answer revision chains.
 
 ### Changed
 
@@ -22,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Content Security Policy and iframe sandboxing for integrated reports; active report content is removed while report data, local styles, images, and navigation remain available.
 - Added DOM and libxml PHP extension requirements for server-side report integration.
 - Updated the OpenAPI specifications, translations, and app metadata for version `0.0.4`.
+- Updated API responses to expose `revision_count` and `client_mutation_id`; matching retries now return the current resource without applying the mutation twice.
+- Updated the Vue data client to generate UUID mutation IDs and send the next expected revision with updates.
 
 ### Fixed
 
@@ -29,6 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed report previews recursively embedding the Nextcloud application when an artifact response was misrouted.
 - Fixed integrated reports loading unauthenticated in an iframe by preserving the same origin needed for Nextcloud session cookies.
 - Fixed artifact links in the analysis detail view so they download the selected artifact rather than opening it inline.
+- Fixed ambiguous create and update retries being able to produce duplicate records or version-chain entries.
+
+### Tests
+
+- Added unit and integration coverage for idempotent retries, revision progression, schema migration, API fixtures, and mutation-ID validation.
 
 ## [0.0.3]
 

@@ -29,6 +29,8 @@ export interface Diary {
     reminder_signal_first: string
     reminder_signal_repeat: string
     entry_schedule: number
+    revision_count: number
+    client_mutation_id: string | null
     access_level: number
     is_owner: boolean
 }
@@ -69,6 +71,8 @@ export interface Entry {
     diary_id: number
     timestamp: number
     title: string | null
+    revision_count: number
+    client_mutation_id: string | null
 }
 
 export interface Question {
@@ -87,6 +91,8 @@ export interface Question {
     template_text: string
     previous_version_id: number | null
     next_version_id: number | null
+    revision_count: number
+    client_mutation_id: string | null
 }
 
 export interface Answer {
@@ -99,6 +105,8 @@ export interface Answer {
     numeric_content: number | null
     previous_version_id: number | null
     next_version_id: number | null
+    revision_count: number
+    client_mutation_id: string | null
 }
 
 export interface QuestionTypeDefinition {
@@ -135,6 +143,9 @@ export interface DiaryStats {
 }
 
 export interface DiaryUpdatePayload {
+	/** The current server revision plus one. */
+    revisionCount: number
+    clientMutationId?: string
     title?: string
     description?: string
     ownerUserId?: string
@@ -147,22 +158,27 @@ export interface DiaryUpdatePayload {
     entrySchedule?: number
 }
 
-export interface DiaryCreatePayload extends Required<DiaryUpdatePayload> {
-    title: string
-    description: string
+export interface DiaryCreatePayload extends Omit<Required<DiaryUpdatePayload>, 'revisionCount' | 'clientMutationId'> {
+	title: string
+	description: string
+	clientMutationId?: string
 }
 
 export interface EntryCreatePayload {
+	clientMutationId?: string
     timestamp: number
     title?: string | null
 }
 
 export interface EntryUpdatePayload {
+	revisionCount: number
+	clientMutationId?: string
     timestamp?: number
     title?: string | null
 }
 
 export interface QuestionCreatePayload {
+	clientMutationId?: string
     diaryId: number
     label: string | null
     displayText?: string | null
@@ -175,6 +191,8 @@ export interface QuestionCreatePayload {
 }
 
 export interface QuestionUpdatePayload {
+	revisionCount: number
+	clientMutationId?: string
     questionId: number
     chainId: number
     label?: string | null
@@ -188,12 +206,15 @@ export interface QuestionUpdatePayload {
     diaryId?: undefined
 }
 export interface AnswerCreatePayload {
+	clientMutationId?: string
     questionId: number
     textContent?: string | null
     numericContent?: number | null
 }
 
 export interface AnswerUpdatePayload {
+	revisionCount: number
+	clientMutationId?: string
     textContent?: string | null
     numericContent?: number | null
 }

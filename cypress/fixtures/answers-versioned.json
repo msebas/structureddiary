@@ -8,6 +8,8 @@
 		"text_content": "Feeling better now.",
 		"numeric_content": null,
 		"previous_version_id": 11,
-		"next_version_id": null
+		"next_version_id": null,
+		"revision_count": 2,
+		"client_mutation_id": null
 	}
 ]

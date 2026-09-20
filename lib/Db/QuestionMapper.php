@@ -6,6 +6,7 @@ namespace OCA\StructuredDiary\Db;
 
 use InvalidArgumentException;
 use OCP\AppFramework\Db\QBMapper;
+use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\DB\Exception;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
@@ -30,6 +31,19 @@ class QuestionMapper extends QBMapper {
 			->setMaxResults(1);
 
 		return $this->findEntity($qb);
+	}
+
+	/** @throws Exception */
+	public function findByClientMutationId(string $clientMutationId): ?Question {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from($this->getTableName())
+			->where($qb->expr()->eq('client_mutation_id', $qb->createNamedParameter($clientMutationId)))
+			->setMaxResults(1);
+		try {
+			return $this->findEntity($qb);
+		} catch (DoesNotExistException) {
+			return null;
+		}
 	}
 
 	/**
@@ -120,7 +134,8 @@ class QuestionMapper extends QBMapper {
 		?float $maximum,
 		?array $choices,
 		bool $active,
-		string $templateText
+		string $templateText,
+		?string $clientMutationId = null,
 	): Question {
 		QuestionTypeValidator::validateQuestionDefinition($type, $minimum, $maximum, $choices);
 		$question = new Question();
@@ -138,7 +153,16 @@ class QuestionMapper extends QBMapper {
 		$question->setTemplateText($templateText);
 		$question->setPreviousVersionId(null);
 		$question->setNextVersionId(null);
-		$question = $this->insert($question);
+		$question->setClientMutationId($clientMutationId);
+		$question->setRevisionCount(1);
+		try {
+			$question = $this->insert($question);
+		} catch (Exception $e) {
+			if ($clientMutationId === null || ($existing = $this->findByClientMutationId($clientMutationId)) === null) {
+				throw $e;
+			}
+			return $existing;
+		}
 
 		$question->setChainId($question->getId());
 		$question->setDiaryQuestionOrder($question->getId());
@@ -160,7 +184,8 @@ class QuestionMapper extends QBMapper {
 		?float $maximum,
 		?array $choices,
 		?bool $active,
-		?string $templateText
+		?string $templateText,
+		?string $clientMutationId = null,
 	): Question {
 		$hasAnswers = $this->hasAnswersInChain($question);
 		$targetLabel = $label ?? $question->getLabel();
@@ -195,6 +220,8 @@ class QuestionMapper extends QBMapper {
 			$question->setJsonChoices($targetChoices === null ? null : json_encode($targetChoices, JSON_THROW_ON_ERROR));
 			$question->setActive($targetActive);
 			$question->setTemplateText($targetTemplateText);
+			$question->setRevisionCount($question->getRevisionCount() + 1);
+			$question->setClientMutationId($clientMutationId);
 			$this->assertUniqueCurrentOrder($question->getDiaryId(), $question->getDiaryQuestionOrder(), $question->getId());
 
 			return $this->update($question);
@@ -215,6 +242,7 @@ class QuestionMapper extends QBMapper {
 			$targetActive,
 			$targetTemplateText,
 			$question->getDiaryQuestionOrder(),
+			$clientMutationId,
 		);
 
 		return $newQuestion;
@@ -453,6 +481,7 @@ class QuestionMapper extends QBMapper {
 		bool $active,
 		string $templateText,
 		int $diaryQuestionOrder,
+		?string $clientMutationId = null,
 	): Question {
 		$this->assertUniqueCurrentOrder($question->getDiaryId(), $diaryQuestionOrder, $question->getId());
 
@@ -471,6 +500,8 @@ class QuestionMapper extends QBMapper {
 		$newQuestion->setTemplateText($templateText);
 		$newQuestion->setPreviousVersionId($question->getId());
 		$newQuestion->setNextVersionId(null);
+		$newQuestion->setRevisionCount($question->getRevisionCount() + 1);
+		$newQuestion->setClientMutationId($clientMutationId);
 		$newQuestion = $this->insert($newQuestion);
 
 		$question->setNextVersionId($newQuestion->getId());

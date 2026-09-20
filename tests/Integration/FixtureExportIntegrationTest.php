@@ -197,11 +197,13 @@ final class FixtureExportIntegrationTest extends IntegrationTestParentClass {
 			[
 				'path' => ['id' => $answer->getId()],
 				'body' => [
+					'revisionCount' => 2,
+					'clientMutationId' => 'fixture-answer-put-1',
 					'textContent' => 'Feeling better now.',
 					'numericContent' => null,
 				],
 			],
-			fn (): DataResponse => $answerController->update($answer->getId(), 'Feeling better now.', null),
+			fn (): DataResponse => $answerController->update($answer->getId(), 2, 'Feeling better now.', null, 'fixture-answer-put-1'),
 		);
 		$currentQuestion = $this->exportBackendMutationFixture(
 			'question_put_text',
@@ -210,6 +212,8 @@ final class FixtureExportIntegrationTest extends IntegrationTestParentClass {
 			[
 				'path' => ['id' => $question->getId()],
 				'body' => [
+					'revisionCount' => 2,
+					'clientMutationId' => 'fixture-question-put-1',
 					'label' => 'Mood check-in',
 					'displayText' => 'How do you feel today, in detail?',
 					'type' => QuestionTypes::TEXT,
@@ -222,6 +226,7 @@ final class FixtureExportIntegrationTest extends IntegrationTestParentClass {
 			],
 			fn (): DataResponse => $questionController->update(
 				$question->getId(),
+				2,
 				'Mood check-in',
 				'How do you feel today, in detail?',
 				QuestionTypes::TEXT,
@@ -230,6 +235,7 @@ final class FixtureExportIntegrationTest extends IntegrationTestParentClass {
 				null,
 				true,
 				'Write a longer note',
+				'fixture-question-put-1',
 			),
 		);
 		$this->exportBackendMutationFixture(
@@ -239,11 +245,12 @@ final class FixtureExportIntegrationTest extends IntegrationTestParentClass {
 			[
 				'path' => ['id' => $question->getId()],
 				'body' => [
+					'revisionCount' => 2,
 					'label' => '   ',
 					'displayText' => null,
 				],
 			],
-			fn (): DataResponse => $questionController->update($question->getId(), '   ', null),
+			fn (): DataResponse => $questionController->update($question->getId(), 2, '   ', null),
 			false,
 		);
 		$alarmSound = $this->exportBackendMutationFixture(

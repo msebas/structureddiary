@@ -8,6 +8,8 @@
 		"text_content": "Feeling stable today.",
 		"numeric_content": null,
 		"previous_version_id": null,
-		"next_version_id": null
+		"next_version_id": null,
+		"revision_count": 1,
+		"client_mutation_id": null
 	}
 ]

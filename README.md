@@ -17,6 +17,8 @@ The app supports Nextcloud 32 through 34 and is licensed under
 - Collects text (including Markdown), boolean, rating, number, integer, time,
   select, and editable-select answers.
 - Keeps answer history when an answer is changed, allowing to browse earlier versions.
+- Supports idempotent Diary, Entry, Question, and Answer mutations with client-generated
+  mutation IDs and revision-based concurrent-update detection.
 - Allows managing analysis reports (create, copy, cancel, delete) from the App.
 - Analysis (with optional LLM support) is carried out by an external analysis service:
   - See https://github.com/msebas/structureddiary_analysis
@@ -74,6 +76,25 @@ changes with:
 ```bash
 bash scripts/update_openapi.sh
 ```
+
+### Idempotent data mutations
+
+Diary, Entry, Question, and Answer `POST` endpoints accept an optional
+`clientMutationId` of up to 64 characters. Clients should generate a UUID once
+for a logical create operation and reuse it for every retry. Repeating a create
+with the same ID and payload returns the existing object; reusing the ID for a
+different payload is rejected.
+
+The corresponding `PUT` endpoints require `revisionCount`, set to the current
+object's `revision_count + 1`, and accept a `clientMutationId` for the update.
+Successful responses expose both `revision_count` and `client_mutation_id`.
+If a response is lost, repeating the same update with its original revision,
+mutation ID, and payload returns the current object without creating another
+Question or Answer version. A mismatched revision with different mutation data
+is rejected as a concurrent update that must be reviewed.
+
+The Vue client generates UUID mutation IDs automatically. Offline clients must
+persist the UUID with their queued mutation so retries keep the same ID.
 
 `scripts/pack.sh` builds the distributable app archive. Release history is in
 [CHANGELOG.md](CHANGELOG.md).

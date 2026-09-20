@@ -33,6 +33,19 @@ class AnswerMapper extends QBMapper {
 		return $this->findEntity($qb);
 	}
 
+	/** @throws Exception */
+	public function findByClientMutationId(string $clientMutationId): ?Answer {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from($this->getTableName())
+			->where($qb->expr()->eq('client_mutation_id', $qb->createNamedParameter($clientMutationId)))
+			->setMaxResults(1);
+		try {
+			return $this->findEntity($qb);
+		} catch (DoesNotExistException) {
+			return null;
+		}
+	}
+
 	/**
 	 * @return list<Answer>
 	 * @throws Exception
@@ -121,7 +134,10 @@ class AnswerMapper extends QBMapper {
 	/**
 	 * @throws Exception
 	 */
-	public function createAnswer(int $diaryId, int $entryId, int $questionId, ?string $textContent, ?float $numericContent): Answer {
+	public function createAnswer(int $diaryId, int $entryId, int $questionId, ?string $textContent, ?float $numericContent, ?string $clientMutationId = null): Answer {
+		if ($clientMutationId !== null && ($existing = $this->findByClientMutationId($clientMutationId)) !== null) {
+			return $existing;
+		}
 		if ($this->currentAnswerExists($entryId, $questionId)) {
 			throw new InvalidArgumentException('An answer for this question already exists in the entry.');
 		}
@@ -135,14 +151,23 @@ class AnswerMapper extends QBMapper {
 		$answer->setNumericContent($numericContent);
 		$answer->setPreviousVersionId(null);
 		$answer->setNextVersionId(null);
+		$answer->setClientMutationId($clientMutationId);
+		$answer->setRevisionCount(1);
 
-		return $this->insert($answer);
+		try {
+			return $this->insert($answer);
+		} catch (Exception $e) {
+			if ($clientMutationId === null || ($existing = $this->findByClientMutationId($clientMutationId)) === null) {
+				throw $e;
+			}
+			return $existing;
+		}
 	}
 
 	/**
 	 * @throws Exception
 	 */
-	public function updateAnswer(Answer $answer, ?string $textContent, ?float $numericContent): Answer {
+	public function updateAnswer(Answer $answer, ?string $textContent, ?float $numericContent, ?string $clientMutationId = null): Answer {
 		if ($answer->getNextVersionId() !== null) {
 			throw new InvalidArgumentException('Only the current answer version can be changed.');
 		}
@@ -159,6 +184,8 @@ class AnswerMapper extends QBMapper {
 		$newAnswer->setNumericContent($numericContent);
 		$newAnswer->setPreviousVersionId($answer->getId());
 		$newAnswer->setNextVersionId(null);
+		$newAnswer->setRevisionCount($answer->getRevisionCount() + 1);
+		$newAnswer->setClientMutationId($clientMutationId);
 		$newAnswer = $this->insert($newAnswer);
 
 		$answer->setNextVersionId($newAnswer->getId());

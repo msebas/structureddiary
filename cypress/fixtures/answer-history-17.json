@@ -8,7 +8,9 @@
 		"text_content": "Feeling stable today.",
 		"numeric_content": null,
 		"previous_version_id": null,
-		"next_version_id": 12
+		"next_version_id": 12,
+		"revision_count": 1,
+		"client_mutation_id": null
 	},
 	{
 		"id": 12,
@@ -19,6 +21,8 @@
 		"text_content": "Feeling better now.",
 		"numeric_content": null,
 		"previous_version_id": 11,
-		"next_version_id": null
+		"next_version_id": null,
+		"revision_count": 2,
+		"client_mutation_id": null
 	}
 ]

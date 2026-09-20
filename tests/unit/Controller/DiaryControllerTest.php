@@ -90,6 +90,10 @@ final class DiaryControllerTest extends TestCase {
 		$shareMapper = $this->createMock(DiaryShareMapper::class);
 		$diary = new Diary();
 		$diary->setUserId('alice');
+		$diaryMapper->expects($this->once())
+			->method('getDiaryForUser')
+			->with(42, 'alice', DiaryPermissions::MANAGE)
+			->willReturn($diary);
 
 		$diaryMapper->expects($this->once())
 			->method('updateDiary')
@@ -97,7 +101,7 @@ final class DiaryControllerTest extends TestCase {
 			->willReturn($diary);
 
 		$controller = new DiaryController(Application::APP_ID, $request, $diaryMapper, $shareMapper, 'alice');
-		$response = $controller->update(42, 'Updated', 'Desc', 'bob', true, 36000, 4, 1800, 'bell', 'vibrate', 86400);
+		$response = $controller->update(42, 2, 'Updated', 'Desc', 'bob', true, 36000, 4, 1800, 'bell', 'vibrate', 86400);
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($diary, $response->getData());
@@ -246,7 +250,7 @@ final class DiaryControllerTest extends TestCase {
 		$diaryMapper->expects($this->never())->method('updateDiary');
 
 		$controller = new DiaryController(Application::APP_ID, $request, $diaryMapper, $shareMapper, 'alice');
-		$response = $controller->update(42, '   ');
+		$response = $controller->update(42, 2, '   ');
 
 		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
 		$this->assertSame(['error' => 'Diary title cannot be empty.'], $response->getData());

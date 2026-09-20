@@ -29,6 +29,15 @@ final class AnswerMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->answerMapper = self::$container->get(AnswerMapper::class);
 	}
 
+	public function testCreateAnswerWithSameClientMutationIdReturnsOriginalAnswer(): void {
+		[$diaryId, $entryId, $questionId] = $this->createDiaryEntryAndQuestion();
+		$first = $this->answerMapper->createAnswer($diaryId, $entryId, $questionId, 'first', null, 'answer-create-1');
+		$retry = $this->answerMapper->createAnswer($diaryId, $entryId, $questionId, 'first', null, 'answer-create-1');
+
+		$this->assertSame($first->getId(), $retry->getId());
+		$this->assertSame('answer-create-1', $this->answerMapper->getAnswer($first->getId())->getClientMutationId());
+	}
+
 	public function testCreateUpdateAndFetchAnswerChainPersistsChronologicalVersions(): void {
 		[$diaryId, $entryId, $questionId] = $this->createDiaryEntryAndQuestion();
 
@@ -42,6 +51,7 @@ final class AnswerMapperIntegrationTest extends IntegrationTestParentClass {
 		$this->assertSame($second->getId(), $current[0]->getId());
 		$this->assertSame([$first->getId(), $second->getId()], array_map(static fn ($answer) => $answer->getId(), $chain));
 		$this->assertSame([null, $first->getId()], array_map(static fn ($answer) => $answer->getPreviousVersionId(), $chain));
+		$this->assertSame([1, 2], array_map(static fn ($answer) => $answer->getRevisionCount(), $chain));
 		$this->assertGreaterThanOrEqual($first->getCreatedAt(), $second->getCreatedAt());
 	}
 

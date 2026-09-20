@@ -28,6 +28,10 @@ use OCP\AppFramework\Db\Entity;
  * @method void setReminderSignalRepeat(string $reminderSignalRepeat)
  * @method int getEntrySchedule()
  * @method void setEntrySchedule(int $entrySchedule)
+ * @method string|null getClientMutationId()
+ * @method void setClientMutationId(?string $clientMutationId)
+ * @method int getRevisionCount()
+ * @method void setRevisionCount(int $revisionCount)
  * @method int getAccessLevel()
  * @method void setAccessLevel(int $accessLevel)
  * @method bool getIsOwner()
@@ -44,6 +48,8 @@ class Diary extends Entity implements JsonSerializable {
 	protected $reminderSignalFirst = '';
 	protected $reminderSignalRepeat = '';
 	protected $entrySchedule = 86400;
+	protected $clientMutationId;
+	protected $revisionCount = 1;
 	protected $accessLevel = DiaryPermissions::OWNER;
 	protected $isOwner = false;
 
@@ -58,6 +64,8 @@ class Diary extends Entity implements JsonSerializable {
 		$this->addType('reminderSignalFirst', 'string');
 		$this->addType('reminderSignalRepeat', 'string');
 		$this->addType('entrySchedule', 'integer');
+		$this->addType('clientMutationId', 'string');
+		$this->addType('revisionCount', 'integer');
 		$this->addType('accessLevel', 'integer');
 		$this->addType('isOwner', 'boolean');
 	}
@@ -81,7 +89,9 @@ class Diary extends Entity implements JsonSerializable {
 			'reminder_signal_first' => $this->reminderSignalFirst,
 			'reminder_signal_repeat' => $this->reminderSignalRepeat,
 			'entry_schedule' => (int)$this->entrySchedule,
+			'revision_count' => (int)$this->revisionCount,
 			'access_level' => (int)$this->accessLevel,
+			'client_mutation_id' => $this->clientMutationId,
 			'is_owner' => (bool)$this->isOwner,
 		];
 	}

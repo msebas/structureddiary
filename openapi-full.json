@@ -541,7 +541,9 @@
                     "text_content",
                     "numeric_content",
                     "previous_version_id",
-                    "next_version_id"
+                    "next_version_id",
+                    "revision_count",
+                    "client_mutation_id"
                 ],
                 "properties": {
                     "id": {
@@ -582,6 +584,14 @@
                         "type": "integer",
                         "format": "int64",
                         "nullable": true
+                    },
+                    "revision_count": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "client_mutation_id": {
+                        "type": "string",
+                        "nullable": true
                     }
                 }
             },
@@ -611,6 +621,8 @@
                     "reminder_signal_first",
                     "reminder_signal_repeat",
                     "entry_schedule",
+                    "revision_count",
+                    "client_mutation_id",
                     "access_level",
                     "is_owner"
                 ],
@@ -652,6 +664,14 @@
                     "entry_schedule": {
                         "type": "integer",
                         "format": "int64"
+                    },
+                    "revision_count": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "client_mutation_id": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "access_level": {
                         "type": "integer",
@@ -782,7 +802,9 @@
                     "id",
                     "diary_id",
                     "timestamp",
-                    "title"
+                    "title",
+                    "revision_count",
+                    "client_mutation_id"
                 ],
                 "properties": {
                     "id": {
@@ -798,6 +820,14 @@
                         "format": "int64"
                     },
                     "title": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "revision_count": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "client_mutation_id": {
                         "type": "string",
                         "nullable": true
                     }
@@ -1022,7 +1052,9 @@
                     "active",
                     "template_text",
                     "previous_version_id",
-                    "next_version_id"
+                    "next_version_id",
+                    "revision_count",
+                    "client_mutation_id"
                 ],
                 "properties": {
                     "id": {
@@ -1085,6 +1117,14 @@
                     "next_version_id": {
                         "type": "integer",
                         "format": "int64",
+                        "nullable": true
+                    },
+                    "revision_count": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "client_mutation_id": {
+                        "type": "string",
                         "nullable": true
                     }
                 }
@@ -3189,6 +3229,11 @@
                                         "format": "double",
                                         "nullable": true,
                                         "default": null
+                                    },
+                                    "clientMutationId": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "default": null
                                     }
                                 }
                             }
@@ -3540,12 +3585,19 @@
                     }
                 ],
                 "requestBody": {
-                    "required": false,
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "type": "object",
+                                "required": [
+                                    "revisionCount"
+                                ],
                                 "properties": {
+                                    "revisionCount": {
+                                        "type": "integer",
+                                        "format": "int64"
+                                    },
                                     "textContent": {
                                         "type": "string",
                                         "nullable": true,
@@ -3554,6 +3606,11 @@
                                     "numericContent": {
                                         "type": "number",
                                         "format": "double",
+                                        "nullable": true,
+                                        "default": null
+                                    },
+                                    "clientMutationId": {
+                                        "type": "string",
                                         "nullable": true,
                                         "default": null
                                     }
@@ -3937,6 +3994,11 @@
                                         "type": "string",
                                         "nullable": true,
                                         "default": null
+                                    },
+                                    "clientMutationId": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "default": null
                                     }
                                 }
                             }
@@ -4258,12 +4320,19 @@
                     }
                 ],
                 "requestBody": {
-                    "required": false,
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "type": "object",
+                                "required": [
+                                    "revisionCount"
+                                ],
                                 "properties": {
+                                    "revisionCount": {
+                                        "type": "integer",
+                                        "format": "int64"
+                                    },
                                     "title": {
                                         "type": "string",
                                         "nullable": true,
@@ -4315,6 +4384,11 @@
                                     "entrySchedule": {
                                         "type": "integer",
                                         "format": "int64",
+                                        "nullable": true,
+                                        "default": null
+                                    },
+                                    "clientMutationId": {
+                                        "type": "string",
                                         "nullable": true,
                                         "default": null
                                     }
@@ -5329,6 +5403,11 @@
                                         "type": "string",
                                         "nullable": true,
                                         "default": null
+                                    },
+                                    "clientMutationId": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "default": null
                                     }
                                 }
                             }
@@ -5556,12 +5635,19 @@
                     }
                 ],
                 "requestBody": {
-                    "required": false,
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "type": "object",
+                                "required": [
+                                    "revisionCount"
+                                ],
                                 "properties": {
+                                    "revisionCount": {
+                                        "type": "integer",
+                                        "format": "int64"
+                                    },
                                     "timestamp": {
                                         "type": "integer",
                                         "format": "int64",
@@ -5569,6 +5655,11 @@
                                         "default": null
                                     },
                                     "title": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "default": null
+                                    },
+                                    "clientMutationId": {
                                         "type": "string",
                                         "nullable": true,
                                         "default": null
@@ -6068,6 +6159,11 @@
                                     "templateText": {
                                         "type": "string",
                                         "default": ""
+                                    },
+                                    "clientMutationId": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "default": null
                                     }
                                 }
                             }
@@ -6399,12 +6495,19 @@
                     }
                 ],
                 "requestBody": {
-                    "required": false,
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "type": "object",
+                                "required": [
+                                    "revisionCount"
+                                ],
                                 "properties": {
+                                    "revisionCount": {
+                                        "type": "integer",
+                                        "format": "int64"
+                                    },
                                     "label": {
                                         "type": "string",
                                         "nullable": true,
@@ -6446,6 +6549,11 @@
                                         "default": null
                                     },
                                     "templateText": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "default": null
+                                    },
+                                    "clientMutationId": {
                                         "type": "string",
                                         "nullable": true,
                                         "default": null

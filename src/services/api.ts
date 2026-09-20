@@ -26,6 +26,7 @@ import type {
 	QuestionUpdatePayload,
 	SelectOption,
 } from '@/types/types'
+import { createClientMutationId } from '@/utils/clientMutationId'
 
 declare global {
 	interface Window {
@@ -138,7 +139,7 @@ export const diaryService = {
 	create(payload: DiaryCreatePayload): Promise<Diary> {
 		return request('diaries', {
 			method: 'POST',
-			body: JSON.stringify(payload),
+			body: JSON.stringify({ ...payload, clientMutationId: payload.clientMutationId ?? createClientMutationId() }),
 		})
 	},
 	update(id: number, payload: DiaryUpdatePayload): Promise<Diary> {
@@ -281,7 +282,7 @@ export const entryService = {
 	create(diaryId: number, payload: EntryCreatePayload): Promise<Entry> {
 		return request(`diaries/${diaryId}/entries`, {
 			method: 'POST',
-			body: JSON.stringify(payload),
+			body: JSON.stringify({ ...payload, clientMutationId: payload.clientMutationId ?? createClientMutationId() }),
 		})
 	},
 	update(id: number, payload: EntryUpdatePayload): Promise<Entry> {
@@ -315,7 +316,7 @@ export const questionService = {
 	create(diaryId: number, payload: QuestionCreatePayload): Promise<Question> {
 		return request(`diaries/${diaryId}/questions`, {
 			method: 'POST',
-			body: JSON.stringify(payload),
+			body: JSON.stringify({ ...payload, clientMutationId: payload.clientMutationId ?? createClientMutationId() }),
 		})
 	},
 	update(id: number, payload: QuestionUpdatePayload): Promise<Question> {
@@ -351,7 +352,7 @@ export const answerService = {
 	create(entryId: number, payload: AnswerCreatePayload): Promise<Answer> {
 		return request(`entries/${entryId}/answers`, {
 			method: 'POST',
-			body: JSON.stringify(payload),
+			body: JSON.stringify({ ...payload, clientMutationId: payload.clientMutationId ?? createClientMutationId() }),
 		})
 	},
 	update(id: number, payload: AnswerUpdatePayload): Promise<Answer> {

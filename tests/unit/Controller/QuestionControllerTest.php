@@ -72,7 +72,7 @@ final class QuestionControllerTest extends TestCase {
 			'alice',
 		);
 
-		$response = $controller->update(11, 'Number', null, QuestionTypes::NUMBER, 1.0, 10.0, null, true, 'template');
+		$response = $controller->update(11, 2, 'Number', null, QuestionTypes::NUMBER, 1.0, 10.0, null, true, 'template');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 	}
@@ -95,7 +95,7 @@ final class QuestionControllerTest extends TestCase {
 			->willReturn($question);
 
 		$controller = new QuestionController(Application::APP_ID, $request, $diaryMapper, $questionMapper, 'alice');
-		$response = $controller->update(11, ' Mood label ', ' How do you feel today? ');
+		$response = $controller->update(11, 2, ' Mood label ', ' How do you feel today? ');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($question, $response->getData());
@@ -125,7 +125,7 @@ final class QuestionControllerTest extends TestCase {
 			'alice',
 		);
 
-		$response = $controller->update(11, 'Mood');
+		$response = $controller->update(11, 2, 'Mood');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 		$this->assertSame(['error' => 'Diary not manageable'], $response->getData());
@@ -305,7 +305,7 @@ final class QuestionControllerTest extends TestCase {
 			'alice',
 		);
 
-		$response = $controller->update(11, '   ', null);
+		$response = $controller->update(11, 2, '   ', null);
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 		$this->assertSame(['error' => 'Question label/display text cannot be empty.'], $response->getData());
@@ -409,7 +409,7 @@ final class QuestionControllerTest extends TestCase {
 			->willReturn($question);
 
 		$controller = new QuestionController(Application::APP_ID, $request, $diaryMapper, $questionMapper, 'alice');
-		$response = $controller->update(11, null, 'Mood?');
+		$response = $controller->update(11, 2, null, 'Mood?');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($question, $response->getData());

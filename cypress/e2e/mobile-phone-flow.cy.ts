@@ -1,3 +1,5 @@
+const phoneClientMutationIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 function setPhoneViewport(): void {
 	cy.viewport(390, 740)
 	cy.window().then((win) => {
@@ -97,7 +99,14 @@ describe('Structured diary phone workflows', () => {
 	it('edits an entry from a phone viewport with reachable lower actions', () => {
 		cy.mockStructuredDiaryBootstrap()
 		cy.intercept('PUT', '**/structureddiary/api/v1/entries/7', (request) => {
-			request.reply({ id: 7, diary_id: 5, timestamp: request.body.timestamp, title: request.body.title })
+			request.reply({
+				id: 7,
+				diary_id: 5,
+				timestamp: request.body.timestamp,
+				title: request.body.title,
+				revision_count: request.body.revisionCount,
+				client_mutation_id: request.body.clientMutationId,
+			})
 		}).as('updateEntry')
 		cy.intercept('PUT', '**/structureddiary/api/v1/answers/11', (request) => {
 			request.reply({
@@ -110,6 +119,8 @@ describe('Structured diary phone workflows', () => {
 				numeric_content: request.body.numericContent ?? null,
 				previous_version_id: 11,
 				next_version_id: null,
+				revision_count: request.body.revisionCount,
+				client_mutation_id: request.body.clientMutationId,
 			})
 		}).as('updateAnswer')
 
@@ -128,12 +139,21 @@ describe('Structured diary phone workflows', () => {
 		assertReachable(cy.contains('#structured-diary-entry-edit-form footer button', 'Save'), 'edit entry footer save')
 		cy.contains('#structured-diary-entry-edit-form footer button', 'Save').click()
 
+		let entryClientMutationId = ''
 		cy.wait('@updateEntry').its('request.body').should('deep.include', {
 			title: 'Edited on phone',
+			revisionCount: 2,
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(phoneClientMutationIdPattern)
+			entryClientMutationId = body.clientMutationId
 		})
 		cy.wait('@updateAnswer').its('request.body').should('deep.include', {
 			questionId: 17,
 			textContent: 'Edited from the phone layout',
+			revisionCount: 2,
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(phoneClientMutationIdPattern)
+			expect(body.clientMutationId).not.to.equal(entryClientMutationId)
 		})
 	})
 

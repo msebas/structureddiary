@@ -13,6 +13,8 @@ const diary: Diary = {
 	reminder_signal_first: 'bell',
 	reminder_signal_repeat: 'soft-bell',
 	entry_schedule: 43200,
+	revision_count: 1,
+	client_mutation_id: null,
 	access_level: 15,
 	is_owner: true,
 }

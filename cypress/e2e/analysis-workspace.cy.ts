@@ -19,8 +19,8 @@ describe('Analysis workspace flow', () => {
 			output_types: ['JSON', 'HTML'],
 			parameters: {
 				includeTextAnalysis: true,
-				movingAverageWindow: 11,
-				showStandardDeviation: false,
+				shifting_median_width: 11,
+				plot_std_error: false,
 			},
 			storage_url: null,
 			status_message: '',

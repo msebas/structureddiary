@@ -9,6 +9,7 @@ use OCA\StructuredDiary\ResponseDefinitions;
 use OCA\StructuredDiary\Db\DiaryMapper;
 use OCA\StructuredDiary\Db\DiaryPermissions;
 use OCA\StructuredDiary\Db\DiaryShareMapper;
+use OCA\StructuredDiary\Service\ClientMutationId;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -119,15 +120,16 @@ class DiaryController extends ApiOCSController {
 		string $reminderSignalRepeat = '',
 		int $entrySchedule = 86400,
 		?string $ownerUserId = null,
+		?string $clientMutationId = null,
 	): DataResponse {
 		try {
 			$title = trim($title);
 			if ($title === '') {
 				throw new \InvalidArgumentException('Diary title is required.');
 			}
+			$clientMutationId = ClientMutationId::normalize($clientMutationId);
 
-			return $this->respond(
-				$this->diaryMapper->createDiary(
+			$diary = $this->diaryMapper->createDiary(
 					$this->requireUser($this->userId),
 					$title,
 					$description,
@@ -139,9 +141,12 @@ class DiaryController extends ApiOCSController {
 					$reminderSignalRepeat,
 					$entrySchedule,
 					$ownerUserId,
-				),
-				201
-			);
+					$clientMutationId,
+				);
+			if ($clientMutationId !== null && ($diary->getTitle() !== $title || $diary->getDescription() !== $description)) {
+				throw new \InvalidArgumentException('clientMutationId was already used for a different diary.');
+			}
+			return $this->respond($diary, 201);
 		} catch (Throwable $e) {
 			return $this->respondError($e->getMessage());
 		}
@@ -158,6 +163,7 @@ class DiaryController extends ApiOCSController {
 	#[ApiRoute(verb: 'PUT', url: '/api/{apiVersion}/diaries/{id}', requirements: ['apiVersion' => '(v1)'])]
 	public function update(
 		int $id,
+		int $revisionCount,
 		?string $title = null,
 		?string $description = null,
 		?string $ownerUserId = null,
@@ -168,6 +174,7 @@ class DiaryController extends ApiOCSController {
 		?string $reminderSignalFirst = null,
 		?string $reminderSignalRepeat = null,
 		?int $entrySchedule = null,
+		?string $clientMutationId = null,
 	): DataResponse {
 		try {
 			if ($title !== null) {
@@ -175,6 +182,23 @@ class DiaryController extends ApiOCSController {
 				if ($title === '') {
 					throw new \InvalidArgumentException('Diary title cannot be empty.');
 				}
+			}
+			$current = $this->diaryMapper->getDiaryForUser($id, $this->requireUser($this->userId), DiaryPermissions::MANAGE);
+			$clientMutationId = ClientMutationId::normalize($clientMutationId);
+			if ($revisionCount !== $current->getRevisionCount() + 1) {
+				if ($revisionCount === $current->getRevisionCount() && $clientMutationId !== null &&
+                    $clientMutationId === $current->getClientMutationId() &&
+                    ($title === null || $title === $current->getTitle()) &&
+                    ($description === null || $description === $current->getDescription()) &&
+                    ($reminderActive === null || $reminderActive === $current->getReminderActive()) &&
+                    ($reminderTime === null || $reminderTime === $current->getReminderTime()) &&
+                    ($reminderCount === null || $reminderCount === $current->getReminderCount()) &&
+                    ($reminderDelay === null || $reminderDelay === $current->getReminderDelay()) &&
+                    ($reminderSignalFirst === null || $reminderSignalFirst === $current->getReminderSignalFirst()) &&
+                    ($reminderSignalRepeat === null || $reminderSignalRepeat === $current->getReminderSignalRepeat()) &&
+                    ($entrySchedule === null || $entrySchedule === $current->getEntrySchedule()))
+                    return $this->respond($current);
+				throw new \InvalidArgumentException('Concurrent update detected: The diary revision does not match and this update needs to be reviewed.');
 			}
 
 			return $this->respond(
@@ -191,6 +215,7 @@ class DiaryController extends ApiOCSController {
 					$reminderSignalFirst,
 					$reminderSignalRepeat,
 					$entrySchedule,
+					$clientMutationId,
 				)
 			);
 		} catch (Throwable $e) {

@@ -1,4 +1,5 @@
 const currentUser = String(Cypress.env('ncUsername') ?? 'admin')
+const managementClientMutationIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const diary = {
 	id: 5,
@@ -12,6 +13,8 @@ const diary = {
 	reminder_signal_first: 'bell',
 	reminder_signal_repeat: 'soft-bell',
 	entry_schedule: 86400,
+	revision_count: 1,
+	client_mutation_id: null,
 	access_level: 15,
 	is_owner: true,
 }
@@ -102,6 +105,8 @@ describe('Structured diary management flow', () => {
 			title: 'Copied journal',
 			description: 'Draft description',
 			ownerUserId: 'bob',
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(managementClientMutationIdPattern)
 		})
 		cy.contains('Copied journal').should('be.visible')
 	})
@@ -126,6 +131,8 @@ describe('Structured diary management flow', () => {
 			type: 'text',
 			active: true,
 			templateText: '0 to 10',
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(managementClientMutationIdPattern)
 		})
 	})
 
@@ -237,9 +244,11 @@ describe('Structured diary management flow', () => {
 			template_text: 'Write a short note',
 			previous_version_id: null,
 			next_version_id: null,
+			revision_count: 1,
+			client_mutation_id: null,
 		}
-		let currentQuestion = firstQuestion
-		const versions = [firstQuestion]
+		let currentQuestion: Record<string, unknown> = firstQuestion
+		const versions: Record<string, unknown>[] = [firstQuestion]
 
 		cy.intercept('GET', '**/structureddiary/api/v1/questions/17', (request) => {
 			request.reply(firstQuestion)
@@ -261,6 +270,8 @@ describe('Structured diary management flow', () => {
 				template_text: request.body.templateText,
 				previous_version_id: 17,
 				next_version_id: null,
+				revision_count: request.body.revisionCount,
+				client_mutation_id: request.body.clientMutationId,
 			}
 			versions.push(currentQuestion)
 			request.reply(currentQuestion)
@@ -276,6 +287,8 @@ describe('Structured diary management flow', () => {
 				template_text: request.body.templateText,
 				previous_version_id: 18,
 				next_version_id: null,
+				revision_count: request.body.revisionCount,
+				client_mutation_id: request.body.clientMutationId,
 			}
 			versions.push(currentQuestion)
 			request.reply(currentQuestion)
@@ -294,12 +307,17 @@ describe('Structured diary management flow', () => {
 		setMarkdownEditorValue('Write a longer note', 1)
 		assertReachable(cy.contains('#structured-diary-question-edit-form button', 'Save question'), 'question edit lower save')
 		cy.contains('#structured-diary-question-edit-form button', 'Save question').click()
+		let firstClientMutationId = ''
 		cy.wait('@updateQuestionFirst').its('request.body').should('deep.include', {
 			questionId: 17,
 			chainId: 17,
 			label: 'Mood v2',
 			displayText: 'How is your mood now?',
 			templateText: 'Write a longer note',
+			revisionCount: 2,
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(managementClientMutationIdPattern)
+			firstClientMutationId = body.clientMutationId
 		})
 		cy.wait('@questionVersionsLive')
 
@@ -314,6 +332,10 @@ describe('Structured diary management flow', () => {
 			chainId: 17,
 			label: 'Mood v3',
 			displayText: 'How is your mood this evening?',
+			revisionCount: 3,
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(managementClientMutationIdPattern)
+			expect(body.clientMutationId).not.to.equal(firstClientMutationId)
 		})
 		cy.wait('@questionVersionsLive')
 
@@ -403,6 +425,9 @@ describe('Structured diary management flow', () => {
 
 		cy.wait('@transferDiary').its('request.body').should('deep.include', {
 			ownerUserId: 'bob',
+			revisionCount: 2,
+		}).then((body) => {
+			expect(body.clientMutationId).to.match(managementClientMutationIdPattern)
 		})
 		cy.wait('@createShareAfterOwnershipChange')
 		cy.wait('@createShareAfterOwnershipChange')

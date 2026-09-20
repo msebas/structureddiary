@@ -10,6 +10,8 @@
 	"reminder_signal_first": "bell",
 	"reminder_signal_repeat": "soft-bell",
 	"entry_schedule": 86400,
+	"revision_count": 1,
 	"access_level": 15,
+	"client_mutation_id": null,
 	"is_owner": true
 }

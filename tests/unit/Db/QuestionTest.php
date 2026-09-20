@@ -25,6 +25,7 @@ final class QuestionTest extends TestCase {
 		$question->setTemplateText('Pick the closest option.');
 		$question->setPreviousVersionId(3);
 		$question->setNextVersionId(12);
+		$question->setClientMutationId('question-create-1');
 
 		$this->assertSame([
 			'id' => 11,
@@ -42,6 +43,8 @@ final class QuestionTest extends TestCase {
 			'template_text' => 'Pick the closest option.',
 			'previous_version_id' => 3,
 			'next_version_id' => 12,
+			'revision_count' => 1,
+			'client_mutation_id' => 'question-create-1',
 		], $question->jsonSerialize());
 	}
 
@@ -96,6 +99,8 @@ final class QuestionTest extends TestCase {
 			'template_text' => '',
 			'previous_version_id' => null,
 			'next_version_id' => null,
+			'revision_count' => 1,
+			'client_mutation_id' => null,
 		], $question->jsonSerialize());
 	}
 }

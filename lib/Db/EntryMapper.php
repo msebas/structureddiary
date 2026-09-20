@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\StructuredDiary\Db;
 
+use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Db\QBMapper;
 use OCP\DB\Exception;
 use OCP\DB\QueryBuilder\IQueryBuilder;
@@ -67,13 +68,36 @@ class EntryMapper extends QBMapper {
 	/**
 	 * @throws Exception
 	 */
-	public function createEntry(int $diaryId, int $timestamp, ?string $title): Entry {
+	/** @throws Exception */
+	public function findByClientMutationId(string $clientMutationId): ?Entry {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from($this->getTableName())
+			->where($qb->expr()->eq('client_mutation_id', $qb->createNamedParameter($clientMutationId)))
+			->setMaxResults(1);
+		try {
+			return $this->findEntity($qb);
+		} catch (DoesNotExistException) {
+			return null;
+		}
+	}
+
+	/** @throws Exception */
+	public function createEntry(int $diaryId, int $timestamp, ?string $title, ?string $clientMutationId = null): Entry {
 		$entry = new Entry();
 		$entry->setDiaryId($diaryId);
 		$entry->setTimestamp($timestamp);
 		$entry->setTitle($title);
+		$entry->setClientMutationId($clientMutationId);
+		$entry->setRevisionCount(1);
 
-		return $this->insert($entry);
+		try {
+			return $this->insert($entry);
+		} catch (Exception $e) {
+			if ($clientMutationId === null || ($existing = $this->findByClientMutationId($clientMutationId)) === null) {
+				throw $e;
+			}
+			return $existing;
+		}
 	}
 
 	/**
@@ -86,6 +110,7 @@ class EntryMapper extends QBMapper {
 		if ($title !== null) {
 			$entry->setTitle($title);
 		}
+		$entry->setRevisionCount($entry->getRevisionCount() + 1);
 
 		return $this->update($entry);
 	}

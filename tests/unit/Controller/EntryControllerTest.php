@@ -18,6 +18,28 @@ use OCP\IRequest;
 use PHPUnit\Framework\TestCase;
 
 final class EntryControllerTest extends TestCase {
+	public function testUpdateReturnsCurrentEntryForMatchingRetry(): void {
+		$request = $this->createMock(IRequest::class);
+		$diaryMapper = $this->createMock(DiaryMapper::class);
+		$entryMapper = $this->createMock(EntryMapper::class);
+		$entry = new Entry();
+		$entry->setId(5);
+		$entry->setDiaryId(42);
+		$entry->setTimestamp(1713254401);
+		$entry->setTitle('Changed');
+		$entry->setRevisionCount(2);
+		$entry->setClientMutationId('retry-1');
+		$entryMapper->expects($this->once())->method('getEntry')->with(5)->willReturn($entry);
+		$diaryMapper->expects($this->once())->method('getDiaryForUser')->with(42, 'alice', DiaryPermissions::WRITE)->willReturn($this->createStub(Diary::class));
+		$entryMapper->expects($this->never())->method('updateEntry');
+
+		$response = (new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice'))
+			->update(5, 2, 1713254401, 'Changed', 'retry-1');
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame($entry, $response->getData());
+	}
+
 	public function testIndexUsesReadPermission(): void {
 		$request = $this->createMock(IRequest::class);
 		$diaryMapper = $this->createMock(DiaryMapper::class);
@@ -200,7 +222,7 @@ final class EntryControllerTest extends TestCase {
 		$entryMapper->expects($this->never())->method('updateEntry');
 
 		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
-		$response = $controller->update(5, 1713254401, 'Changed');
+		$response = $controller->update(5, 2, 1713254401, 'Changed');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 		$this->assertSame(['error' => 'Diary not writable'], $response->getData());
@@ -251,7 +273,7 @@ final class EntryControllerTest extends TestCase {
 			->willReturn($updated);
 
 		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
-		$response = $controller->update(5, 1713254401, 'Changed');
+		$response = $controller->update(5, 2, 1713254401, 'Changed');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($updated, $response->getData());
@@ -281,7 +303,7 @@ final class EntryControllerTest extends TestCase {
 			->willReturn($updated);
 
 		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
-		$response = $controller->update(5, null, 'Changed');
+		$response = $controller->update(5, 2, null, 'Changed');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($updated, $response->getData());
@@ -311,7 +333,7 @@ final class EntryControllerTest extends TestCase {
 			->willReturn($updated);
 
 		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), 'alice');
-		$response = $controller->update(5, 1713254500);
+		$response = $controller->update(5, 2, 1713254500);
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($updated, $response->getData());
@@ -422,7 +444,7 @@ final class EntryControllerTest extends TestCase {
 		$entryMapper->expects($this->never())->method('updateEntry');
 
 		$controller = new EntryController(Application::APP_ID, $request, $diaryMapper, $entryMapper, $this->createMock(AnswerMapper::class), null);
-		$response = $controller->update(5, 1713254401, 'Changed');
+		$response = $controller->update(5, 2, 1713254401, 'Changed');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 		$this->assertSame(['error' => 'Authentication required.'], $response->getData());
