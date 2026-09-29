@@ -1,102 +1,133 @@
-describe('Analysis workspace flow', () => {
-	it('creates a started job through the Nextcloud API', () => {
-		let createdJob: Record<string, unknown> | null = null
-		const job = {
-			id: 77,
-			diary_id: 5,
-			created_by: 'alice',
-			created_at: 1713520000,
-			updated_at: 1713520000,
-			data_from: 1713000000,
-			data_until: 1713520000,
-			started_at: null,
-			finished_at: null,
-			title: 'Analysis',
-			language: 'de-DE',
-			analysis_type: 'standard',
-			status: 'DRAFT',
-			progress: 0,
-			output_types: ['JSON', 'HTML'],
-			parameters: {
-				includeTextAnalysis: true,
-				shifting_median_width: 11,
-				plot_std_error: false,
-			},
-			storage_url: null,
-			status_message: '',
-			error_message: null,
-			cancel_requested_at: null,
-		}
+import type { AnalysisArtifact, AnalysisJob } from '@/types/types'
 
-		cy.mockStructuredDiaryBootstrap()
-		cy.intercept('GET', '**/structureddiary/api/v1/jobs*', (request) => {
-			request.reply(createdJob === null ? [] : [createdJob])
-		}).as('analysisJobs')
-		cy.intercept('POST', '**/structureddiary/api/v1/jobs', (request) => {
-			expect(request.body.start).to.eq(true)
-			expect(request.body.outputFormats).to.deep.eq(['JSON', 'HTML'])
-			createdJob = { ...job, ...request.body, id: 78, status: 'SUBMITTED' }
-			request.reply(createdJob)
-		}).as('createAnalysis')
-		cy.loginToNextcloud()
-		cy.visitStructuredDiary('analyses/5')
-		cy.wait('@analysisJobs')
-		cy.contains('No analyses yet.').should('be.visible')
-		cy.contains('New analysis').click()
-		cy.contains('Create and start').click()
-		cy.wait('@createAnalysis')
-		cy.contains('Submitted').should('be.visible')
+interface ServiceJob extends AnalysisJob {
+	uuid: string
+	job_token: string
+}
+
+function serviceRequest<T>(method: 'GET' | 'POST' | 'PATCH', path: string, job?: ServiceJob, body?: unknown, apiToken = ''): Cypress.Chainable<T> {
+	const origin = new URL(String(Cypress.config('baseUrl'))).origin
+	return cy.request({
+		method,
+		url: `${origin}/ocs/v2.php/apps/structureddiary/api/v1/service/jobs/${path}`,
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			'OCS-APIRequest': 'true',
+			...(job ? {
+				'x-structureddiary-job-token': job.job_token,
+				'x-structureddiary-job-uuid': job.uuid,
+			} : { 'x-structureddiary-nextcloud-api-token': apiToken }),
+		},
+		body: body as Cypress.RequestBody,
+	}).then(({ body: responseBody }) => responseBody.ocs?.data ?? responseBody)
+}
+
+describe('Analysis workspace flow', () => {
+	it('creates a started job through the real Nextcloud API', () => {
+		cy.seedStructuredDiary().then(({ diary }) => {
+			cy.intercept('POST', '**/structureddiary/api/v1/jobs').as('createAnalysis')
+			cy.loginToNextcloud()
+			cy.visitStructuredDiary(`analyses/${diary.id}`)
+			cy.contains('No analyses yet.').should('be.visible')
+			cy.contains('New analysis').click()
+			cy.contains('Create and start').click()
+			cy.wait('@createAnalysis').its('request.body').should('deep.include', {
+				start: true,
+				outputFormats: ['JSON', 'HTML'],
+			})
+			cy.contains('Submitted').should('be.visible')
+			cy.apiRequest<AnalysisJob[]>('GET', 'jobs').then((jobs) => {
+				expect(jobs).to.have.length(1)
+				expect(jobs[0].status).to.equal('SUBMITTED')
+			})
+		})
 	})
 
-	it('loads an HTML report through the integrated view within a phone viewport', () => {
-		const job = {
-			id: 77,
-			diary_id: 5,
-			created_by: 'alice',
-			created_at: 1713520000,
-			updated_at: 1713520000,
-			data_from: 1713000000,
-			data_until: 1713520000,
-			started_at: 1713520000,
-			finished_at: 1713520300,
-			title: 'Analysis report',
-			language: 'en-GB',
-			analysis_type: 'standard',
-			status: 'COMPLETED',
-			progress: 100,
-			output_types: ['HTML'],
-			parameters: { includeTextAnalysis: false, shifting_median_width: 11, plot_std_error: false, show_single_data_points: true },
-			storage_url: null,
-			status_message: '',
-			error_message: null,
-			cancel_requested_at: null,
-		}
+	it('loads an API-created HTML report through the integrated phone view', () => {
+		cy.seedStructuredDiary().then(({ diary }) => {
+			const origin = new URL(String(Cypress.config('baseUrl'))).origin
+			const username = String(Cypress.env('ncUsername') ?? 'admin')
+			const password = String(Cypress.env('ncPassword') ?? 'admin')
+			cy.request({
+				method: 'POST',
+				url: `${origin}/ocs/v2.php/apps/structureddiary/api/v1/admin/analysis-settings`,
+				auth: { username, password },
+				headers: { 'OCS-APIRequest': 'true', 'Content-Type': 'application/json' },
+				body: {
+					serviceUrl: 'http://127.0.0.1:9',
+					serviceSecret: 'e2e-service-secret',
+					outputBaseFolder: '/StructuredDiary/Analyses',
+				},
+				failOnStatusCode: false,
+			})
+			cy.task<{ stdout: string }>('runExec', {
+				command: ['php', 'occ', 'config:app:get', 'structureddiary', 'analysis.nextcloud_api_token'],
+			}).then(({ stdout }) => {
+				const apiToken = stdout.trim()
+				expect(apiToken, 'generated analysis API token').not.to.equal('')
+				const now = Math.floor(Date.now() / 1000)
+				cy.apiRequest<AnalysisJob>('POST', 'jobs', {
+					diaryId: diary.id,
+					fromTimestamp: now - 86400,
+					untilTimestamp: now,
+					title: 'Analysis report',
+					language: 'en-GB',
+					start: true,
+					outputFormats: ['HTML'],
+					parameters: { includeTextAnalysis: false, shifting_median_width: 11, plot_std_error: false },
+				}).then((createdJob) => {
+					serviceRequest<ServiceJob[]>('GET', 'poll', undefined, undefined, apiToken).then((jobs) => {
+						const job = jobs.find(({ id }) => id === createdJob.id)
+						expect(job, 'analysis service job').to.exist
+						serviceRequest<AnalysisJob>('PATCH', `${job!.uuid}/status`, job, {
+							status: 'WORKER_UPLOAD',
+							progress: 90,
+						}).then(() => {
+							cy.fixture('analysis-report/report.html').then((report: string) => {
+								serviceRequest<Array<{ id: number }>>('POST', `${job!.uuid}/artifacts/create`, job, {
+									artifacts: [{
+										id: 301,
+										artifact_type: 'HTML',
+										mime_type: 'text/html',
+										file_name: 'report.html',
+										file_path: 'report.html',
+										size: report.length,
+									}],
+								}).then((artifacts) => {
+									cy.request({
+										method: 'POST',
+										url: `${origin}/ocs/v2.php/apps/structureddiary/api/v1/service/jobs/${job!.uuid}/artifacts/upload/${artifacts[0].id}`,
+										headers: {
+											'Content-Type': 'text/html',
+											'OCS-APIRequest': 'true',
+											'x-structureddiary-job-token': job!.job_token,
+											'x-structureddiary-job-uuid': job!.uuid,
+										},
+										body: report,
+									})
+									serviceRequest('PATCH', `${job!.uuid}/status`, job, { status: 'JOB_COMPLETED', progress: 100 })
+									serviceRequest('POST', `${job!.uuid}/finalize`, job)
+								})
+							})
+						})
+					})
 
-		cy.fixture('analysis-report/report.html').then((report) => {
-			cy.fixture('analysis-report/questions/mood.html').then((mood) => {
-				const artifacts = [
-					{ id: 301, parent_id: null, job_id: 77, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'report.html', file_path: 'report.html', file_id: 1001, size: report.length, checksum: null, created_at: 1713520300 },
-					{ id: 302, parent_id: 301, job_id: 77, artifact_type: 'HTML', mime_type: 'text/html', file_name: 'mood.html', file_path: 'questions/mood.html', file_id: 1002, size: mood.length, checksum: null, created_at: 1713520300 },
-					{ id: 304, parent_id: 302, job_id: 77, artifact_type: 'PLOT', mime_type: 'image/svg+xml', file_name: 'mood.svg', file_path: 'plots/mood.svg', file_id: 1004, size: 100, checksum: null, created_at: 1713520300 },
-				]
-				cy.mockStructuredDiaryBootstrap()
-				cy.intercept('GET', '**/structureddiary/api/v1/jobs*', [job]).as('analysisJobs')
-				cy.intercept('GET', '**/structureddiary/api/v1/jobs/77/artifacts', artifacts).as('artifacts')
-				cy.intercept('GET', '**/structureddiary/api/v1/jobs/77/artifacts/301/integrated-view', report).as('report')
-
-				cy.loginToNextcloud()
-				cy.visitStructuredDiary('analyses/5/77')
-				cy.wait('@analysisJobs')
-				cy.wait('@artifacts')
-				cy.wait('@report')
-				cy.get('iframe').should('have.attr', 'src').and('match', /\/jobs\/77\/artifacts\/301\/integrated-view/)
-				cy.viewport(390, 740)
-				cy.window().then((win) => win.dispatchEvent(new Event('resize')))
-				cy.window().its('innerWidth').should('equal', 390)
-				cy.get('iframe').scrollIntoView().should(($frame) => {
-					const bounds = $frame[0].getBoundingClientRect()
-					expect(bounds.left).to.be.at.least(0)
-					expect(bounds.right).to.be.at.most(390)
+					cy.intercept('GET', `**/structureddiary/api/v1/jobs/${createdJob.id}/artifacts`).as('artifacts')
+					cy.intercept('GET', `**/structureddiary/api/v1/jobs/${createdJob.id}/artifacts/*/integrated-view`).as('report')
+					cy.loginToNextcloud()
+					cy.visitStructuredDiary(`analyses/${diary.id}/${createdJob.id}`)
+					cy.wait('@artifacts')
+					cy.wait('@report')
+					cy.get('iframe').should('have.attr', 'src').and('include', `/jobs/${createdJob.id}/artifacts/`)
+					cy.viewport(390, 740)
+					cy.window().then((win) => win.dispatchEvent(new Event('resize')))
+					cy.get('iframe').scrollIntoView().should(($frame) => {
+						const bounds = $frame[0].getBoundingClientRect()
+						expect(bounds.left).to.be.at.least(0)
+						expect(bounds.right).to.be.at.most(390)
+					})
+					cy.apiRequest<AnalysisArtifact[]>('GET', `jobs/${createdJob.id}/artifacts`).should('have.length', 1)
 				})
 			})
 		})

@@ -3,19 +3,39 @@ import vue from '@vitejs/plugin-vue'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { resolve } from 'path'
 import { fileURLToPath } from 'url'
+import {configureNextcloud, runExec, startNextcloud, stopNextcloud, waitOnNextcloud} from "@nextcloud/e2e-test-server";
 
 const configDir = fileURLToPath(new URL('.', import.meta.url))
 
-const baseUrl = process.env.CYPRESS_BASE_URL ?? 'http://nextcloud.dev.mcservice.eu/index.php/apps/structureddiary/'
+//const baseUrl = process.env.CYPRESS_BASE_URL ?? 'http://nextcloud.dev.mcservice.eu/index.php/apps/structureddiary/'
 
 export default defineConfig({
 	video: false,
 	screenshotOnRunFailure: true,
 	fixturesFolder: 'cypress/fixtures',
 	e2e: {
-		baseUrl,
-		specPattern: 'cypress/e2e/**/*.cy.ts',
-		supportFile: 'cypress/support/e2e.ts',
+        setupNodeEvents(on, config) {
+            on('after:run', () => stopNextcloud())
+            on('task', {
+                runExec({command, options}) {
+                    return runExec(command, options)
+                },
+            })
+
+            return startNextcloud(process.env.BRANCH ?? 'stable34')
+                .then((ip) => {
+                    config.baseUrl = `http://${ip}/index.php`
+                    return ip
+                })
+                .then(waitOnNextcloud)
+                .then(() => configureNextcloud(['structureddiary']))
+                .then(() => config)
+        },
+        supportFile: "./cypress/support/e2e.ts",
+        fixturesFolder: "./cypress/fixtures",
+        specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
+        excludeSpecPattern: ['server/**/*'],
+		//baseUrl,
 	},
 	component: {
 		specPattern: 'cypress/component/**/*.cy.ts',

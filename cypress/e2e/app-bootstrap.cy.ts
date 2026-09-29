@@ -1,18 +1,20 @@
 describe('Structured diary workspace', () => {
-	it('renders the bootstrapped diary overview with mocked API responses', () => {
-		cy.mockStructuredDiaryBootstrap()
-		cy.loginToNextcloud()
-		cy.visitStructuredDiary('entries/5')
+	it('renders diary, entry, question, and answer data from Nextcloud', () => {
+		cy.seedStructuredDiary().then(({ diary }) => {
+			cy.intercept('GET', '**/structureddiary/api/v1/question-types*').as('questionTypes')
+			cy.intercept('GET', `**/structureddiary/api/v1/diaries/${diary.id}/entries*`).as('entries')
 
-		cy.wait('@questionTypes')
-		cy.wait('@diaries')
-		cy.wait('@entries')
-		cy.contains('Health journal').should('exist')
-		cy.contains('Morning check-in').should('be.visible')
-		cy.contains('Morning check-in').click()
-		cy.wait('@entryDetail')
-		cy.wait('@answers')
-		cy.contains('How do you feel today?').should('be.visible')
-		cy.contains('Feeling stable today.').should('be.visible')
+			cy.loginToNextcloud()
+			cy.visitStructuredDiary(`entries/${diary.id}`)
+
+			cy.wait('@questionTypes')
+			cy.wait('@entries')
+			cy.contains('Health journal').should('exist')
+			cy.contains('Morning check-in').should('be.visible').click()
+			cy.contains('How do you feel today?').should('be.visible')
+			cy.contains('Feeling stable today.').should('be.visible')
+		})
 	})
 })
+
+export {}

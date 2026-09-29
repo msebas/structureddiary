@@ -1,30 +1,98 @@
-import Chainable = Cypress.Chainable;
+import type { Answer, Diary, Entry, Question } from '@/types/types'
+
+type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+
+export interface StructuredDiarySeed {
+	diary: Diary
+	question: Question
+	entry: Entry
+	answer: Answer
+	answerVersions: Answer[]
+	questionVersions: Question[]
+}
+
+export interface SeedOptions {
+	answerVersions?: number
+	questionVersions?: number
+	questionType?: Question['type']
+	questionMinimum?: number | null
+	questionMaximum?: number | null
+	questionChoices?: string[] | null
+}
 
 declare global {
 	namespace Cypress {
 		interface Chainable {
+			apiRequest<T>(method: ApiMethod, path: string, body?: unknown): Chainable<T>
+			ensureNextcloudUser(userId: string, displayName?: string): Chainable<void>
 			loginToNextcloud(): Chainable<void>
-			mockStructuredDiaryBootstrap(): Chainable<void>
+			seedStructuredDiary(options?: SeedOptions): Chainable<StructuredDiarySeed>
 			visitStructuredDiary(path?: string): Chainable<void>
 		}
 	}
 }
 
-let structuredDiaryMockState: {
-	questions: Record<string, unknown>[]
-	createdQuestion: Record<string, unknown> | null
-} | null = null
+function credentials(): { username: string, password: string } {
+	return {
+		username: String(Cypress.env('ncUsername') ?? 'admin'),
+		password: String(Cypress.env('ncPassword') ?? 'admin'),
+	}
+}
+
+function nextcloudOrigin(): string {
+	return new URL(String(Cypress.config('baseUrl'))).origin
+}
+
+function unwrapOcs<T>(body: T | { ocs?: { data?: T } }): T {
+	if (typeof body === 'object' && body !== null && 'ocs' in body) {
+		return (body as { ocs?: { data?: T } }).ocs?.data as T
+	}
+
+	return body as T
+}
+
+Cypress.Commands.add('apiRequest', <T>(method: ApiMethod, path: string, body?: unknown) => {
+	return cy.request({
+		method,
+		url: `${nextcloudOrigin()}/ocs/v2.php/apps/structureddiary/api/v1/${path.replace(/^\//, '')}`,
+		auth: credentials(),
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			'OCS-APIRequest': 'true',
+		},
+		body: body as Cypress.RequestBody,
+	}).then((response) => unwrapOcs<T>(response.body))
+})
+
+Cypress.Commands.add('ensureNextcloudUser', (userId: string, displayName = userId) => {
+	const { username, password } = credentials()
+	cy.request({
+		method: 'POST',
+		url: `${nextcloudOrigin()}/ocs/v1.php/cloud/users`,
+		auth: { username, password },
+		headers: {
+			Accept: 'application/json',
+			'OCS-APIRequest': 'true',
+		},
+		form: true,
+		body: { userid: userId, password, displayName },
+		failOnStatusCode: false,
+	}).then((response) => {
+		const statusCode = response.body?.ocs?.meta?.statuscode
+		expect([100, 102], `create Nextcloud user ${userId}`).to.include(statusCode)
+	})
+})
 
 Cypress.Commands.add('loginToNextcloud', () => {
-	const configuredBaseUrl = String(Cypress.config('baseUrl') ?? 'http://nextcloud.dev.mcservice.eu/index.php/apps/structureddiary/')
+	const configuredBaseUrl = String(Cypress.config('baseUrl'))
 	const url = new URL(configuredBaseUrl)
 	const origin = `${url.protocol}//${url.host}`
-	const username = String(Cypress.env('ncUsername') ?? 'admin')
-	const password = String(Cypress.env('ncPassword') ?? 'admin')
+	const { username, password } = credentials()
 
 	cy.viewport(1440, 1000)
 	cy.visit(`${origin}/index.php/login`)
-	cy.location('pathname', { timeout: 10000 }).then((pathname) => {
+	cy.location('pathname', { timeout: 20000 }).then((pathname) => {
 		if (!pathname.includes('/login')) {
 			return
 		}
@@ -40,318 +108,112 @@ Cypress.Commands.add('loginToNextcloud', () => {
 		cy.contains('button, input[type="submit"]', 'Log in', { timeout: 10000 }).click()
 	})
 
-	cy.location('pathname').should('not.include', '/login')
+	cy.location('pathname', { timeout: 20000 }).should('not.include', '/login')
 })
 
 Cypress.Commands.add('visitStructuredDiary', (path = '') => {
-	const configuredBaseUrl = String(Cypress.config('baseUrl') ?? 'http://nextcloud.dev.mcservice.eu/index.php/apps/structureddiary/')
-	const targetUrl = new URL(path.replace(/^\//, ''), configuredBaseUrl).toString()
+	const configuredBaseUrl = String(Cypress.config('baseUrl'))
+	const url = new URL(configuredBaseUrl)
+	const target = `${url.protocol}//${url.host}/index.php/apps/structureddiary/${path.replace(/^\//, '')}`
+
 	cy.viewport(1440, 1000)
-	cy.visit(targetUrl, {
+	cy.visit(target, {
 		onBeforeLoad(win) {
-			if (structuredDiaryMockState === null) {
-				return
-			}
 			win.localStorage.removeItem('structureddiary:lastDiaryId')
-			const originalFetch = win.fetch.bind(win)
-			win.fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-				const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
-				const method = init?.method ?? (typeof input === 'object' && 'method' in input ? input.method : 'GET')
-				if (method.toUpperCase() === 'GET' && /\/api\/v1\/diaries\/5\/questions(?:\?.*)?$/.test(url)) {
-					const questions = structuredDiaryMockState!.createdQuestion === null
-						? structuredDiaryMockState!.questions
-						: [...structuredDiaryMockState!.questions, structuredDiaryMockState!.createdQuestion]
-					return Promise.resolve(new win.Response(JSON.stringify(questions), {
-						status: 200,
-						headers: { 'Content-Type': 'application/json' },
-					}))
-				}
-				if (method.toUpperCase() === 'GET' && /\/api\/v1\/diaries\/5\/questions\/active(?:\?.*)?$/.test(url)) {
-					return Promise.resolve(new win.Response(JSON.stringify(structuredDiaryMockState!.questions), {
-						status: 200,
-						headers: { 'Content-Type': 'application/json' },
-					}))
-				}
-				return originalFetch(input, init)
-			}
 		},
 	})
 	cy.location('pathname', { timeout: 20000 }).should('include', '/apps/structureddiary')
 })
 
-Cypress.Commands.add('mockStructuredDiaryBootstrap', () => {
-	let createdQuestion: Record<string, unknown> | null = null
-	let createdEntryAnswers: Record<string, unknown>[] = []
-	const today = new Date()
-	const entryTimestamp = Math.floor(new Date(
-		today.getFullYear(),
-		today.getMonth(),
-		today.getDate(),
-		9,
-		0,
-	).getTime() / 1000)
-	const questionCreatedAt = Math.min(entryTimestamp - 3600, Math.floor(Date.now() / 1000) - 3600)
-	const answerCreatedAt = entryTimestamp + 600
-	const answerVersionCreatedAt = entryTimestamp + 700
-	const diary = {
-		id: 5,
-		user_id: 'alice',
+Cypress.Commands.add('seedStructuredDiary', (options: SeedOptions = {}) => {
+	const now = Math.floor(Date.now() / 1000)
+	// Questions are selected by their creation time at the entry timestamp.
+	// Keep the seeded entry just after the API-created question.
+	const entryTimestamp = now + 5
+	let diary: Diary
+	let entry: Entry
+	let question: Question
+	let answer: Answer
+	const answerVersions: Answer[] = []
+	const questionVersions: Question[] = []
+
+	cy.apiRequest<Diary>('POST', 'diaries', {
 		title: 'Health journal',
 		description: 'Daily notes',
-		reminder_active: true,
-		reminder_time: 32400,
-		reminder_count: 3,
-		reminder_delay: 2700,
-		reminder_signal_first: 'bell',
-		reminder_signal_repeat: 'soft-bell',
-		entry_schedule: 86400,
-		revision_count: 1,
-		client_mutation_id: null,
-		access_level: 15,
-		is_owner: true,
-	}
-	const entries = [{
-		id: 7,
-		diary_id: 5,
-		timestamp: entryTimestamp,
-		title: 'Morning check-in',
-		revision_count: 1,
-		client_mutation_id: null,
-	}]
-	const questions = [{
-		id: 17,
-		chain_id: 17,
-		diary_id: 5,
-		diary_question_order: 17,
-		created_at: questionCreatedAt,
-		label: 'Mood',
-		display_text: 'How do you feel today?',
-		type: 'text',
-		minimum: null,
-		maximum: null,
-		choices: null,
-		active: true,
-		template_text: 'Write a short note',
-		previous_version_id: null,
-		next_version_id: 18,
-		revision_count: 1,
-		client_mutation_id: null,
-	}]
-	const questionVersions = [
-		questions[0],
-		{
-			...questions[0],
-			id: 18,
-			label: 'Mood score',
-			display_text: 'How strong was your mood?',
-			type: 'rating',
-			minimum: 0,
-			maximum: 10,
-			template_text: '',
-			previous_version_id: 17,
-			next_version_id: null,
-			revision_count: 2,
-		},
-	]
-	const answers = [{
-		id: 11,
-		diary_id: 5,
-		entry_id: 7,
-		question_id: 17,
-		created_at: answerCreatedAt,
-		text_content: 'Feeling stable today.',
-		numeric_content: null,
-		previous_version_id: null,
-		next_version_id: null,
-		revision_count: 1,
-		client_mutation_id: null,
-	}]
-	const answerHistory = [
-		{ ...answers[0], next_version_id: 12 },
-		{
-			id: 12,
-			diary_id: 5,
-			entry_id: 7,
-			question_id: 17,
-			created_at: answerVersionCreatedAt,
-			text_content: 'Feeling better now.',
-			numeric_content: null,
-			previous_version_id: 11,
-			next_version_id: null,
-			revision_count: 2,
-		},
-	]
-	const stats = {
-		question_count: 1,
-		entry_count: 1,
-		answer_count: 1,
-		average_answer_count: 1,
-		first_entry_at: entryTimestamp,
-		latest_entry_at: entryTimestamp,
-		entry_frequency: { mean: 86400, stddev: 0 },
-		entry_frequency_last_month: { mean: 86400, stddev: 0 },
-		gap_count_above_ten_target_intervals: 0,
-		last_large_gap: null,
-		longest_gap: null,
-		average_entry_duration: 600,
-		average_entry_duration_last_month: 600,
-		latest_answer_at: answerCreatedAt,
-	}
-	structuredDiaryMockState = {
-		questions,
-		createdQuestion: null,
-	}
+		reminderActive: false,
+		reminderTime: 32400,
+		reminderCount: 3,
+		reminderDelay: 2700,
+		reminderSignalFirst: '',
+		reminderSignalRepeat: '',
+		entrySchedule: 86400,
+	}).then((createdDiary) => {
+		diary = createdDiary
+		return cy.apiRequest<Question>('POST', `diaries/${diary.id}/questions`, {
+			label: 'Mood',
+			displayText: 'How do you feel today?',
+			type: options.questionType ?? 'text',
+			minimum: options.questionMinimum ?? null,
+			maximum: options.questionMaximum ?? null,
+			choices: options.questionChoices ?? null,
+			active: true,
+			templateText: options.questionType && options.questionType !== 'text' ? '' : 'Write a short note',
+		})
+	}).then((createdQuestion) => {
+		question = createdQuestion
+		questionVersions.push(question)
+		return cy.apiRequest<Entry>('POST', `diaries/${diary.id}/entries`, {
+			timestamp: entryTimestamp,
+			title: 'Morning check-in',
+		})
+	}).then((createdEntry) => {
+		entry = createdEntry
+		const numeric = ['rating', 'number', 'integer'].includes(options.questionType ?? '')
+		const constrainedText = options.questionMaximum !== undefined && options.questionMaximum !== null
+			? 'okay'.slice(0, options.questionMaximum)
+			: 'Feeling stable today.'
+		return cy.apiRequest<Answer>('POST', `entries/${entry.id}/answers`, {
+			questionId: question.id,
+			textContent: numeric ? null : constrainedText,
+			numericContent: numeric ? 3 : null,
+		})
+	}).then((createdAnswer) => {
+		answer = createdAnswer
+		answerVersions.push(answer)
 
-	cy.intercept('GET', '**/structureddiary/api/v1/question-types*', [
-		{ id: 'TEXT', value: 'text' },
-		{ id: 'BOOLEAN', value: 'boolean' },
-		{ id: 'RATING', value: 'rating' },
-		{ id: 'NUMBER', value: 'number' },
-		{ id: 'INTEGER', value: 'integer' },
-		{ id: 'TIME', value: 'time' },
-		{ id: 'SELECT', value: 'select' },
-		{ id: 'EDITABLE_SELECT', value: 'editable_select' },
-	]).as('questionTypes')
-	cy.intercept('GET', '**/structureddiary/api/v1/alarm-sounds*', [
-		{ id: 1, name: 'Bell', path: 'bell', created_at: 1713500000, last_seen_at: 1713500000, is_default: true, os_affinity: ['ios:17', 'android:15'] },
-		{ id: 2, name: 'Soft Bell', path: 'soft-bell', created_at: 1713500000, last_seen_at: 1713500000, is_default: false, os_affinity: ['android:15'] },
-	]).as('alarmSounds')
-	cy.intercept('GET', '**/structureddiary/api/v1/diaries', [diary]).as('diaries')
-	cy.intercept('GET', '**/structureddiary/api/v1/diary-shares*', []).as('allShares')
-	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5', diary).as('diaryDetail')
-	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/entries*', entries).as('entries')
-	cy.intercept('GET', '**/structureddiary/api/v1/entries/7', entries[0]).as('entryDetail')
-	cy.intercept('GET', '**/structureddiary/api/v1/entries/7/answers*', answers).as('answers')
-	cy.intercept('GET', '**/structureddiary/api/v1/entries/7/answer-count', { count: answers.length }).as('answerCount')
-	cy.intercept('GET', '**/structureddiary/api/v1/questions/*/answer-count', { count: answers.length }).as('questionAnswerCount')
-	cy.intercept('DELETE', '**/structureddiary/api/v1/entries/7', entries[0]).as('deleteEntry')
-	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions/active*', questions).as('activeQuestions')
-	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/questions*', (request) => {
-		request.reply(createdQuestion === null ? questions : [...questions, createdQuestion])
-	}).as('questions')
-	cy.intercept('GET', '**/structureddiary/api/v1/questions/17/versions', questionVersions).as('questionVersions')
-	cy.intercept('GET', '**/structureddiary/api/v1/questions/18/versions', questionVersions).as('questionVersionsCurrent')
-	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/shares*', []).as('shares')
-	cy.intercept('GET', '**/structureddiary/api/v1/diaries/5/stats*', stats).as('stats')
-	cy.intercept('PUT', '**/structureddiary/api/v1/diaries/5', (request) => {
-		request.reply({
-			...diary,
-			user_id: request.body.ownerUserId ?? diary.user_id,
-			title: request.body.title,
-			description: request.body.description,
-			reminder_active: request.body.reminderActive,
-			reminder_time: request.body.reminderTime,
-			reminder_count: request.body.reminderCount,
-			reminder_delay: request.body.reminderDelay,
-			reminder_signal_first: request.body.reminderSignalFirst,
-			reminder_signal_repeat: request.body.reminderSignalRepeat,
-			entry_schedule: request.body.entrySchedule,
-			revision_count: request.body.revisionCount,
-			client_mutation_id: request.body.clientMutationId,
-		})
-	}).as('updateDiary')
-	cy.intercept('DELETE', '**/structureddiary/api/v1/diaries/5', diary).as('deleteDiary')
-	cy.intercept('POST', '**/structureddiary/api/v1/diaries/5/shares', (request) => {
-		request.reply({
-			id: 300,
-			diary_id: 5,
-			shared_with: request.body.sharedWith,
-			permission: request.body.permission,
-		})
-	}).as('createShare')
-	cy.intercept('PUT', '**/structureddiary/api/v1/diaries/5/shares/*', (request) => {
-		request.reply({
-			id: Number(request.url.split('/').pop()),
-			diary_id: 5,
-			shared_with: 'admin',
-			permission: request.body.permission,
-		})
-	}).as('updateShare')
-	cy.intercept('DELETE', '**/structureddiary/api/v1/diaries/5/shares/*', (request) => {
-		request.reply({
-			id: Number(request.url.split('/').pop()),
-			diary_id: 5,
-			shared_with: 'deleted',
-			permission: 0,
-		})
-	}).as('deleteShare')
-
-	cy.intercept('POST', '**/structureddiary/api/v1/diaries', (request) => {
-		request.reply({
-			...diary,
-			id: 6,
-			user_id: request.body.ownerUserId ?? 'alice',
-			title: request.body.title,
-			description: request.body.description,
-			reminder_active: request.body.reminderActive,
-			reminder_time: request.body.reminderTime,
-			reminder_count: request.body.reminderCount,
-			reminder_delay: request.body.reminderDelay,
-			reminder_signal_first: request.body.reminderSignalFirst,
-			reminder_signal_repeat: request.body.reminderSignalRepeat,
-			entry_schedule: request.body.entrySchedule,
-			revision_count: 1,
-			client_mutation_id: request.body.clientMutationId,
-		})
-	}).as('createDiary')
-
-	cy.intercept('POST', '**/structureddiary/api/v1/diaries/5/questions', (request) => {
-		createdQuestion = {
-			id: 33,
-			chain_id: 33,
-			diary_id: 5,
-			diary_question_order: 33,
-			created_at: 1713520000,
-			label: request.body.label,
-			display_text: request.body.displayText,
-			type: request.body.type,
-			minimum: request.body.minimum,
-			maximum: request.body.maximum,
-			choices: request.body.choices,
-			active: request.body.active,
-			template_text: request.body.templateText,
-			previous_version_id: null,
-			next_version_id: null,
-			revision_count: 1,
-			client_mutation_id: request.body.clientMutationId,
+		for (let revision = 2; revision <= (options.answerVersions ?? 0) + 1; revision++) {
+			cy.then(() => cy.apiRequest<Answer>('PUT', `answers/${answer.id}`, {
+				revisionCount: revision,
+				questionId: question.id,
+				textContent: ['rating', 'number', 'integer'].includes(options.questionType ?? '')
+					? null
+					: revision === 2 ? 'Feeling better now.' : `Feeling version ${revision}.`,
+				numericContent: ['rating', 'number', 'integer'].includes(options.questionType ?? '') ? revision + 2 : null,
+			})).then((updated) => {
+				answer = updated
+				answerVersions.push(answer)
+			})
 		}
-		structuredDiaryMockState!.createdQuestion = createdQuestion
-		request.reply(createdQuestion)
-	}).as('createQuestion')
 
-	cy.intercept('POST', '**/structureddiary/api/v1/diaries/5/entries', (request) => {
-		request.reply({
-			id: 8,
-			diary_id: 5,
-			timestamp: request.body.timestamp,
-			title: request.body.title,
-			revision_count: 1,
-			client_mutation_id: request.body.clientMutationId,
-		})
-	}).as('createEntry')
-
-	cy.intercept('POST', '**/structureddiary/api/v1/entries/8/answers', (request) => {
-		const answer = {
-			id: 40,
-			diary_id: 5,
-			entry_id: 8,
-			question_id: request.body.questionId,
-			created_at: 1713520200,
-			text_content: request.body.textContent ?? null,
-			numeric_content: request.body.numericContent ?? null,
-			previous_version_id: null,
-			next_version_id: null,
-			revision_count: 1,
-			client_mutation_id: request.body.clientMutationId,
+		for (let revision = 2; revision <= (options.questionVersions ?? 0) + 1; revision++) {
+			cy.then(() => cy.apiRequest<Question>('PUT', `questions/${question.id}`, {
+				questionId: question.id,
+				chainId: question.chain_id,
+				label: revision === 2 ? 'Mood check-in' : `Mood version ${revision}`,
+				displayText: revision === 2 ? 'How strong is your mood?' : `Mood question version ${revision}`,
+				type: question.type,
+				minimum: question.minimum,
+				maximum: question.maximum,
+				choices: question.choices,
+				active: true,
+				templateText: revision === 2 ? 'Write a longer note' : question.template_text,
+				revisionCount: revision,
+			})).then((updated) => {
+				question = updated
+				questionVersions.push(question)
+			})
 		}
-		createdEntryAnswers = [...createdEntryAnswers, answer]
-		request.reply(answer)
-	}).as('createAnswer')
-
-	cy.intercept('GET', '**/structureddiary/api/v1/entries/8/answers*', (request) => {
-		request.reply(createdEntryAnswers)
-	}).as('newEntryAnswers')
-	return cy.intercept('GET', '**/structureddiary/api/v1/entries/7/questions/17/answers/history', answerHistory).as('answerHistory') as unknown as Chainable<void>
+	}).then(() => ({ diary, question, entry, answer, answerVersions, questionVersions }))
 })
 
 export {}
